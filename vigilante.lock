@@ -1,7 +1,10 @@
 version = 1
 
 [code."."]
-powers = ["exec"]
+powers = [
+    "exec",
+    "files",
+]
 
 [code."npm/vigilante"]
 powers = ["exec"]

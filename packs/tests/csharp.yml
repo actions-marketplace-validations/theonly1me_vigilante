@@ -36,3 +36,29 @@ valid:
   - "class A { void F() { var value = Environment.MachineName; } }"
 invalid:
   - "class A { void F() { var value = Environment.GetEnvironmentVariable(\"HOME\"); } }"
+---
+id: csharp-files
+valid:
+  - "class A { void F() { var name = Path.Combine(a, b); } }"
+  - "class A { void F() { Directory.SetCurrentDirectory(folder); } }"
+invalid:
+  - "class A { void F() { var text = File.ReadAllText(path); } }"
+  - "class A { void F() { System.IO.File.Delete(path); } }"
+  - "class A { void F() { Directory.CreateDirectory(folder); } }"
+  - "class A { void F() { var stream = new FileStream(path, FileMode.Open); } }"
+---
+id: csharp-system-info
+valid:
+  - "class A { void F() { var value = config.MachineName; } }"
+invalid:
+  - "class A { void F() { var value = Environment.MachineName; } }"
+  - "class A { void F() { var folder = Environment.CurrentDirectory; } }"
+  - "class A { void F() { var host = Dns.GetHostName(); } }"
+---
+id: csharp-modify-system-state
+valid:
+  - "class A { void F() { var value = Environment.GetEnvironmentVariable(\"HOME\"); } }"
+invalid:
+  - "class A { void F() { Environment.SetEnvironmentVariable(\"HOME\", value); } }"
+  - "class A { void F() { Directory.SetCurrentDirectory(folder); } }"
+  - "class A { void F() { Environment.CurrentDirectory = folder; } }"

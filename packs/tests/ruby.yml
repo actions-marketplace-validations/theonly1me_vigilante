@@ -38,7 +38,46 @@ invalid:
 ---
 id: ruby-env-read
 valid:
+  - "ENV[\"TOKEN\"] = value"
+  - "ENV.delete(\"TOKEN\")"
   - "environment = config.env"
 invalid:
   - "token = ENV[\"TOKEN\"]"
   - "token = ENV.fetch(\"TOKEN\")"
+---
+id: ruby-files
+valid:
+  - "path = File.join(root, name)"
+  - "name = File.basename(path)"
+  - "folder = Dir.pwd"
+invalid:
+  - "text = File.read(path)"
+  - "File.write(path, text)"
+  - "FileUtils.rm_rf(folder)"
+  - "files = Dir.glob('*.rb')"
+  - "require 'fileutils'"
+---
+id: ruby-system-info
+valid:
+  - "name = config.hostname"
+invalid:
+  - "folder = Dir.pwd"
+  - "name = Socket.gethostname"
+  - "id = Process.pid"
+---
+id: ruby-modify-system-state
+valid:
+  - "token = ENV[\"TOKEN\"]"
+  - "token = ENV.fetch(\"TOKEN\")"
+invalid:
+  - "ENV[\"TOKEN\"] = value"
+  - "ENV.delete(\"TOKEN\")"
+  - "Dir.chdir(folder)"
+  - "trap(\"TERM\") { exit }"
+  - "Signal.trap(\"INT\") { exit }"
+---
+id: ruby-system-calls
+valid:
+  - "result = client.syscall(number)"
+invalid:
+  - "syscall(39)"

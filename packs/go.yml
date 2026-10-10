@@ -54,4 +54,40 @@ metadata:
   capability: read_system_state
 rule:
   kind: selector_expression
-  regex: ^os\.(Getenv|LookupEnv|Environ|Setenv|ExpandEnv)$
+  regex: ^os\.(Getenv|LookupEnv|Environ|ExpandEnv)$
+---
+id: go-files
+language: go
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  kind: selector_expression
+  regex: ^(os\.(Open|OpenFile|Create|CreateTemp|ReadFile|WriteFile|Remove|RemoveAll|Mkdir|MkdirAll|MkdirTemp|Rename|Chmod|Chown|Lchown|Symlink|Link|ReadDir|Truncate|DirFS|Stat|Lstat)|ioutil\.(ReadFile|WriteFile|ReadDir|TempFile|TempDir)|filepath\.(Walk|WalkDir|Glob))$
+---
+id: go-system-info
+language: go
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  kind: selector_expression
+  regex: ^os\.(Hostname|Getwd|Getpid|Getppid|Getuid|Geteuid|Getgid|Getegid|Getgroups|Executable|UserHomeDir|UserCacheDir|UserConfigDir|TempDir)$
+---
+id: go-modify-system-state
+language: go
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  kind: selector_expression
+  regex: ^(os\.(Setenv|Unsetenv|Clearenv|Chdir)|signal\.(Notify|Ignore|Reset|Stop))$
+---
+id: go-system-calls
+language: go
+message: Makes system calls directly
+metadata:
+  capability: system_calls
+rule:
+  kind: selector_expression
+  regex: ^(syscall|unix)\.(Syscall|Syscall6|SyscallN|RawSyscall|RawSyscall6|RawSyscallNoError)$

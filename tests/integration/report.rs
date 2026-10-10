@@ -114,3 +114,35 @@ fn json_and_sarif_mark_the_blocking_finding() {
     );
     assert_eq!(location["region"]["startLine"], 1);
 }
+
+#[test]
+fn a_hidden_power_is_shown_and_fails_until_the_lock_has_it() {
+    let writes_a_file = "with open('out.csv', 'w') as out:\n    out.write('x')\n";
+    let repository = TestRepository::new();
+    repository.write(&[("README.md", "# app\n")]);
+    repository.commit("base");
+    repository.git(&["checkout", "--quiet", "-b", "feature"]);
+    repository.write(&[("services/report.py", writes_a_file)]);
+    repository.commit("write a report");
+
+    let unlocked = repository.diff(MAIN_AND_FEATURE);
+
+    assert!(unlocked.render(Format::Markdown).contains("| `files` |"));
+    assert!(!unlocked.passed());
+
+    repository.write(&[(
+        Lock::FILE,
+        "version = 1\n\n[code.services]\npowers = [\"files\"]\n",
+    )]);
+    repository.commit("lock the new power");
+
+    let locked = repository.diff(MAIN_AND_FEATURE);
+
+    let markdown = locked.render(Format::Markdown);
+    assert!(!markdown.contains("| `files` |"), "{markdown}");
+    assert!(
+        markdown.contains("Hidden low-signal findings: 1 (files)."),
+        "{markdown}"
+    );
+    assert!(locked.passed());
+}

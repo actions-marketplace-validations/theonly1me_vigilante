@@ -91,3 +91,71 @@ metadata:
 rule:
   kind: member_expression
   regex: ^(process|Deno|Bun)\.env$
+  not:
+    any:
+      - inside: { kind: assignment_expression, field: left, stopBy: end }
+      - inside: { kind: unary_expression, regex: ^delete\b, stopBy: end }
+---
+id: js-files-module
+language: tsx
+message: Imports a file system module
+metadata:
+  capability: files
+rule:
+  kind: string
+  regex: ^["']((node:)?fs(/promises)?|fs-extra|graceful-fs)["']$
+  any:
+    - inside: { kind: import_statement, field: source }
+    - inside: { kind: export_statement, field: source }
+    - inside:
+        kind: arguments
+        inside:
+          kind: call_expression
+          has: { field: function, regex: ^(require|import)$ }
+---
+id: js-files-call
+language: tsx
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  kind: member_expression
+  regex: ^(Deno\.(readFile|readTextFile|writeFile|writeTextFile|remove|mkdir|open|create|readDir|rename|chmod|copyFile|makeTempFile|makeTempDir)|Bun\.(file|write))$
+---
+id: js-system-info
+language: tsx
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  any:
+    - kind: member_expression
+      regex: ^process\.(cwd|pid|ppid|getuid|geteuid|getgid|getegid)$
+    - kind: string
+      regex: ^["'](node:)?os["']$
+      any:
+        - inside: { kind: import_statement, field: source }
+        - inside: { kind: export_statement, field: source }
+        - inside:
+            kind: arguments
+            inside:
+              kind: call_expression
+              has: { field: function, regex: ^(require|import)$ }
+---
+id: js-modify-system-state
+language: tsx
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  any:
+    - kind: assignment_expression
+      has: { field: left, regex: '^process\.env(\.|\[)' }
+    - kind: unary_expression
+      regex: '^delete\s+process\.env(\.|\[)'
+    - kind: call_expression
+      has:
+        field: function
+        regex: ^(process\.(chdir|umask|setuid|setgid|seteuid|setegid|setgroups)|Deno\.(env\.(set|delete)|chdir))$
+    - kind: call_expression
+      regex: ^process\.on\(\s*["']SIG

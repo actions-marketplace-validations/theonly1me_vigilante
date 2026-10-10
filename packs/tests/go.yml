@@ -38,3 +38,35 @@ valid:
   - "package main\n\nfunc main() { os.Exit(0) }\n"
 invalid:
   - "package main\n\nfunc main() { token := os.Getenv(\"TOKEN\") }\n"
+---
+id: go-files
+valid:
+  - "package main\n\nfunc main() { name := filepath.Join(a, b) }\n"
+invalid:
+  - "package main\n\nfunc main() { data, err := os.ReadFile(path) }\n"
+  - "package main\n\nfunc main() { file, err := os.Create(path) }\n"
+  - "package main\n\nfunc main() { err := os.RemoveAll(folder) }\n"
+  - "package main\n\nfunc main() { data, err := ioutil.ReadFile(path) }\n"
+---
+id: go-system-info
+valid:
+  - "package main\n\nfunc main() { os.Exit(0) }\n"
+invalid:
+  - "package main\n\nfunc main() { name, err := os.Hostname() }\n"
+  - "package main\n\nfunc main() { folder, err := os.Getwd() }\n"
+  - "package main\n\nfunc main() { id := os.Getpid() }\n"
+---
+id: go-modify-system-state
+valid:
+  - "package main\n\nfunc main() { token := os.Getenv(\"TOKEN\") }\n"
+invalid:
+  - "package main\n\nfunc main() { os.Setenv(\"TOKEN\", value) }\n"
+  - "package main\n\nfunc main() { os.Chdir(folder) }\n"
+  - "package main\n\nfunc main() { signal.Notify(channel, os.Interrupt) }\n"
+---
+id: go-system-calls
+valid:
+  - "package main\n\nfunc main() { id := syscall.Getpid() }\n"
+invalid:
+  - "package main\n\nfunc main() { syscall.Syscall(number, a, b, c) }\n"
+  - "package main\n\nfunc main() { unix.RawSyscall(number, a, b, c) }\n"

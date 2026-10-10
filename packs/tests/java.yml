@@ -37,3 +37,29 @@ valid:
   - "class A { void f() { System.getProperty(\"user.home\"); } }"
 invalid:
   - "class A { String home = System.getenv(\"HOME\"); }"
+---
+id: java-files
+valid:
+  - "class A { void f() { String name = file.getName(); } }"
+  - "import java.util.List;"
+invalid:
+  - "import java.nio.file.Files;"
+  - "import java.io.FileInputStream;"
+  - "class A { void f() { var stream = new FileOutputStream(path); } }"
+  - "class A { void f() { var text = Files.readString(path); } }"
+---
+id: java-system-info
+valid:
+  - "class A { void f() { config.getProperty(\"x\"); } }"
+invalid:
+  - "class A { void f() { System.getProperty(\"user.home\"); } }"
+  - "class A { void f() { var host = InetAddress.getLocalHost(); } }"
+  - "class A { void f() { long id = ProcessHandle.current().pid(); } }"
+---
+id: java-modify-system-state
+valid:
+  - "class A { void f() { config.setProperty(\"a\", \"b\"); } }"
+invalid:
+  - "class A { void f() { System.setProperty(\"a\", \"b\"); } }"
+  - "class A { void f() { System.setOut(stream); } }"
+  - "class A { void f() { Runtime.getRuntime().addShutdownHook(thread); } }"

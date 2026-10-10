@@ -51,8 +51,47 @@ invalid:
 ---
 id: python-env-read
 valid:
+  - "os.environ['TOKEN'] = value"
+  - "os.environ.update(values)"
   - "environment = 'os.environ'"
   - "path = os.path.join(a)"
 invalid:
   - "value = os.environ['TOKEN']"
   - "value = os.getenv('TOKEN')"
+---
+id: python-files
+valid:
+  - "webbrowser.open(url)"
+  - "connection = open_connection(host)"
+  - "path = os.path.join(a, b)"
+  - "text = 'open(path)'"
+invalid:
+  - "with open(path) as handle:\n    data = handle.read()"
+  - "os.remove(path)"
+  - "os.makedirs(folder, exist_ok=True)"
+  - "import shutil"
+  - "from tempfile import NamedTemporaryFile"
+  - "files = glob.glob('*.csv')"
+---
+id: python-system-info
+valid:
+  - "name = config.hostname"
+  - "path = os.path.join(a, b)"
+invalid:
+  - "folder = os.getcwd()"
+  - "name = socket.gethostname()"
+  - "user = getpass.getuser()"
+  - "process_id = os.getpid()"
+---
+id: python-modify-system-state
+valid:
+  - "value = os.environ['TOKEN']"
+  - "value = os.environ.get('TOKEN')"
+  - "settings['TOKEN'] = value"
+invalid:
+  - "os.environ['TOKEN'] = value"
+  - "del os.environ['TOKEN']"
+  - "os.environ.update(values)"
+  - "os.putenv('TOKEN', value)"
+  - "os.chdir(folder)"
+  - "signal.signal(signal.SIGTERM, handler)"

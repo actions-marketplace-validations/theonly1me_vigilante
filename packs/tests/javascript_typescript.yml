@@ -54,7 +54,49 @@ invalid:
 ---
 id: js-env-read
 valid:
+  - "process.env.API_KEY = 'x';"
   - "const env = config.env;"
 invalid:
   - "const key = process.env.API_KEY;"
   - "const { NODE_ENV } = process.env;"
+---
+id: js-files-module
+valid:
+  - "import { readFile } from './fs';"
+  - "const fs = require('fsevents-helper');"
+invalid:
+  - "import { readFile } from 'node:fs/promises';"
+  - "import fs from 'fs';"
+  - "const fs = require('fs');"
+  - "import fse from 'fs-extra';"
+---
+id: js-files-call
+valid:
+  - "const file = getFile(path);"
+invalid:
+  - "const text = await Deno.readTextFile(path);"
+  - "const file = Bun.file(path);"
+  - "await Bun.write(path, data);"
+---
+id: js-system-info
+valid:
+  - "const folder = config.cwd;"
+  - "import os from './os';"
+invalid:
+  - "const folder = process.cwd();"
+  - "const id = process.pid;"
+  - "import os from 'node:os';"
+  - "const os = require('os');"
+---
+id: js-modify-system-state
+valid:
+  - "const key = process.env.API_KEY;"
+  - "config.env.API_KEY = 'x';"
+  - "emitter.on('SIGTERM', handler);"
+invalid:
+  - "process.env.API_KEY = 'x';"
+  - "process.env['API_KEY'] = 'x';"
+  - "delete process.env.API_KEY;"
+  - "process.chdir(folder);"
+  - "process.on('SIGTERM', handler);"
+  - "Deno.env.set('API_KEY', 'x');"

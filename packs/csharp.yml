@@ -65,4 +65,41 @@ metadata:
   capability: read_system_state
 rule:
   kind: invocation_expression
-  regex: ^Environment\s*\.\s*(Get|Set)EnvironmentVariables?\b
+  regex: ^Environment\s*\.\s*GetEnvironmentVariables?\b
+---
+id: csharp-files
+language: csharp
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  any:
+    - kind: invocation_expression
+      regex: ^(System\.IO\.)?(File\s*\.\s*\w+|Directory\s*\.\s*(CreateDirectory|Delete|Exists|Move|GetFiles|GetDirectories|GetFileSystemEntries|EnumerateFiles|EnumerateDirectories|EnumerateFileSystemEntries))\s*\(
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(System\.IO\.)?(FileStream|FileInfo|DirectoryInfo)$ }
+---
+id: csharp-system-info
+language: csharp
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  any:
+    - kind: member_access_expression
+      regex: ^Environment\s*\.\s*(MachineName|UserName|UserDomainName|CurrentDirectory|ProcessId|ProcessPath|OSVersion)$
+      not: { inside: { kind: assignment_expression, field: left } }
+    - kind: invocation_expression
+      regex: ^(Environment\s*\.\s*(GetCommandLineArgs|GetFolderPath)|Dns\s*\.\s*GetHostName)\s*\(
+---
+id: csharp-modify-system-state
+language: csharp
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  any:
+    - kind: invocation_expression
+      regex: ^(Environment\s*\.\s*SetEnvironmentVariable|Directory\s*\.\s*SetCurrentDirectory|PosixSignalRegistration\s*\.\s*Create)\s*\(
+    - kind: assignment_expression
+      has: { field: left, regex: ^Environment\s*\.\s*CurrentDirectory$ }

@@ -43,3 +43,41 @@ valid:
 invalid:
   - "fn main() { let token = std::env::var(\"TOKEN\"); }"
   - "fn main() { let token = env::var(\"TOKEN\"); }"
+---
+id: rust-files
+valid:
+  - "fn main() { let name = config.file_name(); }"
+  - "use std::path::Path;"
+invalid:
+  - "use std::fs;"
+  - "use std::fs::{self, File};"
+  - "fn main() { let text = std::fs::read_to_string(path); }"
+  - "fn main() { let text = fs::read_to_string(path); }"
+  - "fn main() { let file = File::create(path); }"
+  - "use tokio::fs;"
+---
+id: rust-system-info
+valid:
+  - "fn main() { let arguments: Vec<String> = std::env::args().collect(); }"
+invalid:
+  - "fn main() { let folder = std::env::current_dir(); }"
+  - "fn main() { let folder = env::current_exe(); }"
+  - "fn main() { let id = std::process::id(); }"
+---
+id: rust-modify-system-state
+valid:
+  - "fn main() { let token = std::env::var(\"TOKEN\"); }"
+invalid:
+  - "fn main() { std::env::set_var(\"TOKEN\", value); }"
+  - "fn main() { env::remove_var(\"TOKEN\"); }"
+  - "fn main() { std::env::set_current_dir(folder); }"
+  - "use signal_hook::consts::SIGTERM;"
+  - "fn main() { ctrlc::set_handler(handler); }"
+---
+id: rust-system-calls
+valid:
+  - "fn main() { let id = libc::getpid(); }"
+invalid:
+  - "fn main() { unsafe { libc::syscall(libc::SYS_gettid) }; }"
+  - "use nix::unistd::fork;"
+  - "use rustix::process::getpid;"

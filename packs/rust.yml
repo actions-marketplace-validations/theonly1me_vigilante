@@ -64,6 +64,51 @@ metadata:
 rule:
   any:
     - kind: scoped_identifier
-      regex: ^(std::)?env::(var|var_os|vars|vars_os|set_var|remove_var)$
+      regex: ^(std::)?env::(var|var_os|vars|vars_os)$
     - kind: use_declaration
-      regex: use\s+(::)?(std::env::(var|vars|set_var)\b|dotenvy?\b)
+      regex: use\s+(::)?(std::env::(var|vars)\b|dotenvy?\b)
+---
+id: rust-files
+language: rust
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?(std|tokio|async_std)::fs\b
+    - kind: scoped_identifier
+      regex: ^(((std|tokio|async_std)::)?fs::\w+|File::(open|create|create_new|options))$
+---
+id: rust-system-info
+language: rust
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  kind: scoped_identifier
+  regex: ^((std::)?env::(current_dir|current_exe|home_dir|temp_dir)|(std::)?process::id)$
+---
+id: rust-modify-system-state
+language: rust
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  any:
+    - kind: scoped_identifier
+      regex: ^((std::)?env::(set_var|remove_var|set_current_dir)|ctrlc::set_handler|tokio::signal::\w+)$
+    - kind: use_declaration
+      regex: use\s+(::)?(std::env::(set_var|remove_var|set_current_dir)\b|signal_hook\b|ctrlc\b)
+---
+id: rust-system-calls
+language: rust
+message: Makes system calls directly
+metadata:
+  capability: system_calls
+rule:
+  any:
+    - kind: scoped_identifier
+      regex: ^(libc::syscall|(nix|rustix)::\w+)$
+    - kind: use_declaration
+      regex: use\s+(::)?(nix|rustix|syscalls)\b
