@@ -23,7 +23,7 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     let Source::Commit(head_reference) = request.head else {
         return Err(Error::new("a diff needs a head commit"));
     };
-    let git = Git::new(request.repository);
+    let git = Git::open(request.repository)?;
     let head = git.resolve(head_reference)?;
     let base_tip = git.resolve(request.base)?;
     let base = git.merge_base(CommitPair {

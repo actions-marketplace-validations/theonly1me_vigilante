@@ -118,6 +118,22 @@ fn errors_exit_with_code_2() {
 }
 
 #[test]
+fn a_folder_that_is_not_a_repository_exits_with_code_2() {
+    let folder = tempfile::tempdir().expect("temporary directory");
+
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_vigilante"))
+        .arg("--repository")
+        .arg(folder.path())
+        .args(["diff", "--base", "main"])
+        .output()
+        .expect("vigilante runs");
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.ends_with("is not a git repository\n"), "{stderr}");
+}
+
+#[test]
 fn scan_prints_each_power_and_never_runs_install_scripts() {
     let repository = TestRepository::new();
     repository.write(&[

@@ -27,10 +27,13 @@ pub struct GitTree {
 }
 
 impl Git {
-    pub fn new(repository: &Path) -> Self {
-        Self {
+    pub fn open(repository: &Path) -> Result<Self, Error> {
+        let git = Self {
             repository: repository.to_path_buf(),
-        }
+        };
+        git.run(&["rev-parse", "--git-dir"])
+            .map_err(|_| Error::new(format!("{} is not a git repository", repository.display())))?;
+        Ok(git)
     }
 
     pub fn resolve(&self, reference: &str) -> Result<String, Error> {

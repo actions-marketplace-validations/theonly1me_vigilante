@@ -40,7 +40,7 @@ impl Source {
         match self {
             Self::WorkingDirectory => Ok(Box::new(DirectoryTree::new(repository)?)),
             Self::Commit(reference) => {
-                let git = Git::new(repository);
+                let git = Git::open(repository)?;
                 let commit = git.resolve(reference)?;
                 Ok(Box::new(git.tree(&commit)?))
             }
