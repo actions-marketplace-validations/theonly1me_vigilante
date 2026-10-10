@@ -1,0 +1,40 @@
+id: go-exec-import
+valid:
+  - "package main\n\nimport \"os\"\n"
+invalid:
+  - "package main\n\nimport (\n\t\"fmt\"\n\t\"os/exec\"\n)\n"
+  - "package main\n\nimport run \"os/exec\"\n"
+---
+id: go-exec-call
+valid:
+  - "package main\n\nfunc main() { os.Exit(1) }\n"
+invalid:
+  - "package main\n\nfunc main() { syscall.Exec(path, args, env) }\n"
+---
+id: go-network-import
+valid:
+  - "package main\n\nimport \"net/url\"\n"
+  - "package main\n\nimport \"net/netip\"\n"
+invalid:
+  - "package main\n\nimport \"net/http\"\n"
+  - "package main\n\nimport \"net\"\n"
+  - "package main\n\nimport \"google.golang.org/grpc\"\n"
+---
+id: go-native-import
+valid:
+  - "package main\n\nimport \"syscall\"\n"
+invalid:
+  - "package main\n\n// #include <stdio.h>\nimport \"C\"\n"
+  - "package main\n\nimport \"unsafe\"\n"
+---
+id: go-dynamic-code-import
+valid:
+  - "package main\n\nimport \"sort\"\n"
+invalid:
+  - "package main\n\nimport \"reflect\"\n"
+---
+id: go-env-read
+valid:
+  - "package main\n\nfunc main() { os.Exit(0) }\n"
+invalid:
+  - "package main\n\nfunc main() { token := os.Getenv(\"TOKEN\") }\n"

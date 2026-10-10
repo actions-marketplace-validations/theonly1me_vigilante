@@ -1,0 +1,39 @@
+id: java-exec
+valid:
+  - "class A { void f() { Runtime.getRuntime().availableProcessors(); } }"
+invalid:
+  - "class A { void f() { new ProcessBuilder(command).start(); } }"
+  - "class A { void f() throws Exception { Runtime.getRuntime().exec(command); } }"
+---
+id: java-network
+valid:
+  - "import java.net.URI;"
+  - "import java.util.List;"
+invalid:
+  - "import java.net.http.HttpClient;"
+  - "import okhttp3.OkHttpClient;"
+  - "import org.springframework.web.client.RestTemplate;"
+  - "class A { void f() throws Exception { new Socket(host, 80); } }"
+---
+id: java-native
+valid:
+  - "class A { String nativeName = name; }"
+  - "/** Class object for {@code sun.misc.Unsafe}, loaded reflectively */\nclass A {}"
+invalid:
+  - "class A { static { System.loadLibrary(\"native\"); } }"
+  - "class A { public static native int compute(int value); }"
+  - "import com.sun.jna.Library;"
+---
+id: java-dynamic-code
+valid:
+  - "class A { void f() { list.getFirst(); } }"
+invalid:
+  - "import java.lang.reflect.Method;"
+  - "class A { void f() throws Exception { Class.forName(name); } }"
+  - "class A { void f() throws Exception { Method method = target.getDeclaredMethod(\"run\"); } }"
+---
+id: java-env-read
+valid:
+  - "class A { void f() { System.getProperty(\"user.home\"); } }"
+invalid:
+  - "class A { String home = System.getenv(\"HOME\"); }"

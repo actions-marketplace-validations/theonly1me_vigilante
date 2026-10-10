@@ -1,6 +1,4 @@
-mod support;
-
-use support::{expected, scan_files, sightings};
+use crate::support::{expected, scan_files, sightings};
 
 const CLAUDE_SETTINGS: &str = r#"{
   "permissions": {

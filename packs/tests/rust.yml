@@ -1,0 +1,45 @@
+id: rust-exec
+valid:
+  - "fn main() { std::process::exit(1); }"
+  - "fn main() { let app = clap::Command::new(\"vigilante\"); }"
+  - "/// Runs commands through [`std::process::Command`].\nfn run() {}"
+invalid:
+  - "use std::process::Command;"
+  - "use std::process::{Command, Stdio};"
+  - "fn main() { std::process::Command::new(\"ls\"); }"
+  - "use tokio::process::Command;"
+---
+id: rust-network
+valid:
+  - "use std::net::IpAddr;"
+  - "use crate::hyper_utils::Client;"
+invalid:
+  - "use std::net::{IpAddr, TcpStream};"
+  - "fn main() { let body = reqwest::blocking::get(url); }"
+  - "use reqwest::Client;"
+  - "fn main() { let stream = TcpStream::connect(address); }"
+---
+id: rust-native
+valid:
+  - "fn safe() -> u8 { 1 }"
+  - "fn main() { let unsafe_count = 0; }"
+invalid:
+  - "fn main() { unsafe { ptr.read() } }"
+  - "unsafe fn read(pointer: *const u8) -> u8 { *pointer }"
+  - "unsafe impl Send for Handle {}"
+  - "extern \"C\" { fn abs(input: i32) -> i32; }"
+  - "#[link(name = \"z\")]\nextern {}"
+  - "fn main() { libc::getpid(); }"
+---
+id: rust-dynamic-code
+valid:
+  - "use std::sync::Arc;"
+invalid:
+  - "use libloading::Library;"
+---
+id: rust-env-read
+valid:
+  - "fn main() { let arguments: Vec<String> = std::env::args().collect(); }"
+invalid:
+  - "fn main() { let token = std::env::var(\"TOKEN\"); }"
+  - "fn main() { let token = env::var(\"TOKEN\"); }"

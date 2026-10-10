@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use crate::code::Rules;
 use crate::config::Config;
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::Surfaces;
@@ -24,7 +25,7 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
     Scanner::new(ScannerInput {
         tree: tree.as_ref(),
         config: &config,
-    })
+    })?
     .scan()
 }
 
@@ -51,20 +52,22 @@ pub struct Scanner<'a> {
     config: &'a Config,
     scopes: Scopes<'a>,
     surfaces: Surfaces<'a>,
+    rules: Rules,
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(input: ScannerInput<'a>) -> Self {
+    pub fn new(input: ScannerInput<'a>) -> Result<Self, Error> {
         let scopes = Scopes::new(ScopesInput {
             paths: input.tree.paths(),
             config: input.config,
         });
-        Self {
+        Ok(Self {
             tree: input.tree,
             config: input.config,
             scopes,
             surfaces: Surfaces::new(input.tree.paths()),
-        }
+            rules: rules_of(input)?,
+        })
     }
 
     pub fn scan(&self) -> Result<PowerMap, Error> {
@@ -73,7 +76,10 @@ impl<'a> Scanner<'a> {
             .paths()
             .iter()
             .map(String::as_str)
-            .filter(|path| self.surfaces.handles(path) && !self.config.is_excluded(path))
+            .filter(|path| {
+                (self.surfaces.handles(path) || self.rules.handles(path))
+                    && !self.config.is_excluded(path)
+            })
             .collect();
         let mut map = PowerMap::default();
         for file in self.tree.read(&wanted)? {
@@ -81,7 +87,8 @@ impl<'a> Scanner<'a> {
                 path: &file.path,
                 text: &file.text,
             };
-            for detection in self.surfaces.detect(source)? {
+            let detections = self.surfaces.detect(source)?;
+            for detection in detections.into_iter().chain(self.rules.detect(source)) {
                 let surface = detection.power.capability.surface();
                 let scope_path = match surface {
                     Surface::Code => self.scopes.code_scope_of(&file.path),
@@ -103,4 +110,33 @@ impl<'a> Scanner<'a> {
         }
         Ok(map)
     }
+}
+
+fn rules_of(input: ScannerInput) -> Result<Rules, Error> {
+    let mut rules = Rules::built_in()?;
+    let folders: Vec<String> = input
+        .config
+        .rule_paths
+        .iter()
+        .map(|folder| format!("{}/", folder.trim_end_matches('/')))
+        .collect();
+    let rule_files: Vec<&str> = input
+        .tree
+        .paths()
+        .iter()
+        .map(String::as_str)
+        .filter(|path| {
+            folders
+                .iter()
+                .any(|folder| path.starts_with(folder.as_str()))
+                && (path.ends_with(".yml") || path.ends_with(".yaml"))
+        })
+        .collect();
+    for file in input.tree.read(&rule_files)? {
+        rules.add(SourceFile {
+            path: &file.path,
+            text: &file.text,
+        })?;
+    }
+    Ok(rules)
 }

@@ -1,0 +1,38 @@
+id: csharp-exec
+valid:
+  - "using System.Diagnostics;"
+  - "class A { void F() { Debug.WriteLine(1); } }"
+invalid:
+  - "class A { void F() { Process.Start(\"git\", arguments); } }"
+  - "class A { void F() { var info = new ProcessStartInfo(\"git\"); } }"
+---
+id: csharp-network
+valid:
+  - "using System.Net;"
+  - "class A { void F() { var uri = new Uri(text); } }"
+invalid:
+  - "class A { void F() { using var client = new HttpClient(); } }"
+  - "using System.Net.Http;"
+  - "class A { A(HttpClient client) {} }"
+---
+id: csharp-native
+valid:
+  - "// - Excludes unsafe characters: / \\ : * ? \" < > |\nclass A {}"
+  - "class A { void F() {} }"
+invalid:
+  - "class A { [DllImport(\"user32.dll\")] static extern int MessageBox(); }"
+  - "class A { public unsafe static void Copy(byte* source) {} }"
+  - "class A { void F() { unsafe { } } }"
+---
+id: csharp-dynamic-code
+valid:
+  - "using System.Reflection;"
+invalid:
+  - "class A { void F() { var assembly = Assembly.LoadFrom(path); } }"
+  - "class A { void F() { var value = Activator.CreateInstance(type); } }"
+---
+id: csharp-env-read
+valid:
+  - "class A { void F() { var value = Environment.MachineName; } }"
+invalid:
+  - "class A { void F() { var value = Environment.GetEnvironmentVariable(\"HOME\"); } }"

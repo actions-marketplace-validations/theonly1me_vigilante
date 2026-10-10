@@ -1,6 +1,4 @@
-mod support;
-
-use support::{expected, scan_files, sightings, write_files};
+use crate::support::{expected, scan_files, sightings, write_files};
 use vigilante::{ScanRequest, Source};
 
 const PACKAGE_MANIFEST: &str = r#"{

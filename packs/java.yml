@@ -1,0 +1,64 @@
+id: java-exec
+language: java
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(java\.lang\.)?ProcessBuilder$ }
+    - kind: method_invocation
+      regex: ^Runtime\s*\.\s*getRuntime\s*\(\s*\)\s*\.\s*exec\b
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?org\.apache\.commons\.exec\b
+---
+id: java-network
+language: java
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(java\.net\.(Socket|ServerSocket|DatagramSocket|HttpURLConnection|URLConnection|http)\b|java\.net\.\*|okhttp3?\.|retrofit2?\.|org\.apache\.(http|hc)\.|org\.springframework\.web\.(client|reactive\.function\.client)\.|feign\.|io\.grpc\.|io\.netty\.)
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(Socket|ServerSocket|DatagramSocket)$ }
+---
+id: java-native
+language: java
+message: Calls native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: method_invocation
+      regex: ^System\s*\.\s*load(Library)?\s*\(
+    - kind: modifiers
+      regex: \bnative\b
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(com\.sun\.jna|sun\.misc\.Unsafe|jdk\.internal\.misc\.Unsafe|java\.lang\.foreign)\b
+---
+id: java-dynamic-code
+language: java
+message: Uses reflection or runs scripts
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(java\.lang\.reflect|java\.lang\.invoke|javax\.script|groovy\.lang)\b
+    - kind: method_invocation
+      regex: ^Class\s*\.\s*forName\s*\(
+    - kind: method_invocation
+      has: { field: name, regex: ^getDeclared(Method|Field|Constructor)s?$ }
+    - kind: type_identifier
+      regex: ^(ScriptEngineManager|GroovyShell|URLClassLoader)$
+---
+id: java-env-read
+language: java
+message: Reads environment variables
+metadata:
+  capability: env
+rule:
+  kind: method_invocation
+  regex: ^System\s*\.\s*getenv\s*\(

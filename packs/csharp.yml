@@ -1,0 +1,68 @@
+id: csharp-exec
+language: csharp
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: invocation_expression
+      regex: ^(System\.Diagnostics\.)?Process\s*\.\s*Start\s*\(
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(System\.Diagnostics\.)?(Process|ProcessStartInfo)$ }
+    - kind: using_directive
+      regex: ^using\s+CliWrap\b
+---
+id: csharp-network
+language: csharp
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: object_creation_expression
+      has:
+        field: type
+        regex: ^(System\.Net\.(Http\.|Sockets\.|WebSockets\.)?)?(HttpClient|TcpClient|UdpClient|TcpListener|Socket|ClientWebSocket|WebClient|SmtpClient|RestClient)$
+    - kind: using_directive
+      regex: ^using\s+(static\s+)?(System\.Net\.(Http|Sockets|WebSockets|Mail)|RestSharp|Grpc\.Net)\b
+    - kind: invocation_expression
+      regex: ^(WebRequest|HttpWebRequest)\s*\.\s*Create\b
+    - kind: identifier
+      regex: ^(HttpClient|IHttpClientFactory)$
+---
+id: csharp-native
+language: csharp
+message: Uses unsafe code or native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: attribute
+      has: { field: name, regex: ^(DllImport|LibraryImport)(Attribute)?$ }
+    - kind: modifier
+      regex: ^unsafe$
+    - kind: unsafe_statement
+    - kind: fixed_statement
+    - kind: invocation_expression
+      regex: ^(Marshal|NativeLibrary)\s*\.
+---
+id: csharp-dynamic-code
+language: csharp
+message: Loads or builds code at run time
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: using_directive
+      regex: ^using\s+(static\s+)?(System\.Reflection\.Emit|Microsoft\.CodeAnalysis\.CSharp\.Scripting)\b
+    - kind: invocation_expression
+      regex: ^(Assembly\s*\.\s*Load\w*|Activator\s*\.\s*CreateInstance|Type\s*\.\s*GetType|CSharpScript\s*\.\s*\w+)\b
+---
+id: csharp-env-read
+language: csharp
+message: Reads environment variables
+metadata:
+  capability: env
+rule:
+  kind: invocation_expression
+  regex: ^Environment\s*\.\s*(Get|Set)EnvironmentVariables?\b

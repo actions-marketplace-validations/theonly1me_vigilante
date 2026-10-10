@@ -1,0 +1,60 @@
+id: js-exec-module
+valid:
+  - "const name = 'child_process';"
+  - "import { run } from './child_process';"
+  - "export function f() { return 'child_process'; }"
+invalid:
+  - "const { exec } = require('child_process');"
+  - "import { spawn } from 'node:child_process';"
+  - "import { execa } from 'execa';"
+  - "const shell = await import('shelljs');"
+  - "export * from 'child_process';"
+---
+id: js-exec-call
+valid:
+  - "const spawn = options.spawn;"
+invalid:
+  - "const proc = Bun.spawn(['ls']);"
+  - "const command = new Deno.Command('ls');"
+---
+id: js-network-module
+valid:
+  - "import { format } from 'url';"
+  - "import client from './http';"
+  - "const label = 'axios';"
+invalid:
+  - "import axios from 'axios';"
+  - "const https = require('node:https');"
+  - "import { WebSocketServer } from 'ws';"
+  - "import net from 'net';"
+---
+id: js-network-call
+valid:
+  - "client.fetch(query);"
+  - "const fetchUser = () => user;"
+invalid:
+  - "const response = await fetch(url);"
+  - "const socket = new WebSocket(url);"
+---
+id: js-native-module
+valid:
+  - "import data from './data.json';"
+invalid:
+  - "const addon = require('./build/Release/addon.node');"
+  - "import koffi from 'koffi';"
+---
+id: js-dynamic-code
+valid:
+  - "const evaluate = (x: number) => x;"
+  - "model.eval();"
+invalid:
+  - "const value = eval(source);"
+  - "const add = new Function('a', 'b', 'return a + b');"
+  - "vm.runInNewContext(code, sandbox);"
+---
+id: js-env-read
+valid:
+  - "const env = config.env;"
+invalid:
+  - "const key = process.env.API_KEY;"
+  - "const { NODE_ENV } = process.env;"

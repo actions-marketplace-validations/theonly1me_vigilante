@@ -1,0 +1,81 @@
+id: python-exec-import
+language: python
+message: Imports a module that runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: import_statement
+      has:
+        kind: dotted_name
+        regex: ^(subprocess|pty)(\.|$)
+        stopBy: end
+    - kind: import_from_statement
+      has:
+        field: module_name
+        regex: ^(subprocess|pty)(\.|$)
+---
+id: python-exec-call
+language: python
+message: Runs another program
+metadata:
+  capability: exec
+rule:
+  kind: call
+  has:
+    field: function
+    regex: ^os\.(system|popen|exec[lv]p?e?|spawn[lv]p?e?|posix_spawnp?)$
+---
+id: python-network-import
+language: python
+message: Imports a network module
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: import_statement
+      has:
+        kind: dotted_name
+        regex: ^(socket|requests|httpx|aiohttp|urllib3|urllib\.request|http\.client|websockets?|paramiko|grpc|ftplib|smtplib)(\.|$)
+        stopBy: end
+    - kind: import_from_statement
+      has:
+        field: module_name
+        regex: ^(socket|requests|httpx|aiohttp|urllib3|urllib\.request|http\.client|websockets?|paramiko|grpc|ftplib|smtplib)(\.|$)
+---
+id: python-native-import
+language: python
+message: Imports a module that calls native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: import_statement
+      has:
+        kind: dotted_name
+        regex: ^(ctypes|cffi)(\.|$)
+        stopBy: end
+    - kind: import_from_statement
+      has:
+        field: module_name
+        regex: ^(ctypes|cffi)(\.|$)
+---
+id: python-dynamic-code-call
+language: python
+message: Runs code that is built at run time
+metadata:
+  capability: dynamic_code
+rule:
+  kind: call
+  has:
+    field: function
+    regex: ^(eval|exec|__import__|importlib\.import_module)$
+---
+id: python-env-read
+language: python
+message: Reads environment variables
+metadata:
+  capability: env
+rule:
+  kind: attribute
+  regex: ^os\.(environ|getenv)$

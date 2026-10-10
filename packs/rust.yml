@@ -1,0 +1,69 @@
+id: rust-exec
+language: rust
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?(std::process::(\{[^}]*\b(Command|Child)\b|(Command|Child)\b)|tokio::process\b|async_process\b|duct\b)
+    - kind: scoped_identifier
+      regex: ^((std::)?process::Command|tokio::process::Command|duct::cmd)$
+---
+id: rust-network
+language: rust
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?(std::net::(\{[^}]*\b(TcpStream|TcpListener|UdpSocket)\b|(TcpStream|TcpListener|UdpSocket)\b)|tokio::net\b|(reqwest|hyper|ureq|surf|isahc|tonic|attohttpc)\b)
+    - kind: scoped_identifier
+      regex: ^((reqwest|ureq|surf|isahc|attohttpc)::\w+|(std::net::)?(TcpStream|TcpListener|UdpSocket)::(connect|bind))$
+---
+id: rust-native
+language: rust
+message: Uses unsafe code or native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: unsafe_block
+    - kind: function_modifiers
+      regex: \b(unsafe|extern)\b
+    - kind: impl_item
+      regex: ^unsafe\b
+    - kind: trait_item
+      regex: ^(pub(\([^)]*\))?\s+)?unsafe\b
+    - kind: foreign_mod_item
+    - kind: attribute_item
+      regex: ^#\[link\b
+    - kind: use_declaration
+      regex: use\s+(::)?libc\b
+    - kind: scoped_identifier
+      regex: ^libc::\w+$
+---
+id: rust-dynamic-code
+language: rust
+message: Loads code at run time
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?libloading\b
+    - kind: scoped_identifier
+      regex: ^libloading::\w+$
+---
+id: rust-env-read
+language: rust
+message: Reads environment variables
+metadata:
+  capability: env
+rule:
+  any:
+    - kind: scoped_identifier
+      regex: ^(std::)?env::(var|var_os|vars|vars_os|set_var|remove_var)$
+    - kind: use_declaration
+      regex: use\s+(::)?(std::env::(var|vars|set_var)\b|dotenvy?\b)

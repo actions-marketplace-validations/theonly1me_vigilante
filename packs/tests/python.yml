@@ -1,0 +1,58 @@
+id: python-exec-import
+valid:
+  - "import os"
+  - "x = 'import subprocess'"
+  - "# import subprocess"
+  - "from mysubprocess import run"
+invalid:
+  - "import subprocess"
+  - "import os, subprocess as sp"
+  - "from subprocess import run"
+  - "import pty"
+---
+id: python-exec-call
+valid:
+  - "model.system('x')"
+  - "os.path.join(a, b)"
+invalid:
+  - "os.system('make')"
+  - "stream = os.popen('ls')"
+  - "os.execvp('ls', ['ls'])"
+---
+id: python-network-import
+valid:
+  - "import json"
+  - "from urllib.parse import urlparse"
+  - "import requests_mock_helpers"
+invalid:
+  - "import requests"
+  - "from httpx import AsyncClient"
+  - "import urllib.request"
+  - "import socket"
+  - "from aiohttp import web"
+---
+id: python-native-import
+valid:
+  - "import typing"
+invalid:
+  - "import ctypes"
+  - "from cffi import FFI"
+---
+id: python-dynamic-code-call
+valid:
+  - "score = evaluate(model)"
+  - "model.eval()"
+  - "cursor.exec(query)"
+invalid:
+  - "result = eval(expression)"
+  - "exec(source)"
+  - "module = __import__(name)"
+  - "module = importlib.import_module(name)"
+---
+id: python-env-read
+valid:
+  - "environment = 'os.environ'"
+  - "path = os.path.join(a)"
+invalid:
+  - "value = os.environ['TOKEN']"
+  - "value = os.getenv('TOKEN')"

@@ -1,0 +1,93 @@
+id: js-exec-module
+language: tsx
+message: Imports a module that runs other programs
+metadata:
+  capability: exec
+rule:
+  kind: string
+  regex: ^["'](node:)?(child_process|execa|shelljs|cross-spawn|zx)["']$
+  any:
+    - inside: { kind: import_statement, field: source }
+    - inside: { kind: export_statement, field: source }
+    - inside:
+        kind: arguments
+        inside:
+          kind: call_expression
+          has: { field: function, regex: ^(require|import)$ }
+---
+id: js-exec-call
+language: tsx
+message: Runs another program
+metadata:
+  capability: exec
+rule:
+  kind: member_expression
+  regex: ^(Bun\.spawn(Sync)?|Deno\.(run|Command))$
+---
+id: js-network-module
+language: tsx
+message: Imports a network module
+metadata:
+  capability: network
+rule:
+  kind: string
+  regex: ^["']((node:)?(http|https|http2|net|dgram|tls)|axios|undici|got|node-fetch|ws|socket\.io-client|ky)["']$
+  any:
+    - inside: { kind: import_statement, field: source }
+    - inside: { kind: export_statement, field: source }
+    - inside:
+        kind: arguments
+        inside:
+          kind: call_expression
+          has: { field: function, regex: ^(require|import)$ }
+---
+id: js-network-call
+language: tsx
+message: Makes a network request
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: call_expression
+      has: { field: function, kind: identifier, regex: ^fetch$ }
+    - kind: new_expression
+      has: { field: constructor, regex: ^(WebSocket|XMLHttpRequest|EventSource)$ }
+---
+id: js-native-module
+language: tsx
+message: Loads native code
+metadata:
+  capability: native
+rule:
+  kind: string
+  regex: ^["']((ffi-napi|koffi|bindings|node-gyp-build)|[^"']+\.node)["']$
+  any:
+    - inside: { kind: import_statement, field: source }
+    - inside:
+        kind: arguments
+        inside:
+          kind: call_expression
+          has: { field: function, regex: ^(require|import)$ }
+---
+id: js-dynamic-code
+language: tsx
+message: Runs code that is built at run time
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: call_expression
+      has: { field: function, kind: identifier, regex: ^eval$ }
+    - kind: new_expression
+      has: { field: constructor, regex: ^Function$ }
+    - kind: member_expression
+      regex: ^vm\.(runIn\w*|Script|compileFunction)$
+---
+id: js-env-read
+language: tsx
+message: Reads environment variables
+metadata:
+  capability: env
+rule:
+  kind: member_expression
+  regex: ^(process|Deno|Bun)\.env$

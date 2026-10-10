@@ -1,0 +1,72 @@
+id: ruby-exec
+language: ruby
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: subshell
+    - kind: call
+      has: { field: method, regex: ^(system|exec|spawn)$ }
+      not: { has: { field: receiver, regex: . } }
+    - kind: call
+      has: { field: receiver, regex: ^(Open3|PTY)$ }
+    - kind: call
+      regex: ^(IO|Process|Kernel)\s*\.\s*(popen|spawn|exec|system)\b
+---
+id: ruby-network
+language: ruby
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: scope_resolution
+      regex: ^Net::(HTTP|FTP|SMTP|Telnet)$
+    - kind: constant
+      regex: ^(Faraday|HTTParty|TCPSocket|TCPServer|UDPSocket|RestClient|Excon|Typhoeus|HTTPX)$
+    - kind: call
+      regex: ^URI\s*\.\s*open\b
+    - kind: call
+      has: { field: method, regex: ^require$ }
+      regex: '["''](net/https?|socket|open-uri|faraday|httparty|rest-client|excon|typhoeus|httpx)["'']'
+---
+id: ruby-native
+language: ruby
+message: Calls native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: scope_resolution
+      regex: '^(FFI|Fiddle)::'
+    - kind: call
+      has: { field: method, regex: ^require$ }
+      regex: '["''](ffi|fiddle)["'']'
+---
+id: ruby-dynamic-code
+language: ruby
+message: Runs code that is built at run time
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: call
+      has: { field: method, regex: ^eval$ }
+      not: { has: { field: receiver, regex: . } }
+    - kind: call
+      has:
+        field: method
+        regex: ^(instance_eval|class_eval|module_eval|instance_exec|class_exec|const_get|constantize|safe_constantize)$
+---
+id: ruby-env-read
+language: ruby
+message: Reads environment variables
+metadata:
+  capability: env
+rule:
+  any:
+    - kind: element_reference
+      has: { field: object, regex: ^ENV$ }
+    - kind: call
+      has: { field: receiver, regex: ^ENV$ }
