@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use super::packages::Packages;
-use super::parse::{Source, parse_all};
+use super::packages::{PackageFile, Packages};
+use super::parse::{ParseInput, Source, parse_all};
+use super::resolve::ParsedFile;
 use super::syntax::FileIndex;
 use crate::code::Rules;
 use crate::deep::graph::Owner;
@@ -101,7 +102,10 @@ impl<'a> Program<'a> {
             for key in frontier {
                 let text = match key.root {
                     Root::Repository => texts.remove(&key.path),
-                    Root::Package(index) => self.input.packages.read(index, &key.path),
+                    Root::Package(package) => self.input.packages.read(PackageFile {
+                        package,
+                        path: &key.path,
+                    }),
                 };
                 if let Some(text) = text {
                     let (display, owner) = self.identity(&key);
@@ -109,11 +113,17 @@ impl<'a> Program<'a> {
                     keys.push((key, owner));
                 }
             }
-            let parsed = parse_all(self.input.rules, &sources)?;
+            let parsed = parse_all(ParseInput {
+                rules: self.input.rules,
+                sources: &sources,
+            })?;
             self.prefetch(keys.iter().map(|(key, _)| key).zip(&parsed))?;
             let mut next = Vec::new();
             for (((key, owner), source), mut parsed) in keys.into_iter().zip(sources).zip(parsed) {
-                let resolved = self.resolve_all(&key, &mut parsed)?;
+                let resolved = self.resolve_all(ParsedFile {
+                    from: &key,
+                    parsed: &mut parsed,
+                })?;
                 next.extend(resolved.values().cloned());
                 self.ids.insert(key.clone(), self.files.len());
                 self.files.push(LoadedFile {

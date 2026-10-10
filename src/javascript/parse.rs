@@ -24,7 +24,13 @@ pub struct Parsed {
     pub sites: Vec<SiteSink>,
 }
 
-pub fn parse_all(rules: &Rules, sources: &[Source]) -> Result<Vec<Parsed>, Error> {
+pub struct ParseInput<'a> {
+    pub rules: &'a Rules,
+    pub sources: &'a [Source],
+}
+
+pub fn parse_all(input: ParseInput) -> Result<Vec<Parsed>, Error> {
+    let ParseInput { rules, sources } = input;
     let next = AtomicUsize::new(0);
     let workers = thread::available_parallelism()
         .map_or(1, NonZero::get)
@@ -40,7 +46,7 @@ pub fn parse_all(rules: &Rules, sources: &[Source]) -> Result<Vec<Parsed>, Error
                         let Some(source) = sources.get(position) else {
                             return done;
                         };
-                        done.push((position, parse(rules, source)));
+                        done.push((position, source.parse(rules)));
                     }
                 })
             })
@@ -59,7 +65,22 @@ pub fn parse_all(rules: &Rules, sources: &[Source]) -> Result<Vec<Parsed>, Error
     Ok(finished.into_iter().map(|(_, parsed)| parsed).collect())
 }
 
-fn parse(rules: &Rules, source: &Source) -> Parsed {
+impl Source {
+    fn parse(&self, rules: &Rules) -> Parsed {
+        parse(SourceRules {
+            source: self,
+            rules,
+        })
+    }
+}
+
+struct SourceRules<'a> {
+    source: &'a Source,
+    rules: &'a Rules,
+}
+
+fn parse(input: SourceRules) -> Parsed {
+    let SourceRules { source, rules } = input;
     let document = SupportLang::Tsx.ast_grep(&source.text);
     let root = document.root();
     let index = syntax::index(&root);
@@ -79,7 +100,7 @@ fn parse(rules: &Rules, source: &Source) -> Parsed {
             privileged.entry(specifier).or_default().push(privilege);
         } else {
             sites.push(SiteSink {
-                definition: innermost(&index, found.node.range().start),
+                definition: index.innermost(found.node.range().start),
                 line: syntax::line_of(&found.node),
                 name: sink_name(&found.node),
                 privilege,
@@ -91,16 +112,6 @@ fn parse(rules: &Rules, source: &Source) -> Parsed {
         privileged,
         sites,
     }
-}
-
-fn innermost(index: &FileIndex, offset: usize) -> usize {
-    index
-        .definitions
-        .iter()
-        .enumerate()
-        .filter(|(_, definition)| definition.range.contains(&offset))
-        .min_by_key(|(_, definition)| definition.range.len())
-        .map_or(0, |(position, _)| position)
 }
 
 fn sink_name(node: &SyntaxNode) -> String {

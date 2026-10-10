@@ -98,7 +98,25 @@ impl NpmRegistry {
     }
 }
 
-pub fn run_with_cache(repository: &TestRepository, arguments: &[&str]) -> Run {
+impl TestRepository {
+    pub fn run_with_cache(&self, arguments: &[&str]) -> Run {
+        run_with_cache(Cached {
+            repository: self,
+            arguments,
+        })
+    }
+}
+
+struct Cached<'a> {
+    repository: &'a TestRepository,
+    arguments: &'a [&'a str],
+}
+
+fn run_with_cache(cached: Cached) -> Run {
+    let Cached {
+        repository,
+        arguments,
+    } = cached;
     let cache = TempDir::new().expect("cache");
     let output = Command::new(env!("CARGO_BIN_EXE_vigilante"))
         .arg("--repository")

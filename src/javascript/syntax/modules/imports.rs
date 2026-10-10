@@ -1,7 +1,12 @@
-use super::nodes::{has_child, literal, loaded_specifier, plain, unwrapped};
-use super::{ModuleItems, Outcome};
+use super::nodes::{NodeChildren, literal, loaded_specifier, plain, unwrapped};
+use super::{LoadSite, ModuleItems, NewBinding, Outcome};
 use crate::code::SyntaxNode;
 use crate::javascript::syntax::Imported;
+
+struct ImportItem<'a, 'r> {
+    item: &'a SyntaxNode<'r>,
+    specifier: &'a str,
+}
 
 impl ModuleItems {
     pub(super) fn import(&mut self, node: &SyntaxNode) -> Outcome {
@@ -9,7 +14,7 @@ impl ModuleItems {
             is_leaf: true,
             ..Outcome::default()
         };
-        if has_child(node, "type") {
+        if node.has_child("type") {
             return leaf;
         }
         let clause = node
@@ -21,33 +26,52 @@ impl ModuleItems {
         let Some(specifier) = source.and_then(|source| literal(&source)) else {
             return leaf;
         };
-        self.load(&specifier, node);
+        self.load(LoadSite {
+            specifier: &specifier,
+            node,
+        });
         for part in node.children().chain(clause) {
             for item in part.children() {
-                self.import_item(&item, &specifier);
+                self.import_item(ImportItem {
+                    item: &item,
+                    specifier: &specifier,
+                });
             }
         }
         leaf
     }
 
-    fn import_item(&mut self, item: &SyntaxNode, specifier: &str) {
+    fn import_item(&mut self, import: ImportItem) {
+        let ImportItem { item, specifier } = import;
         match item.kind().as_ref() {
-            "identifier" => self.bind(&item.text(), specifier, Imported::Module),
+            "identifier" => self.bind(NewBinding {
+                local: &item.text(),
+                specifier,
+                imported: Imported::Module,
+            }),
             "namespace_import" => {
                 if let Some(name) = item.children().find(|child| child.kind() == "identifier") {
-                    self.bind(&name.text(), specifier, Imported::Module);
+                    self.bind(NewBinding {
+                        local: &name.text(),
+                        specifier,
+                        imported: Imported::Module,
+                    });
                 }
             }
             "named_imports" => {
                 for named in item
                     .children()
-                    .filter(|child| child.kind() == "import_specifier" && !has_child(child, "type"))
+                    .filter(|child| child.kind() == "import_specifier" && !child.has_child("type"))
                 {
                     let Some(name) = named.field("name") else {
                         continue;
                     };
                     let local = named.field("alias").unwrap_or_else(|| name.clone());
-                    self.bind(&local.text(), specifier, Imported::Named(plain(&name)));
+                    self.bind(NewBinding {
+                        local: &local.text(),
+                        specifier,
+                        imported: Imported::Named(plain(&name)),
+                    });
                 }
             }
             _ => {}
@@ -61,23 +85,31 @@ impl ModuleItems {
         let value = unwrapped(value);
         if let Some(specifier) = loaded_specifier(&value) {
             match name.kind().as_ref() {
-                "identifier" => self.bind(&name.text(), &specifier, Imported::Module),
+                "identifier" => self.bind(NewBinding {
+                    local: &name.text(),
+                    specifier: &specifier,
+                    imported: Imported::Module,
+                }),
                 "object_pattern" => {
                     for part in name.children() {
                         match part.kind().as_ref() {
                             "shorthand_property_identifier_pattern" => {
                                 let local = part.text().to_string();
-                                self.bind(&local, &specifier, Imported::Named(local.clone()));
+                                self.bind(NewBinding {
+                                    local: &local,
+                                    specifier: &specifier,
+                                    imported: Imported::Named(local.clone()),
+                                });
                             }
                             "pair_pattern" => {
                                 if let (Some(key), Some(value)) =
                                     (part.field("key"), part.field("value"))
                                 {
-                                    self.bind(
-                                        &value.text(),
-                                        &specifier,
-                                        Imported::Named(plain(&key)),
-                                    );
+                                    self.bind(NewBinding {
+                                        local: &value.text(),
+                                        specifier: &specifier,
+                                        imported: Imported::Named(plain(&key)),
+                                    });
                                 }
                             }
                             _ => {}
@@ -93,7 +125,11 @@ impl ModuleItems {
             && let (Some(object), Some(property)) = (value.field("object"), value.field("property"))
             && let Some(specifier) = loaded_specifier(&unwrapped(object))
         {
-            self.bind(&name.text(), &specifier, Imported::Named(plain(&property)));
+            self.bind(NewBinding {
+                local: &name.text(),
+                specifier: &specifier,
+                imported: Imported::Named(plain(&property)),
+            });
         }
     }
 }

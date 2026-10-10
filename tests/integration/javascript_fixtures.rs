@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::npm_registry::{FakePackage, LockEntry, NpmRegistry, run_with_cache};
+use crate::npm_registry::{FakePackage, LockEntry, NpmRegistry};
 use crate::support::{Run, TestRepository};
 
 const DIFF: &[&str] = &[
@@ -79,7 +79,7 @@ pub fn diff(change: Change) -> Run {
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
     repository.write(&[("src/index.js", change.head_main)]);
     repository.commit("change");
-    run_with_cache(&repository, DIFF)
+    repository.run_with_cache(DIFF)
 }
 
 pub fn served() -> NpmRegistry {

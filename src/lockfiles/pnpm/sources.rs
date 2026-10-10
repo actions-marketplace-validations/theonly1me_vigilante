@@ -1,8 +1,26 @@
 use super::Format;
 use crate::document::Node;
-use crate::lockfiles::{PackageSource, default_url};
+use crate::lockfiles::{PackageSource, Release, default_url};
 
-pub fn name_and_version(key: &str, format: Format) -> Option<(String, String)> {
+impl Format {
+    pub fn name_and_version(self, key: &str) -> Option<(String, String)> {
+        name_and_version(Keyed { key, format: self })
+    }
+}
+
+pub struct PackageEntry<'a> {
+    pub key: &'a str,
+    pub format: Format,
+    pub entry: &'a Node,
+}
+
+struct Keyed<'a> {
+    key: &'a str,
+    format: Format,
+}
+
+fn name_and_version(keyed: Keyed) -> Option<(String, String)> {
+    let Keyed { key, format } = keyed;
     let plain = key.trim_start_matches('/');
     match format {
         Format::Slash => {
@@ -17,7 +35,8 @@ pub fn name_and_version(key: &str, format: Format) -> Option<(String, String)> {
     }
 }
 
-pub fn source_of(key: &str, format: Format, entry: &Node) -> PackageSource {
+pub fn source_of(package: PackageEntry) -> PackageSource {
+    let PackageEntry { key, format, entry } = package;
     let resolution = entry.get("resolution");
     let field = |name: &str| {
         resolution
@@ -41,9 +60,12 @@ pub fn source_of(key: &str, format: Format, entry: &Node) -> PackageSource {
             PackageSource::Unsupported(tarball.to_string())
         };
     }
-    match name_and_version(key, format) {
+    match format.name_and_version(key) {
         Some((name, version)) => PackageSource::Registry {
-            url: default_url(&name, &version),
+            url: default_url(Release {
+                name: &name,
+                version: &version,
+            }),
             integrity,
         },
         None => PackageSource::Unsupported(key.to_string()),

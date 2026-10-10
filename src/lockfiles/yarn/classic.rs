@@ -28,7 +28,7 @@ pub fn parse(text: &str) -> YarnLockfile {
         match indent {
             0 => {
                 if let Some(done) = entry.take() {
-                    add(&mut lockfile, done);
+                    lockfile.add_classic(done);
                 }
                 let descriptors = content
                     .trim_end_matches(':')
@@ -72,12 +72,27 @@ pub fn parse(text: &str) -> YarnLockfile {
         }
     }
     if let Some(done) = entry.take() {
-        add(&mut lockfile, done);
+        lockfile.add_classic(done);
     }
     lockfile
 }
 
-fn add(lockfile: &mut YarnLockfile, entry: Entry) {
+impl YarnLockfile {
+    fn add_classic(&mut self, entry: Entry) {
+        add(Classic {
+            lockfile: self,
+            entry,
+        });
+    }
+}
+
+struct Classic<'a> {
+    lockfile: &'a mut YarnLockfile,
+    entry: Entry,
+}
+
+fn add(classic: Classic) {
+    let Classic { lockfile, entry } = classic;
     let Some((written_name, range)) = entry
         .descriptors
         .first()
@@ -93,18 +108,16 @@ fn add(lockfile: &mut YarnLockfile, entry: Entry) {
     let version = entry.fields.get("version").cloned().unwrap_or_default();
     let source = source_of(&entry.fields);
     let key = entry.descriptors.first().cloned().unwrap_or_default();
-    lockfile.add(
-        entry.descriptors,
-        YarnPackage {
-            key,
-            package: LockedPackage {
-                name,
-                version,
-                source,
-            },
-            dependencies: entry.dependencies,
+    lockfile.add(YarnPackage {
+        descriptors: entry.descriptors,
+        key,
+        package: LockedPackage {
+            name,
+            version,
+            source,
         },
-    );
+        dependencies: entry.dependencies,
+    });
 }
 
 fn source_of(fields: &HashMap<String, String>) -> PackageSource {

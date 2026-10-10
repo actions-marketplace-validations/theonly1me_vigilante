@@ -15,7 +15,13 @@ pub enum Downloaded {
     NotFound,
 }
 
-pub fn download(agent: &ureq::Agent, url: &str) -> Result<Downloaded, Error> {
+pub struct Request<'a> {
+    pub agent: &'a ureq::Agent,
+    pub url: &'a str,
+}
+
+pub fn download(request: Request) -> Result<Downloaded, Error> {
+    let Request { agent, url } = request;
     let mut attempt = 1;
     loop {
         let result = agent.get(url).call().and_then(|mut response| {

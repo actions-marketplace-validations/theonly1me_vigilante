@@ -1,4 +1,4 @@
-pub use crate::repository_path::{joined, parent_folder};
+pub use crate::repository_path::parent_folder;
 
 const CODE_EXTENSIONS: &[&str] = &[".js", ".ts", ".tsx", ".mjs", ".cjs", ".jsx", ".mts", ".cts"];
 const TYPESCRIPT_SWAPS: &[(&str, &[&str])] = &[
@@ -119,7 +119,13 @@ fn is_package_name(name: &str) -> bool {
     }
 }
 
-pub fn probe(exists: &dyn Fn(&str) -> bool, base: &str) -> Option<String> {
+pub struct Probe<'a> {
+    pub exists: &'a dyn Fn(&str) -> bool,
+    pub base: &'a str,
+}
+
+pub fn probe(request: Probe) -> Option<String> {
+    let Probe { exists, base } = request;
     let base = base.trim_end_matches('/');
     let mut candidates = Vec::new();
     if is_code_file(base) {

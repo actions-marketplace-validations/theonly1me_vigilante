@@ -4,6 +4,7 @@ mod manifest;
 mod packages;
 mod parse;
 mod paths;
+mod prefetch;
 mod program;
 mod projects;
 mod resolve;
@@ -16,7 +17,7 @@ use ast_grep_language::SupportLang;
 use crate::Error;
 use crate::code::{Rules, language_of};
 use crate::config::Config;
-use crate::deep::{self, Analysis};
+use crate::deep::Analysis;
 use crate::lockfiles::JAVASCRIPT_LOCKFILES;
 use crate::registry::Registry;
 use crate::scan::Selection;
@@ -83,8 +84,11 @@ pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
     });
     let root_paths: Vec<String> = roots.iter().cloned().collect();
     program.load(&root_paths)?;
-    let linked = link::link(&program, &roots);
-    let mut analysis = deep::analyze(&linked.graph, &linked.scopes);
+    let linked = link::link(link::LinkInput {
+        program: &program,
+        roots: &roots,
+    });
+    let mut analysis = linked.graph.analyze(&linked.scopes);
     analysis.skipped = program.into_packages().into_skipped();
     Ok(analysis)
 }

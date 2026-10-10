@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::iter;
 
 use super::graph::{Function, FunctionId, Graph, Owner};
-use super::search::{Route, Search, explore, toward_each_power};
+use super::search::{Route, RouteStart, Search, explore, toward_each_power};
 use super::{Analysis, OwnPackagePath, Reach, ReachKind, note_kind_for_own_package};
 use crate::{Evidence, Power, Scope, Sighting, Surface};
 
@@ -11,7 +11,40 @@ pub struct ScopeRoots {
     pub roots: Vec<FunctionId>,
 }
 
-pub fn analyze(graph: &Graph, scopes: &[ScopeRoots]) -> Analysis {
+impl Graph {
+    pub fn analyze(&self, scopes: &[ScopeRoots]) -> Analysis {
+        analyze(Analyzed {
+            graph: self,
+            scopes,
+        })
+    }
+
+    fn evidence_of(&self, route: &Route) -> Evidence {
+        let sink = self.sink(route.sink);
+        let (path, line) = route.hops.first().map_or((String::new(), 1), |hop| {
+            (self.function(hop.function).path.clone(), hop.line)
+        });
+        Evidence {
+            path,
+            line,
+            rule: sink.rule.clone(),
+            call_path: route
+                .hops
+                .iter()
+                .map(|hop| self.function(hop.function).name.clone())
+                .chain(iter::once(sink.name.clone()))
+                .collect(),
+        }
+    }
+}
+
+struct Analyzed<'a> {
+    graph: &'a Graph,
+    scopes: &'a [ScopeRoots],
+}
+
+fn analyze(input: Analyzed) -> Analysis {
+    let Analyzed { graph, scopes } = input;
     let towards = toward_each_power(graph);
     let mut packages_on_paths = BTreeSet::new();
     let mut analysis = Analysis::default();
@@ -22,7 +55,7 @@ pub fn analyze(graph: &Graph, scopes: &[ScopeRoots]) -> Analysis {
             kind: reached.kind,
             power: reached.power.clone(),
             scope: code_scope(&scope.scope),
-            evidence: evidence_of(graph, reached.route),
+            evidence: graph.evidence_of(reached.route),
         };
         let own = explore(Search {
             graph,
@@ -38,7 +71,7 @@ pub fn analyze(graph: &Graph, scopes: &[ScopeRoots]) -> Analysis {
                 None => analysis.sightings.push(Sighting {
                     scope: code_scope(&scope.scope),
                     power: power.clone(),
-                    evidence: evidence_of(graph, route),
+                    evidence: graph.evidence_of(route),
                 }),
                 Some(kind) => analysis.reaches.push(reach_of(Reached {
                     package: scope.scope.clone(),
@@ -82,7 +115,10 @@ pub fn analyze(graph: &Graph, scopes: &[ScopeRoots]) -> Analysis {
                 {
                     continue;
                 }
-                let Some(rest) = toward.route_from(graph, *function) else {
+                let Some(rest) = toward.route_from(RouteStart {
+                    graph,
+                    function: *function,
+                }) else {
                     continue;
                 };
                 packages_on_paths.insert((package.to_string(), power.clone()));
@@ -127,23 +163,5 @@ fn code_scope(path: &str) -> Scope {
     Scope {
         surface: Surface::Code,
         path: path.to_string(),
-    }
-}
-
-fn evidence_of(graph: &Graph, route: &Route) -> Evidence {
-    let sink = graph.sink(route.sink);
-    let (path, line) = route.hops.first().map_or((String::new(), 1), |hop| {
-        (graph.function(hop.function).path.clone(), hop.line)
-    });
-    Evidence {
-        path,
-        line,
-        rule: sink.rule.clone(),
-        call_path: route
-            .hops
-            .iter()
-            .map(|hop| graph.function(hop.function).name.clone())
-            .chain(iter::once(sink.name.clone()))
-            .collect(),
     }
 }

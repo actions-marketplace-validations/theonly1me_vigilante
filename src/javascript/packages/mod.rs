@@ -32,6 +32,11 @@ pub struct Locate<'a> {
     pub declared: Option<&'a str>,
 }
 
+pub struct PackageFile<'a> {
+    pub package: usize,
+    pub path: &'a str,
+}
+
 pub struct PackagesInput<'a> {
     pub projects: Projects<'a>,
     pub registry: &'a Registry,
@@ -70,23 +75,20 @@ impl<'a> Packages<'a> {
             .collect()
     }
 
-    pub fn skip(&mut self, source: &str, reason: String) {
-        self.skipped.insert(Skip {
-            source: source.to_string(),
-            reason,
-        });
+    pub fn skip(&mut self, skip: Skip) {
+        self.skipped.insert(skip);
     }
 
     pub fn into_skipped(self) -> Vec<Skip> {
         self.skipped.into_iter().collect()
     }
 
-    pub fn read(&self, index: usize, path: &str) -> Option<String> {
-        let installed = &self.installed[index];
+    pub fn read(&self, file: PackageFile) -> Option<String> {
+        let installed = &self.installed[file.package];
         installed
             .files
-            .contains(path)
-            .then(|| std::fs::read_to_string(Path::new(&installed.folder).join(path)).ok())
+            .contains(file.path)
+            .then(|| std::fs::read_to_string(Path::new(&installed.folder).join(file.path)).ok())
             .flatten()
     }
 }

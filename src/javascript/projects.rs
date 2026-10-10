@@ -1,15 +1,21 @@
 use std::collections::HashMap;
 
 use super::manifest::Manifest;
-use super::paths::{joined, parent_folder};
+use super::paths::parent_folder;
 use crate::Error;
-use crate::lockfiles::{JAVASCRIPT_LOCKFILES, JavaScriptLockfile, YARN_LOCKFILE};
+use crate::lockfiles::{JAVASCRIPT_LOCKFILES, JavaScriptLockfile, LockfileText, YARN_LOCKFILE};
+use crate::repository_path::Folder;
 use crate::tree::Tree;
 
 pub struct Project {
     pub folder: String,
     pub file: String,
     pub lockfile: JavaScriptLockfile,
+}
+
+pub struct Dependency<'a> {
+    pub path: &'a str,
+    pub name: &'a str,
 }
 
 pub struct Projects<'a> {
@@ -56,10 +62,11 @@ impl<'a> Projects<'a> {
         }
     }
 
-    pub fn declared(&mut self, path: &str, name: &str) -> Result<Option<String>, Error> {
+    pub fn declared(&mut self, dependency: Dependency) -> Result<Option<String>, Error> {
+        let Dependency { path, name } = dependency;
         let mut folder = parent_folder(path);
         loop {
-            let manifest_path = joined(folder, "package.json").unwrap_or_default();
+            let manifest_path = folder.joined("package.json").unwrap_or_default();
             if self.tree.paths().contains(&manifest_path) {
                 if !self.manifests.contains_key(&manifest_path) {
                     let text = self.read_repository(&manifest_path)?.unwrap_or_default();
@@ -88,8 +95,11 @@ impl<'a> Projects<'a> {
             return Ok(*index);
         }
         let text = self.read_repository(&file)?.unwrap_or_default();
-        let mut lockfile = JavaScriptLockfile::parse(&file, &text)
-            .map_err(|error| Error::new(format!("{file}: {error}")))?;
+        let mut lockfile = JavaScriptLockfile::parse(LockfileText {
+            path: &file,
+            text: &text,
+        })
+        .map_err(|error| Error::new(format!("{file}: {error}")))?;
         let folder = parent_folder(&file);
         if file.ends_with(YARN_LOCKFILE) {
             lockfile.add_workspaces(self.workspaces_under(folder)?);

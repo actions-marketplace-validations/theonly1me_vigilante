@@ -12,7 +12,29 @@ pub struct YarnEntry<'a> {
     pub dependencies: &'a [(&'a str, &'a str)],
 }
 
-pub fn pnpm_lockfile(registry: &NpmRegistry, entries: &[PnpmEntry]) -> String {
+impl NpmRegistry {
+    pub fn pnpm_lockfile(&self, entries: &[PnpmEntry]) -> String {
+        pnpm_lockfile(Written {
+            registry: self,
+            entries,
+        })
+    }
+
+    pub fn yarn_lockfile(&self, entries: &[YarnEntry]) -> String {
+        yarn_lockfile(Written {
+            registry: self,
+            entries,
+        })
+    }
+}
+
+struct Written<'a, T> {
+    registry: &'a NpmRegistry,
+    entries: &'a [T],
+}
+
+fn pnpm_lockfile(written: Written<PnpmEntry>) -> String {
+    let Written { registry, entries } = written;
     let mut lines = vec![
         "lockfileVersion: '9.0'".to_string(),
         String::new(),
@@ -55,7 +77,8 @@ pub fn pnpm_lockfile(registry: &NpmRegistry, entries: &[PnpmEntry]) -> String {
     lines.join("\n") + "\n"
 }
 
-pub fn yarn_lockfile(registry: &NpmRegistry, entries: &[YarnEntry]) -> String {
+fn yarn_lockfile(written: Written<YarnEntry>) -> String {
+    let Written { registry, entries } = written;
     let mut lines = vec!["# yarn lockfile v1".to_string(), String::new()];
     for entry in entries {
         let (url, integrity) = registry.tarball(entry.package);

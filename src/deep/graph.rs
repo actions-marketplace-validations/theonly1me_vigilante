@@ -36,6 +36,13 @@ pub struct Edge {
     pub target: Target,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Call {
+    pub from: FunctionId,
+    pub line: usize,
+    pub target: Target,
+}
+
 #[derive(Default)]
 pub struct Graph {
     functions: Vec<Function>,
@@ -61,9 +68,12 @@ impl Graph {
         self.sinks.len() - 1
     }
 
-    pub fn add_edge(&mut self, from: FunctionId, edge: Edge) {
-        if self.linked.insert((from, edge.target)) {
-            self.edges[from].push(edge);
+    pub fn add_call(&mut self, call: Call) {
+        if self.linked.insert((call.from, call.target)) {
+            self.edges[call.from].push(Edge {
+                line: call.line,
+                target: call.target,
+            });
         }
     }
 

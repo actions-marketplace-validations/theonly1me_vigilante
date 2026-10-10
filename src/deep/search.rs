@@ -88,6 +88,11 @@ pub fn explore(search: Search) -> Explored {
     explored
 }
 
+pub struct RouteStart<'a> {
+    pub graph: &'a Graph,
+    pub function: FunctionId,
+}
+
 pub struct Toward {
     next_edge: Vec<Option<usize>>,
 }
@@ -97,9 +102,10 @@ impl Toward {
         self.next_edge[function].is_some()
     }
 
-    pub fn route_from(&self, graph: &Graph, start: FunctionId) -> Option<Route> {
+    pub fn route_from(&self, start: RouteStart) -> Option<Route> {
+        let graph = start.graph;
         let mut hops = Vec::new();
-        let mut current = start;
+        let mut current = start.function;
         loop {
             let edge = graph.edges(current).get(self.next_edge[current]?)?;
             hops.push(Hop {

@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 
 mod sources;
+#[cfg(test)]
+mod tests;
 
 use super::{Found, LockedPackage, Lookup, PackageSource, Place};
 use crate::Error;
 use crate::document::Node;
-use crate::repository_path::joined;
-use sources::{name_and_version, source_of};
+use crate::repository_path::Folder;
+use sources::{PackageEntry, source_of};
 
 const ROOT_IMPORTER: &str = ".";
 const DEPENDENCY_LISTS: &[&str] = &["dependencies", "devDependencies", "optionalDependencies"];
@@ -16,6 +18,11 @@ pub enum Format {
     Slash,
     SlashAt,
     At,
+}
+
+struct Reference<'a> {
+    name: &'a str,
+    reference: &'a str,
 }
 
 #[derive(Debug)]
@@ -63,7 +70,12 @@ impl PnpmLockfile {
             .unwrap_or_default()
         {
             let key = entry.key.trim_matches(['\'', '"']).to_string();
-            resolutions.insert(key.clone(), source_of(&key, format, &entry.value));
+            let source = source_of(PackageEntry {
+                key: &key,
+                format,
+                entry: &entry.value,
+            });
+            resolutions.insert(key.clone(), source);
             dependencies.insert(key, references(&entry.value));
         }
         for entry in document
@@ -89,7 +101,7 @@ impl PnpmLockfile {
                 let mut enclosing: Vec<(&String, &HashMap<String, String>)> = self
                     .importers
                     .iter()
-                    .filter(|(importer, _)| contains(importer, folder))
+                    .filter(|(importer, _)| importer.holds(folder))
                     .collect();
                 enclosing.sort_by_key(|(importer, _)| std::cmp::Reverse(importer.len()));
                 enclosing.into_iter().find_map(|(importer, references)| {
@@ -102,7 +114,7 @@ impl PnpmLockfile {
             .strip_prefix("link:")
             .or_else(|| reference.strip_prefix("file:"))
         {
-            let folder = joined(importer, link)?;
+            let folder = importer.joined(link)?;
             return Some(Found {
                 key: format!("link:{folder}"),
                 package: LockedPackage {
@@ -112,8 +124,8 @@ impl PnpmLockfile {
                 },
             });
         }
-        let key = self.key_of(name, reference);
-        let (package_name, version) = name_and_version(&key, self.format)?;
+        let key = self.key_of(Reference { name, reference });
+        let (package_name, version) = self.format.name_and_version(&key)?;
         let resolution_key = match self.format {
             Format::At => format!("{package_name}@{version}"),
             Format::Slash | Format::SlashAt => key.clone(),
@@ -129,7 +141,8 @@ impl PnpmLockfile {
         })
     }
 
-    fn key_of(&self, name: &str, reference: &str) -> String {
+    fn key_of(&self, wanted: Reference) -> String {
+        let Reference { name, reference } = wanted;
         let plain = reference.split('(').next().unwrap_or(reference);
         let is_alias = plain.strip_prefix('@').unwrap_or(plain).contains('@');
         match self.format {
@@ -157,12 +170,4 @@ fn references(node: &Node) -> HashMap<String, String> {
         }
     }
     found
-}
-
-fn contains(importer: &str, folder: &str) -> bool {
-    importer == ROOT_IMPORTER
-        || folder == importer
-        || folder
-            .strip_prefix(importer)
-            .is_some_and(|rest| rest.starts_with('/'))
 }

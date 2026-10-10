@@ -1,11 +1,25 @@
 use super::decide::{Decision, Planned};
 use super::{Installed, Locate, Located, Packages};
 use crate::Error;
+use crate::deep::Skip;
 use crate::javascript::files::{folder_files, package_root};
 use crate::javascript::manifest::Manifest;
 use crate::registry::Fetched;
 
 const MANIFEST: &str = "package.json";
+
+struct Install<'a> {
+    project: usize,
+    planned: Planned,
+    lockfile_path: &'a str,
+}
+
+struct Missing<'a> {
+    lockfile_path: &'a str,
+    project: usize,
+    key: String,
+    reason: String,
+}
 
 impl Packages<'_> {
     pub fn locate(&mut self, request: Locate) -> Result<Located, Error> {
@@ -14,34 +28,49 @@ impl Packages<'_> {
             Decision::Located(located) => Ok(located),
             Decision::NotInLockfile => {
                 if request.is_from_repository && request.declared.is_some() {
-                    let reason = format!("`{}` is not in the lockfile.", request.name);
-                    self.skip(&lockfile_path, reason);
+                    self.skip(Skip {
+                        source: lockfile_path,
+                        reason: format!("`{}` is not in the lockfile.", request.name),
+                    });
                 }
                 Ok(Located::Missing)
             }
-            Decision::Skip { key, reason } => {
-                self.missing(&lockfile_path, (request.project, key), reason)
-            }
-            Decision::Fetch(planned) => self.install(request.project, planned, &lockfile_path),
+            Decision::Skip { key, reason } => self.missing(Missing {
+                lockfile_path: &lockfile_path,
+                project: request.project,
+                key,
+                reason,
+            }),
+            Decision::Fetch(planned) => self.install(Install {
+                project: request.project,
+                planned,
+                lockfile_path: &lockfile_path,
+            }),
         }
     }
 
-    fn install(
-        &mut self,
-        project: usize,
-        planned: Planned,
-        lockfile_path: &str,
-    ) -> Result<Located, Error> {
+    fn install(&mut self, install: Install) -> Result<Located, Error> {
+        let Install {
+            project,
+            planned,
+            lockfile_path,
+        } = install;
         let label = planned.label();
-        let folder = match super::decide::fetch(self.registry, &planned) {
-            Ok(Fetched::Folder(folder)) => package_root(&folder, MANIFEST),
+        let missing = |reason: String| Missing {
+            lockfile_path,
+            project,
+            key: planned.key.clone(),
+            reason,
+        };
+        let folder = match planned.fetch_from(self.registry) {
+            Ok(Fetched::Folder(folder)) => package_root(&folder),
             Ok(Fetched::NotFound) => {
                 let reason = format!("{label} is not at `{}`.", planned.download.url);
-                return self.missing(lockfile_path, (project, planned.key), reason);
+                return self.missing(missing(reason));
             }
             Err(error) if planned.commit.is_some() => {
                 let reason = format!("{label} could not be downloaded from GitHub: {error}");
-                return self.missing(lockfile_path, (project, planned.key), reason);
+                return self.missing(missing(reason));
             }
             Err(error) => return Err(error),
         };
@@ -61,14 +90,13 @@ impl Packages<'_> {
         Ok(Located::Package(index))
     }
 
-    fn missing(
-        &mut self,
-        source: &str,
-        place: (usize, String),
-        reason: String,
-    ) -> Result<Located, Error> {
-        self.skip(source, reason);
-        self.installed_at.insert(place, None);
+    fn missing(&mut self, missing: Missing) -> Result<Located, Error> {
+        self.skip(Skip {
+            source: missing.lockfile_path.to_string(),
+            reason: missing.reason,
+        });
+        self.installed_at
+            .insert((missing.project, missing.key), None);
         Ok(Located::Missing)
     }
 }

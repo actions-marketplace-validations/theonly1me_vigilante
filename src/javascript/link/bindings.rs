@@ -1,6 +1,6 @@
-use super::{Linker, Unit, specifier_module, unit_of};
+use super::{InFile, Linker, Unit, specifier_module, unit_of};
 use crate::Power;
-use crate::deep::graph::{Edge, Function, FunctionId, Owner, Sink, Target};
+use crate::deep::graph::{Sink, Target};
 use crate::javascript::syntax::{Export, Imported};
 
 const MAXIMUM_FORWARDS: usize = 8;
@@ -11,13 +11,31 @@ struct ExportedLocal {
     local: String,
 }
 
+pub struct BindingUse<'a> {
+    pub file: usize,
+    pub local: &'a str,
+    pub member: Option<&'a str>,
+}
+
+pub struct PrivilegedUse<'a> {
+    pub file: usize,
+    pub specifier: &'a str,
+    pub sink_name: String,
+}
+
+struct ExportQuery<'a> {
+    file: usize,
+    name: &'a str,
+    depth: usize,
+}
+
 impl Linker<'_> {
-    pub(super) fn binding(
-        &mut self,
-        file: usize,
-        local: &str,
-        member: Option<&str>,
-    ) -> Vec<Target> {
+    pub(super) fn binding(&mut self, wanted: BindingUse) -> Vec<Target> {
+        let BindingUse {
+            file,
+            local,
+            member,
+        } = wanted;
         let Some(binding) = self.files[file].index.bindings.get(local).cloned() else {
             return Vec::new();
         };
@@ -27,7 +45,11 @@ impl Linker<'_> {
             (Imported::Module, Some(member)) => format!("{module}.{member}"),
             (Imported::Named(name), _) => format!("{module}.{name}"),
         };
-        let privileged = self.privileged(file, &binding.specifier, sink_name);
+        let privileged = self.privileged(PrivilegedUse {
+            file,
+            specifier: &binding.specifier,
+            sink_name,
+        });
         if !privileged.is_empty() {
             return privileged;
         }
@@ -44,12 +66,22 @@ impl Linker<'_> {
             (Imported::Module, Some(member)) => (member.to_string(), None),
             (Imported::Named(name), member) => (name.clone(), member),
         };
-        let exported = self.exported(target, &wanted, 0);
+        let exported = self.exported(ExportQuery {
+            file: target,
+            name: &wanted,
+            depth: 0,
+        });
         let mut found: Vec<Target> = exported
             .iter()
             .flat_map(|item| match inner {
-                Some(member) => self.local(item.file, &format!("{}.{member}", item.local)),
-                None => self.local(item.file, &item.local),
+                Some(member) => self.local(InFile {
+                    file: item.file,
+                    name: &format!("{}.{member}", item.local),
+                }),
+                None => self.local(InFile {
+                    file: item.file,
+                    name: &item.local,
+                }),
             })
             .collect();
         if found.is_empty() {
@@ -70,7 +102,12 @@ impl Linker<'_> {
         found
     }
 
-    pub(super) fn privileged(&mut self, file: usize, specifier: &str, name: String) -> Vec<Target> {
+    pub(super) fn privileged(&mut self, wanted: PrivilegedUse) -> Vec<Target> {
+        let PrivilegedUse {
+            file,
+            specifier,
+            sink_name: name,
+        } = wanted;
         let Some(privileges) = self.files[file].privileged.get(specifier) else {
             return Vec::new();
         };
@@ -87,7 +124,8 @@ impl Linker<'_> {
             .collect()
     }
 
-    fn exported(&self, file: usize, name: &str, depth: usize) -> Vec<ExportedLocal> {
+    fn exported(&self, query: ExportQuery) -> Vec<ExportedLocal> {
+        let ExportQuery { file, name, depth } = query;
         if depth > MAXIMUM_FORWARDS {
             return Vec::new();
         }
@@ -114,7 +152,11 @@ impl Linker<'_> {
                     imported: Some(imported),
                 } if exported == name => {
                     if let Some(target) = forwarded(specifier) {
-                        found.extend(self.exported(target, imported, depth + 1));
+                        found.extend(self.exported(ExportQuery {
+                            file: target,
+                            name: imported,
+                            depth: depth + 1,
+                        }));
                     }
                 }
                 Export::Forward {
@@ -123,42 +165,16 @@ impl Linker<'_> {
                     ..
                 } if name != DEFAULT_EXPORT => {
                     if let Some(target) = forwarded(specifier) {
-                        found.extend(self.exported(target, name, depth + 1));
+                        found.extend(self.exported(ExportQuery {
+                            file: target,
+                            name,
+                            depth: depth + 1,
+                        }));
                     }
                 }
                 _ => {}
             }
         }
         found
-    }
-
-    fn fallback(&mut self, package: usize) -> FunctionId {
-        if let Some(id) = self.fallbacks.get(&package) {
-            return *id;
-        }
-        let name = self.package_names[package].clone();
-        let id = self.graph.add_function(Function {
-            name: format!("{name}.*"),
-            owner: Owner::Dependency {
-                package: name.clone(),
-            },
-            path: name,
-        });
-        let members = self
-            .in_unit
-            .get(&Unit::Package(package))
-            .cloned()
-            .unwrap_or_default();
-        for member in members {
-            self.graph.add_edge(
-                id,
-                Edge {
-                    line: 1,
-                    target: Target::Function(member),
-                },
-            );
-        }
-        self.fallbacks.insert(package, id);
-        id
     }
 }

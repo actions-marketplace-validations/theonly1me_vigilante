@@ -1,6 +1,7 @@
 mod members;
 mod modules;
 mod names;
+mod references;
 
 use std::collections::HashMap;
 use std::ops::Range;
@@ -8,7 +9,8 @@ use std::ops::Range;
 use crate::code::SyntaxNode;
 use members::member_use;
 use modules::ModuleItems;
-use names::{class_name, definition_name, is_reference};
+use names::{Definable, class_name, definition_name};
+use references::is_reference;
 
 pub const INIT: &str = "init";
 
@@ -109,7 +111,10 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
             | "generator_function"
             | "arrow_function"
             | "method_definition" => {
-                if let Some((name, simple)) = definition_name(node, class.as_deref()) {
+                if let Some((name, simple)) = definition_name(Definable {
+                    node,
+                    class: class.as_deref(),
+                }) {
                     index.definitions.push(Definition {
                         name,
                         simple,
@@ -170,6 +175,17 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
     }
     items.finish(&mut index);
     index
+}
+
+impl FileIndex {
+    pub fn innermost(&self, offset: usize) -> usize {
+        self.definitions
+            .iter()
+            .enumerate()
+            .filter(|(_, definition)| definition.range.contains(&offset))
+            .min_by_key(|(_, definition)| definition.range.len())
+            .map_or(0, |(position, _)| position)
+    }
 }
 
 pub fn line_of(node: &SyntaxNode) -> usize {

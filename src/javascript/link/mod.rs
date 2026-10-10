@@ -1,18 +1,37 @@
 mod bindings;
+mod fallback;
 mod targets;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::paths::stem;
 use super::program::{LoadedFile, Program, Root};
+use super::syntax::UseTarget;
 use crate::Power;
 use crate::deep::ScopeRoots;
-use crate::deep::graph::{Edge, Function, FunctionId, Graph, Owner, Sink, Target};
+use crate::deep::graph::{Call, Function, FunctionId, Graph, Owner, Sink, Target};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum Unit {
     Scope(String),
     Package(usize),
+}
+
+#[derive(Clone, Copy)]
+struct InFile<'a> {
+    file: usize,
+    name: &'a str,
+}
+
+#[derive(Clone, Copy)]
+struct FileUse<'a> {
+    file: usize,
+    target: &'a UseTarget,
+}
+
+pub struct LinkInput<'a> {
+    pub program: &'a Program<'a>,
+    pub roots: &'a BTreeSet<String>,
 }
 
 pub struct Linked {
@@ -31,7 +50,8 @@ struct Linker<'p> {
     fallbacks: HashMap<usize, FunctionId>,
 }
 
-pub fn link(program: &Program, roots: &BTreeSet<String>) -> Linked {
+pub fn link(input: LinkInput) -> Linked {
+    let LinkInput { program, roots } = input;
     let mut linker = Linker {
         files: &program.files,
         ids: &program.ids,
@@ -95,14 +115,15 @@ impl Linker<'_> {
         for (definition, item) in loaded.index.definitions.iter().enumerate() {
             let from = self.functions[file][definition];
             for item_use in &item.uses {
-                for target in self.targets(file, &item_use.target) {
-                    self.graph.add_edge(
+                for target in self.targets(FileUse {
+                    file,
+                    target: &item_use.target,
+                }) {
+                    self.graph.add_call(Call {
                         from,
-                        Edge {
-                            line: item_use.line,
-                            target,
-                        },
-                    );
+                        line: item_use.line,
+                        target,
+                    });
                 }
             }
         }
@@ -113,13 +134,11 @@ impl Linker<'_> {
                 rule: site.privilege.rule.clone(),
             });
             let from = self.functions[file][site.definition];
-            self.graph.add_edge(
+            self.graph.add_call(Call {
                 from,
-                Edge {
-                    line: site.line,
-                    target: Target::Sink(sink),
-                },
-            );
+                line: site.line,
+                target: Target::Sink(sink),
+            });
         }
         let init = self.functions[file][0];
         for load in &loaded.index.loads {
@@ -131,13 +150,11 @@ impl Linker<'_> {
                 continue;
             };
             let target_init = self.functions[*target][0];
-            self.graph.add_edge(
-                init,
-                Edge {
-                    line: load.line,
-                    target: Target::Function(target_init),
-                },
-            );
+            self.graph.add_call(Call {
+                from: init,
+                line: load.line,
+                target: Target::Function(target_init),
+            });
         }
     }
 }

@@ -1,5 +1,5 @@
 use super::UseTarget;
-use super::names::{is_assignment_target, is_called};
+use super::references::{is_assignment_target, is_called};
 use crate::code::SyntaxNode;
 
 pub struct MemberUse {

@@ -4,7 +4,7 @@ mod search;
 
 use serde::Serialize;
 
-pub use classify::{ScopeRoots, analyze};
+pub use classify::ScopeRoots;
 
 use crate::{Capability, Evidence, Power, Scope, Sighting};
 

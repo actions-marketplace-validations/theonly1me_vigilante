@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{YarnLockfile, YarnPackage, split_descriptor, unquoted};
 use crate::Error;
 use crate::document::Node;
-use crate::lockfiles::{LockedPackage, PackageSource, default_url};
+use crate::lockfiles::{LockedPackage, PackageSource, Release, default_url};
 
 const METADATA: &str = "__metadata";
 
@@ -50,32 +50,42 @@ pub fn parse(text: &str) -> Result<YarnLockfile, Error> {
                 .insert(name.to_string(), folder.to_string());
         }
         let version = field("version").unwrap_or_default().to_string();
-        lockfile.add(
+        lockfile.add(YarnPackage {
             descriptors,
-            YarnPackage {
-                key: resolution.to_string(),
-                package: LockedPackage {
-                    name: name.to_string(),
-                    version: version.clone(),
-                    source: source_of(name, reference),
-                },
-                dependencies,
+            key: resolution.to_string(),
+            package: LockedPackage {
+                name: name.to_string(),
+                version: version.clone(),
+                source: source_of(Resolution { name, reference }),
             },
-        );
+            dependencies,
+        });
     }
     Ok(lockfile)
 }
 
-fn source_of(name: &str, reference: &str) -> PackageSource {
+struct Resolution<'a> {
+    name: &'a str,
+    reference: &'a str,
+}
+
+fn source_of(resolution: Resolution) -> PackageSource {
+    let Resolution { name, reference } = resolution;
     if let Some(inner) = reference.strip_prefix("patch:") {
         let unpatched = inner.split('#').next().unwrap_or(inner).replace("%3A", ":");
         if let Some((patched_name, patched_reference)) = split_descriptor(&unpatched) {
-            return source_of(patched_name, patched_reference);
+            return source_of(Resolution {
+                name: patched_name,
+                reference: patched_reference,
+            });
         }
     }
     if let Some(npm_version) = reference.strip_prefix("npm:") {
         return PackageSource::Registry {
-            url: default_url(name, npm_version),
+            url: default_url(Release {
+                name,
+                version: npm_version,
+            }),
             integrity: None,
         };
     }

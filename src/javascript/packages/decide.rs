@@ -3,11 +3,12 @@ use std::thread;
 
 use super::{Locate, Located, Packages};
 use crate::Error;
-use crate::javascript::paths::{is_code_file, joined};
+use crate::javascript::paths::is_code_file;
 use crate::lockfiles::{Found, LockedPackage, Lookup, PackageSource, Place};
 use crate::registry::{
     Archive, Checksum, Download, FetchRequest, Fetched, PackageId, Registry, github_archive,
 };
+use crate::repository_path::Folder;
 
 const ECOSYSTEM: &str = "npm";
 const MANIFEST: &str = "package.json";
@@ -30,6 +31,18 @@ pub struct Planned {
 impl Planned {
     pub fn label(&self) -> String {
         format!("`{}@{}`", self.package.name, self.package.version)
+    }
+
+    pub fn fetch_from(&self, registry: &Registry) -> Result<Fetched, Error> {
+        registry.fetch(FetchRequest {
+            package: PackageId {
+                ecosystem: ECOSYSTEM,
+                name: &self.package.name,
+                version: self.commit.as_deref().unwrap_or(&self.package.version),
+            },
+            download: &self.download,
+            keep: &|path| is_code_file(path) || path.ends_with(MANIFEST),
+        })
     }
 }
 
@@ -64,7 +77,10 @@ impl Packages<'_> {
         let (download, commit) = match &package.source {
             PackageSource::Folder(folder) => {
                 return Decision::Located(
-                    joined(&project.folder, folder).map_or(Located::Missing, Located::Repository),
+                    project
+                        .folder
+                        .joined(folder)
+                        .map_or(Located::Missing, Located::Repository),
                 );
             }
             PackageSource::Registry { url, integrity } if self.sources.allows(url) => (
@@ -122,27 +138,12 @@ impl Packages<'_> {
             for _ in 0..workers {
                 scope.spawn(|| {
                     while let Some(item) = planned.get(next.fetch_add(1, Ordering::Relaxed)) {
-                        let _ = fetch(self.registry, item);
+                        let _ = item.fetch_from(self.registry);
                     }
                 });
             }
         });
     }
-}
-
-pub fn fetch(registry: &Registry, planned: &Planned) -> Result<Fetched, Error> {
-    registry.fetch(FetchRequest {
-        package: PackageId {
-            ecosystem: ECOSYSTEM,
-            name: &planned.package.name,
-            version: planned
-                .commit
-                .as_deref()
-                .unwrap_or(&planned.package.version),
-        },
-        download: &planned.download,
-        keep: &|path| is_code_file(path) || path.ends_with(MANIFEST),
-    })
 }
 
 fn origin(url: &str) -> String {

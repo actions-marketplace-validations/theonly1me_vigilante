@@ -65,7 +65,7 @@ impl Manifest {
         let exported = self
             .exports
             .as_ref()
-            .map(|exports| exported_paths(exports, &wanted))
+            .map(|exports| exports.paths_for(&wanted))
             .unwrap_or_default();
         let mut entries: Vec<String> = exported.iter().map(|path| relative(path)).collect();
         if subpath.is_empty() {
@@ -82,49 +82,51 @@ impl Manifest {
     }
 }
 
-fn exported_paths(exports: &Exports, wanted: &str) -> Vec<String> {
-    let Exports::Conditions(entries) = exports else {
-        return if wanted == ROOT_SUBPATH {
-            targets(exports, None)
-        } else {
-            Vec::new()
+impl Exports {
+    fn paths_for(&self, wanted: &str) -> Vec<String> {
+        let Self::Conditions(entries) = self else {
+            return self.root_targets(wanted);
         };
-    };
-    if !entries.iter().any(|(key, _)| key.starts_with('.')) {
-        return if wanted == ROOT_SUBPATH {
-            targets(exports, None)
-        } else {
-            Vec::new()
-        };
-    }
-    if let Some((_, target)) = entries.iter().find(|(key, _)| key == wanted) {
-        return targets(target, None);
-    }
-    entries
-        .iter()
-        .filter_map(|(key, target)| {
-            let (prefix, suffix) = key.split_once('*')?;
-            let middle = wanted.strip_prefix(prefix)?.strip_suffix(suffix)?;
-            Some((prefix.len(), targets(target, Some(middle))))
-        })
-        .max_by_key(|(length, _)| *length)
-        .map(|(_, paths)| paths)
-        .unwrap_or_default()
-}
-
-fn targets(exports: &Exports, star: Option<&str>) -> Vec<String> {
-    match exports {
-        Exports::Path(path) => vec![match star {
-            Some(star) => path.replace('*', star),
-            None => path.clone(),
-        }],
-        Exports::List(items) => items.iter().flat_map(|item| targets(item, star)).collect(),
-        Exports::Conditions(entries) => entries
+        if !entries.iter().any(|(key, _)| key.starts_with('.')) {
+            return self.root_targets(wanted);
+        }
+        if let Some((_, target)) = entries.iter().find(|(key, _)| key == wanted) {
+            return target.targets(None);
+        }
+        entries
             .iter()
-            .filter(|(condition, _)| CONDITIONS.contains(&condition.as_str()))
-            .flat_map(|(_, target)| targets(target, star))
-            .collect(),
-        Exports::Blocked => Vec::new(),
+            .filter_map(|(key, target)| {
+                let (prefix, suffix) = key.split_once('*')?;
+                let middle = wanted.strip_prefix(prefix)?.strip_suffix(suffix)?;
+                Some((prefix.len(), target.targets(Some(middle))))
+            })
+            .max_by_key(|(length, _)| *length)
+            .map(|(_, paths)| paths)
+            .unwrap_or_default()
+    }
+
+    fn root_targets(&self, wanted: &str) -> Vec<String> {
+        if wanted == ROOT_SUBPATH {
+            self.targets(None)
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn targets(&self, star: Option<&str>) -> Vec<String> {
+        match self {
+            Self::Path(path) => vec![match star {
+                Some(star) => path.replace('*', star),
+                None => path.clone(),
+            }],
+            Self::List(items) => items.iter().flat_map(|item| item.targets(star)).collect(),
+            Self::Conditions(entries) => entries
+                .iter()
+                .filter(|(condition, _)| CONDITIONS.contains(&condition.as_str()))
+                .flat_map(|(_, target)| target.targets(star))
+                .collect(),
+            Self::Blocked => Vec::new(),
+        }
     }
 }
 

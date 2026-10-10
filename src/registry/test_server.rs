@@ -5,6 +5,16 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
+pub struct Serving {
+    pub files: BTreeMap<String, Vec<u8>>,
+    pub failures: usize,
+}
+
+pub struct Symlink<'a> {
+    pub link: &'a str,
+    pub target: &'a str,
+}
+
 pub struct TestServer {
     pub base_url: String,
     requests: Arc<AtomicUsize>,
@@ -12,10 +22,11 @@ pub struct TestServer {
 
 impl TestServer {
     pub fn serve(files: BTreeMap<String, Vec<u8>>) -> Self {
-        Self::serve_after_failures(files, 0)
+        Self::serve_with(Serving { files, failures: 0 })
     }
 
-    pub fn serve_after_failures(files: BTreeMap<String, Vec<u8>>, failures: usize) -> Self {
+    pub fn serve_with(serving: Serving) -> Self {
+        let Serving { files, failures } = serving;
         let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
         let base_url = format!("http://{}", listener.local_addr().expect("address"));
         let requests = Arc::new(AtomicUsize::new(0));
@@ -69,7 +80,8 @@ pub fn tar_gzip(entries: &[(&str, &[u8])]) -> Vec<u8> {
     builder.into_inner().expect("tar").finish().expect("gzip")
 }
 
-pub fn tar_with_symlink(link: &str, target: &str) -> Vec<u8> {
+pub fn tar_with_symlink(symlink: Symlink) -> Vec<u8> {
+    let Symlink { link, target } = symlink;
     let encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
     let mut builder = tar::Builder::new(encoder);
     let mut header = tar::Header::new_gnu();

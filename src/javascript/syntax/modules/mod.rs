@@ -1,3 +1,4 @@
+mod common_js;
 mod exports;
 mod imports;
 mod nodes;
@@ -12,6 +13,17 @@ pub struct ModuleItems {
     bindings: HashMap<String, Binding>,
     exports: Vec<Export>,
     loads: Vec<Load>,
+}
+
+pub struct NewBinding<'a> {
+    pub local: &'a str,
+    pub specifier: &'a str,
+    pub imported: Imported,
+}
+
+pub struct LoadSite<'a, 'r> {
+    pub specifier: &'a str,
+    pub node: &'a SyntaxNode<'r>,
 }
 
 #[derive(Default)]
@@ -45,35 +57,24 @@ impl ModuleItems {
         index.loads = self.loads;
     }
 
-    pub(super) fn bind(&mut self, local: &str, specifier: &str, imported: Imported) {
+    pub(super) fn bind(&mut self, binding: NewBinding) {
         self.bindings.insert(
-            local.to_string(),
+            binding.local.to_string(),
             Binding {
-                specifier: specifier.to_string(),
-                imported,
+                specifier: binding.specifier.to_string(),
+                imported: binding.imported,
             },
         );
     }
 
-    pub(super) fn local(&mut self, exported: &str, local: &str) {
-        self.exports.push(Export::Local {
-            exported: exported.to_string(),
-            local: local.to_string(),
-        });
+    pub(super) fn add_export(&mut self, export: Export) {
+        self.exports.push(export);
     }
 
-    pub(super) fn load(&mut self, specifier: &str, node: &SyntaxNode) {
+    pub(super) fn load(&mut self, site: LoadSite) {
         self.loads.push(Load {
-            specifier: specifier.to_string(),
-            line: line_of(node),
-        });
-    }
-
-    pub(super) fn forward(&mut self, specifier: &str, names: (Option<String>, Option<String>)) {
-        self.exports.push(Export::Forward {
-            exported: names.0,
-            specifier: specifier.to_string(),
-            imported: names.1,
+            specifier: site.specifier.to_string(),
+            line: line_of(site.node),
         });
     }
 }

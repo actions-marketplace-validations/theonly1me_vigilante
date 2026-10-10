@@ -123,8 +123,14 @@ pub fn is_anonymous(declaration: &SyntaxNode) -> bool {
         && declaration.field("name").is_none()
 }
 
-pub fn has_child(node: &SyntaxNode, kind: &str) -> bool {
-    node.children().any(|child| child.kind() == kind)
+pub trait NodeChildren {
+    fn has_child(&self, kind: &str) -> bool;
+}
+
+impl NodeChildren for SyntaxNode<'_> {
+    fn has_child(&self, kind: &str) -> bool {
+        self.children().any(|child| child.kind() == kind)
+    }
 }
 
 pub fn plain(node: &SyntaxNode) -> String {

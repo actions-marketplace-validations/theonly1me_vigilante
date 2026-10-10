@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::npm_registry::{FakePackage, LockEntry, NpmRegistry, report_of, run_with_cache};
+use crate::npm_registry::{FakePackage, LockEntry, NpmRegistry, report_of};
 use crate::support::TestRepository;
 
 const DIFF: &[&str] = &[
@@ -33,9 +33,8 @@ const HARMLESS_SPAWNER: FakePackage = FakePackage {
     )],
 };
 
-fn powers(report: &Value, list: &str) -> Vec<String> {
-    report[list]
-        .as_array()
+fn powers(list: &Value) -> Vec<String> {
+    list.as_array()
         .cloned()
         .unwrap_or_default()
         .iter()
@@ -81,11 +80,11 @@ fn a_lockfile_change_reviews_the_code_that_uses_it() {
     repository.write(&[("package-lock.json", &lockfile_with(&SPAWNER))]);
     repository.commit("update spawner");
 
-    let run = run_with_cache(&repository, DIFF);
+    let run = repository.run_with_cache(DIFF);
 
     let report = report_of(&run);
     assert!(
-        powers(&report, "notes").contains(&"apps/web exec runner".to_string()),
+        powers(&report["notes"]).contains(&"apps/web exec runner".to_string()),
         "{}\n{}",
         run.stdout,
         run.stderr
@@ -119,11 +118,11 @@ fn a_workspace_package_is_own_code() {
     )]);
     repository.commit("call the tools package");
 
-    let run = run_with_cache(&repository, DIFF);
+    let run = repository.run_with_cache(DIFF);
 
     let report = report_of(&run);
     assert_eq!(
-        powers(&report, "findings"),
+        powers(&report["findings"]),
         vec!["apps/web exec own code"],
         "{}",
         run.stderr

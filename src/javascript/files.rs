@@ -4,8 +4,10 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 
-pub fn package_root(folder: &Path, manifest: &str) -> PathBuf {
-    if folder.join(manifest).is_file() {
+const MANIFEST: &str = "package.json";
+
+pub fn package_root(folder: &Path) -> PathBuf {
+    if folder.join(MANIFEST).is_file() {
         return folder.to_path_buf();
     }
     let Ok(entries) = fs::read_dir(folder) else {
@@ -14,7 +16,7 @@ pub fn package_root(folder: &Path, manifest: &str) -> PathBuf {
     let mut children: Vec<PathBuf> = entries
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.join(manifest).is_file())
+        .filter(|path| path.join(MANIFEST).is_file())
         .collect();
     children.sort();
     children

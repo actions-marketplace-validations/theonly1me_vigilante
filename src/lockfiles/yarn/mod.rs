@@ -7,8 +7,7 @@ use std::collections::HashMap;
 
 use super::{Found, LockedPackage, Lookup, PackageSource, Place};
 use crate::Error;
-
-const ROOT_WORKSPACE: &str = ".";
+use crate::repository_path::Folder;
 
 #[derive(Debug, Default)]
 pub struct YarnLockfile {
@@ -19,8 +18,14 @@ pub struct YarnLockfile {
     workspace_folders: HashMap<String, String>,
 }
 
+struct WorkspaceDependency<'a> {
+    folder: &'a str,
+    name: &'a str,
+}
+
 #[derive(Debug)]
 struct YarnPackage {
+    descriptors: Vec<String>,
     key: String,
     package: LockedPackage,
     dependencies: HashMap<String, String>,
@@ -59,7 +64,7 @@ impl YarnLockfile {
                         },
                     });
                 }
-                self.workspace_descriptor(folder, name)
+                self.workspace_descriptor(WorkspaceDependency { folder, name })
                     .or_else(|| lookup.declared.map(|range| format!("{name}@{range}")))
             }
         };
@@ -73,11 +78,12 @@ impl YarnLockfile {
         })
     }
 
-    fn workspace_descriptor(&self, folder: &str, name: &str) -> Option<String> {
+    fn workspace_descriptor(&self, wanted: WorkspaceDependency) -> Option<String> {
+        let WorkspaceDependency { folder, name } = wanted;
         let mut enclosing: Vec<(&String, &HashMap<String, String>)> = self
             .workspace_dependencies
             .iter()
-            .filter(|(workspace, _)| contains(workspace, folder))
+            .filter(|(workspace, _)| workspace.holds(folder))
             .collect();
         enclosing.sort_by_key(|(workspace, _)| std::cmp::Reverse(workspace.len()));
         enclosing
@@ -101,9 +107,10 @@ impl YarnLockfile {
         }
     }
 
-    fn add(&mut self, descriptors: Vec<String>, package: YarnPackage) {
+    fn add(&mut self, package: YarnPackage) {
         let index = self.packages.len();
-        for descriptor in descriptors.into_iter().chain([package.key.clone()]) {
+        for descriptor in package.descriptors.iter().chain([&package.key]) {
+            let descriptor = descriptor.clone();
             self.descriptors.insert(descriptor, index);
         }
         self.names
@@ -122,12 +129,4 @@ fn split_descriptor(descriptor: &str) -> Option<(&str, &str)> {
 
 fn unquoted(text: &str) -> &str {
     text.trim().trim_matches('"')
-}
-
-fn contains(workspace: &str, folder: &str) -> bool {
-    workspace == ROOT_WORKSPACE
-        || folder == workspace
-        || folder
-            .strip_prefix(workspace)
-            .is_some_and(|rest| rest.starts_with('/'))
 }

@@ -2,10 +2,26 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
-use super::{Found, LockedPackage, Lookup, PackageSource, Place, default_url};
+use super::{Found, LockedPackage, Lookup, PackageSource, Place, Release, default_url};
 use crate::Error;
 
 const INSTALL_FOLDER: &str = "node_modules/";
+
+struct Tree<'a> {
+    parent: &'a str,
+    dependencies: &'a Map<String, Value>,
+}
+
+struct Entry<'a> {
+    key: &'a str,
+    entry: &'a Value,
+    is_version_one: bool,
+}
+
+struct Installation<'a> {
+    folder: &'a str,
+    name: &'a str,
+}
 
 #[derive(Debug, Default)]
 pub struct NpmLockfile {
@@ -20,11 +36,18 @@ impl NpmLockfile {
         if let Some(packages) = document.get("packages").and_then(Value::as_object) {
             for (key, entry) in packages {
                 if !key.is_empty() {
-                    lockfile.insert(key, entry, false);
+                    lockfile.insert(Entry {
+                        key,
+                        entry,
+                        is_version_one: false,
+                    });
                 }
             }
         } else if let Some(dependencies) = document.get("dependencies").and_then(Value::as_object) {
-            lockfile.insert_tree("", dependencies);
+            lockfile.insert_tree(Tree {
+                parent: "",
+                dependencies,
+            });
         }
         Ok(lockfile)
     }
@@ -35,7 +58,7 @@ impl NpmLockfile {
             Place::Repository { folder } => folder,
             Place::Package { key } => key,
         };
-        install_candidates(folder, name)
+        install_candidates(Installation { folder, name })
             .into_iter()
             .find_map(|key| {
                 let package = self.packages.get(&key)?.clone();
@@ -43,17 +66,29 @@ impl NpmLockfile {
             })
     }
 
-    fn insert_tree(&mut self, parent: &str, dependencies: &Map<String, Value>) {
-        for (name, entry) in dependencies {
-            let key = format!("{parent}{INSTALL_FOLDER}{name}");
-            self.insert(&key, entry, true);
+    fn insert_tree(&mut self, tree: Tree) {
+        for (name, entry) in tree.dependencies {
+            let key = format!("{}{INSTALL_FOLDER}{name}", tree.parent);
+            self.insert(Entry {
+                key: &key,
+                entry,
+                is_version_one: true,
+            });
             if let Some(nested) = entry.get("dependencies").and_then(Value::as_object) {
-                self.insert_tree(&format!("{key}/"), nested);
+                self.insert_tree(Tree {
+                    parent: &format!("{key}/"),
+                    dependencies: nested,
+                });
             }
         }
     }
 
-    fn insert(&mut self, key: &str, entry: &Value, is_version_one: bool) {
+    fn insert(&mut self, insertion: Entry) {
+        let Entry {
+            key,
+            entry,
+            is_version_one,
+        } = insertion;
         let text = |field: &str| entry.get(field).and_then(Value::as_str);
         let flag = |field: &str| entry.get(field).and_then(Value::as_bool) == Some(true);
         let installed_name = key
@@ -114,7 +149,10 @@ struct Located<'a> {
 fn source_of(located: Located) -> PackageSource {
     let Some(resolved) = located.resolved else {
         return PackageSource::Registry {
-            url: default_url(located.name, located.version),
+            url: default_url(Release {
+                name: located.name,
+                version: located.version,
+            }),
             integrity: located.integrity.map(str::to_string),
         };
     };
@@ -140,7 +178,8 @@ fn source_of(located: Located) -> PackageSource {
     PackageSource::Unsupported(resolved.to_string())
 }
 
-fn install_candidates(folder: &str, name: &str) -> Vec<String> {
+fn install_candidates(installation: Installation) -> Vec<String> {
+    let Installation { folder, name } = installation;
     let parts: Vec<&str> = folder.split('/').filter(|part| !part.is_empty()).collect();
     let mut candidates = Vec::new();
     for length in (0..=parts.len()).rev() {

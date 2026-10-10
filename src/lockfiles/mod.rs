@@ -1,7 +1,5 @@
 mod npm;
 mod pnpm;
-#[cfg(test)]
-mod tests;
 mod yarn;
 
 use std::collections::HashMap;
@@ -59,6 +57,11 @@ pub struct Found {
     pub package: LockedPackage,
 }
 
+pub struct LockfileText<'a> {
+    pub path: &'a str,
+    pub text: &'a str,
+}
+
 pub enum JavaScriptLockfile {
     Npm(NpmLockfile),
     Pnpm(PnpmLockfile),
@@ -66,7 +69,8 @@ pub enum JavaScriptLockfile {
 }
 
 impl JavaScriptLockfile {
-    pub fn parse(path: &str, text: &str) -> Result<Self, Error> {
+    pub fn parse(lockfile: LockfileText) -> Result<Self, Error> {
+        let LockfileText { path, text } = lockfile;
         if path.ends_with("pnpm-lock.yaml") {
             PnpmLockfile::parse(text).map(Self::Pnpm)
         } else if path.ends_with(YARN_LOCKFILE) {
@@ -91,7 +95,13 @@ impl JavaScriptLockfile {
     }
 }
 
-fn default_url(name: &str, version: &str) -> String {
+struct Release<'a> {
+    name: &'a str,
+    version: &'a str,
+}
+
+fn default_url(release: Release) -> String {
+    let Release { name, version } = release;
     let base_name = name.rsplit('/').next().unwrap_or(name);
     format!("{DEFAULT_NPM_REGISTRY}/{name}/-/{base_name}-{version}.tgz")
 }

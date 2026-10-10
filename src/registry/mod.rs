@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use cache::{Cache, CacheFill, CacheKey};
 pub use checksum::Checksum;
-use download::{Downloaded, download};
+use download::{Downloaded, Request, download};
 use extract::{ExtractRequest, extract};
 pub use git::github_archive;
 pub use sources::Sources;
@@ -100,7 +100,11 @@ impl Registry {
             return Ok(Fetched::Folder(folder));
         }
         let url = &request.download.url;
-        let Downloaded::Bytes(bytes) = download(&self.agent, url)? else {
+        let Downloaded::Bytes(bytes) = download(Request {
+            agent: &self.agent,
+            url,
+        })?
+        else {
             return Ok(Fetched::NotFound);
         };
         if let Some(checksum) = &request.download.checksum
