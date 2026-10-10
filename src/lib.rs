@@ -1,5 +1,6 @@
 mod error;
 mod model;
+mod tree;
 
 pub use error::Error;
 pub use model::{
