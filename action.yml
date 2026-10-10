@@ -31,8 +31,14 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
         GH_TOKEN: ${{ github.token }}
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vigilante-cache/vigilante
+        key: vigilante-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json', '**/npm-shrinkwrap.json', '**/pnpm-lock.yaml', '**/yarn.lock', '**/uv.lock', '**/poetry.lock', '**/Pipfile.lock', '**/requirements*.txt', '**/pom.xml', '**/gradle.lockfile', '**/Cargo.lock', '**/packages.lock.json', '**/*.csproj', '**/Directory.Packages.props', '**/Gemfile.lock', '**/gems.locked') }}
+        restore-keys: vigilante-packages-${{ runner.os }}-
     - shell: bash
       run: '"$GITHUB_ACTION_PATH/action/review.sh"'
       env:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        XDG_CACHE_HOME: ${{ runner.temp }}/vigilante-cache
