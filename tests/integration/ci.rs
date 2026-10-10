@@ -82,3 +82,17 @@ fn a_read_only_workflow_has_no_powers() {
 
     assert!(map.is_empty(), "{:?}", sightings(&map));
 }
+
+#[test]
+fn github_expressions_inside_flow_lists_do_not_stop_the_scan() {
+    let file = ".github/workflows/matrix.yml";
+    let map = scan_files(&[(
+        file,
+        "on: push\njobs:\n  test:\n    strategy:\n      matrix:\n        python-version: [${{ env.VERSIONS }}]\n        include: [{os: linux}]\n    steps:\n      - run: echo ${{ secrets.DEPLOY_KEY }}\n",
+    )]);
+
+    assert_eq!(
+        sightings(&map),
+        expected(&[&format!("ci {file} secret:DEPLOY_KEY {file}:9")])
+    );
+}

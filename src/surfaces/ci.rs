@@ -5,11 +5,31 @@ const WORKFLOW_FOLDER: &str = ".github/workflows/";
 const UNTRUSTED_TRIGGERS: &[&str] = &["pull_request_target", "workflow_run"];
 const FIRST_PARTY_OWNERS: &[&str] = &["actions/", "github/"];
 const BUILT_IN_SECRET: &str = "GITHUB_TOKEN";
+const EXPRESSION_START: &str = "${{";
+const EXPRESSION_END: &str = "}}";
 
 pub fn is_workflow(path: &str) -> bool {
     path.strip_prefix(WORKFLOW_FOLDER).is_some_and(|name| {
         !name.contains('/') && (name.ends_with(".yml") || name.ends_with(".yaml"))
     })
+}
+
+pub fn without_expression_braces(text: &str) -> String {
+    let mut output = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find(EXPRESSION_START) {
+        output.push_str(&rest[..start]);
+        output.push_str("$((");
+        rest = &rest[start + EXPRESSION_START.len()..];
+        let Some(end) = rest.find(EXPRESSION_END) else {
+            break;
+        };
+        output.push_str(&rest[..end]);
+        output.push_str("))");
+        rest = &rest[end + EXPRESSION_END.len()..];
+    }
+    output.push_str(rest);
+    output
 }
 
 pub fn detect(workflow: &Node) -> Vec<Detection> {
