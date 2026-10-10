@@ -3,6 +3,8 @@ use super::{FileUse, InFile, Linker, specifier_module, unit_of};
 use crate::deep::graph::Target;
 use crate::deep::program::UseTarget;
 
+const CONSTRUCTORS: &[&str] = &["constructor", "__init__"];
+
 impl Linker<'_> {
     pub(super) fn targets(&mut self, item: FileUse) -> Vec<Target> {
         let file = item.file;
@@ -59,13 +61,18 @@ impl Linker<'_> {
 
     pub(super) fn local(&self, wanted: InFile) -> Vec<Target> {
         let InFile { file, name } = wanted;
-        let constructor = format!("{name}.constructor");
+        let constructors: Vec<String> = CONSTRUCTORS
+            .iter()
+            .map(|constructor| format!("{name}.{constructor}"))
+            .collect();
         self.files[file]
             .index
             .definitions
             .iter()
             .enumerate()
-            .filter(|(_, definition)| definition.name == name || definition.name == constructor)
+            .filter(|(_, definition)| {
+                definition.name == name || constructors.contains(&definition.name)
+            })
             .map(|(position, _)| Target::Function(self.functions[file][position]))
             .collect()
     }

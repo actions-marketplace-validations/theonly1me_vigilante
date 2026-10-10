@@ -28,6 +28,8 @@ pub fn github_archive(url: &str) -> Option<GitArchive> {
     let repository = GITHUB_HOSTS
         .iter()
         .find_map(|host| location.strip_prefix(host))?
+        .split('?')
+        .next()?
         .trim_end_matches(".git");
     let (owner, name) = repository.split_once('/')?;
     let is_plain = |part: &str| {

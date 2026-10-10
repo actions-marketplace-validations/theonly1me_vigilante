@@ -165,5 +165,6 @@ impl<'a> Scanner<'a> {
         self.go.as_ref().is_some_and(|go| go.owns(path))
             || (self.config.javascript_engine == LanguageEngine::Deep
                 && crate::javascript::owns(path))
+            || (self.config.python_engine == LanguageEngine::Deep && crate::python::owns(path))
     }
 }

@@ -2,10 +2,13 @@ mod cache;
 mod checksum;
 mod download;
 mod extract;
+mod files;
 mod git;
+mod json;
+mod prefetch;
 mod sources;
 #[cfg(test)]
-mod test_server;
+pub mod test_server;
 #[cfg(test)]
 mod tests;
 
@@ -15,9 +18,11 @@ use std::time::Duration;
 
 use cache::{Cache, CacheFill, CacheKey};
 pub use checksum::Checksum;
-use download::{Downloaded, Request, download};
+use download::{Downloaded, MAXIMUM_DOWNLOAD_BYTES, Request, download};
 use extract::{ExtractRequest, extract};
+pub use files::{folder_files, package_root};
 pub use git::github_archive;
+pub use prefetch::Prefetch;
 pub use sources::Sources;
 
 use sha2::{Digest, Sha256};
@@ -30,6 +35,7 @@ const IDENTITY_LENGTH: usize = 16;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Archive {
     TarGzip,
+    Zip,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -42,6 +48,12 @@ pub struct Download {
 pub enum Fetched {
     Folder(PathBuf),
     NotFound,
+    TooLarge,
+}
+
+pub struct RegistryLimit {
+    pub cache_root: PathBuf,
+    pub limit: u64,
 }
 
 pub struct PackageId<'a> {
@@ -59,10 +71,19 @@ pub struct FetchRequest<'a> {
 pub struct Registry {
     cache: Cache,
     agent: ureq::Agent,
+    limit: u64,
 }
 
 impl Registry {
     pub fn new(cache_root: PathBuf) -> Self {
+        Self::with_limit(RegistryLimit {
+            cache_root,
+            limit: MAXIMUM_DOWNLOAD_BYTES,
+        })
+    }
+
+    pub fn with_limit(limited: RegistryLimit) -> Self {
+        let RegistryLimit { cache_root, limit } = limited;
         let agent = ureq::Agent::config_builder()
             .timeout_global(Some(TIMEOUT))
             .user_agent(concat!("vigilante/", env!("CARGO_PKG_VERSION")))
@@ -71,6 +92,7 @@ impl Registry {
         Self {
             cache: Cache::new(cache_root),
             agent,
+            limit,
         }
     }
 
@@ -100,12 +122,14 @@ impl Registry {
             return Ok(Fetched::Folder(folder));
         }
         let url = &request.download.url;
-        let Downloaded::Bytes(bytes) = download(Request {
+        let bytes = match download(Request {
             agent: &self.agent,
             url,
-        })?
-        else {
-            return Ok(Fetched::NotFound);
+            limit: self.limit,
+        })? {
+            Downloaded::Bytes(bytes) => bytes,
+            Downloaded::NotFound => return Ok(Fetched::NotFound),
+            Downloaded::TooLarge => return Ok(Fetched::TooLarge),
         };
         if let Some(checksum) = &request.download.checksum
             && !checksum.matches(&bytes)

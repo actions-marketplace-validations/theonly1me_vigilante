@@ -76,5 +76,6 @@ fn fetch(request: Fetch) -> Result<std::path::PathBuf, Error> {
     match fetched {
         Fetched::Folder(folder) => Ok(folder),
         Fetched::NotFound => Err(Error::new("not found")),
+        Fetched::TooLarge => Err(Error::new("too large")),
     }
 }

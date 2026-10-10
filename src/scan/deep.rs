@@ -4,6 +4,7 @@ use crate::config::LanguageEngine;
 use crate::deep::Analysis;
 use crate::go::GoRequest;
 use crate::javascript::{self, JavaScriptRequest};
+use crate::python::{self, PythonRequest};
 
 impl Scanner<'_> {
     pub(super) fn deep(&self, selection: &Selection) -> Result<Analysis, Error> {
@@ -21,6 +22,18 @@ impl Scanner<'_> {
         }
         if self.config.javascript_engine == LanguageEngine::Deep {
             let found = javascript::analyze(JavaScriptRequest {
+                tree: self.tree,
+                config: self.config,
+                rules: &self.rules,
+                scope_of: &|path| self.scopes.code_scope_of(path),
+                selection,
+            })?;
+            analysis.sightings.extend(found.sightings);
+            analysis.reaches.extend(found.reaches);
+            analysis.skipped.extend(found.skipped);
+        }
+        if self.config.python_engine == LanguageEngine::Deep {
+            let found = python::analyze(PythonRequest {
                 tree: self.tree,
                 config: self.config,
                 rules: &self.rules,

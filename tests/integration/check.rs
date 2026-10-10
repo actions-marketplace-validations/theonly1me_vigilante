@@ -8,7 +8,10 @@ use crate::support::{TestRepository, expected, finding_lines};
 fn check_fails_on_unlocked_powers_and_on_stale_lock_entries() {
     let repository = TestRepository::new();
     repository.write(&[
-        ("services/run.py", "import subprocess\n"),
+        (
+            "services/run.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
         (
             Lock::FILE,
             "version = 1\n\n[code.services]\npowers = [\"network\"]\n",
@@ -34,7 +37,7 @@ fn check_fails_on_unlocked_powers_and_on_stale_lock_entries() {
 fn a_deny_rule_fails_even_in_report_mode_and_with_a_lock_entry() {
     let repository = TestRepository::new();
     repository.write(&[
-        ("services/run.py", "import subprocess\n"),
+        ("services/run.py", "import subprocess; subprocess.run(['true'])\n"),
         (
             "vigilante.toml",
             "[policy]\nmode = \"report\"\ndeny = [{ scope = \"services\", capability = \"exec\" }]\n",
@@ -58,7 +61,10 @@ fn a_deny_rule_fails_even_in_report_mode_and_with_a_lock_entry() {
 fn report_mode_passes_with_unlocked_powers() {
     let repository = TestRepository::new();
     repository.write(&[
-        ("services/run.py", "import subprocess\n"),
+        (
+            "services/run.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
         ("vigilante.toml", "[policy]\nmode = \"report\"\n"),
     ]);
 

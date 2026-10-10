@@ -2,6 +2,7 @@ mod index;
 mod link;
 mod load;
 mod parse;
+mod roots;
 
 use std::collections::HashMap;
 
@@ -9,6 +10,7 @@ use ast_grep_language::SupportLang;
 
 pub use index::{Binding, Definition, Export, FileIndex, INIT, Imported, Load, Use, UseTarget};
 pub use link::{LinkInput, link};
+pub use roots::{RootsInput, selected_roots};
 
 use crate::code::{Rules, SyntaxNode};
 use crate::deep::graph::Owner;

@@ -1,4 +1,3 @@
-mod files;
 mod language;
 mod manifest;
 mod packages;
@@ -8,22 +7,20 @@ mod projects;
 mod resolver;
 mod syntax;
 
-use std::collections::{BTreeSet, HashSet};
-
 use ast_grep_language::SupportLang;
 
 use crate::Error;
 use crate::code::{Rules, language_of};
 use crate::config::Config;
 use crate::deep::Analysis;
-use crate::deep::program::{LinkInput, Program, ProgramInput, link};
+use crate::deep::program::{LinkInput, Program, ProgramInput, RootsInput, link, selected_roots};
 use crate::lockfiles::JAVASCRIPT_LOCKFILES;
 use crate::registry::Registry;
 use crate::scan::Selection;
 use crate::tree::Tree;
 use language::JavaScript;
 use packages::{Packages, PackagesInput};
-use paths::{is_code_file, parent_folder};
+use paths::is_code_file;
 use projects::Projects;
 use resolver::JavaScriptResolver;
 
@@ -40,34 +37,14 @@ pub fn owns(path: &str) -> bool {
 }
 
 pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
-    let changed_lockfile_folders: HashSet<&str> = match request.selection {
-        Selection::Everything => HashSet::new(),
-        Selection::Changes(changes) => changes
-            .paths
-            .iter()
-            .filter(|path| {
-                let name = path.rsplit('/').next().unwrap_or(path);
-                JAVASCRIPT_LOCKFILES.contains(&name)
-            })
-            .map(|path| parent_folder(path))
-            .collect(),
-    };
-    let is_selected = |path: &str| match request.selection {
-        Selection::Everything => true,
-        Selection::Changes(changes) => {
-            changes.code_scopes.contains(&(request.scope_of)(path))
-                || changed_lockfile_folders
-                    .iter()
-                    .any(|folder| folder.is_empty() || path.starts_with(&format!("{folder}/")))
-        }
-    };
-    let roots: BTreeSet<String> = request
-        .tree
-        .paths()
-        .iter()
-        .filter(|path| is_code_file(path) && !request.config.is_excluded(path) && is_selected(path))
-        .cloned()
-        .collect();
+    let roots = selected_roots(RootsInput {
+        tree: request.tree,
+        config: request.config,
+        scope_of: request.scope_of,
+        selection: request.selection,
+        is_code: is_code_file,
+        lockfiles: JAVASCRIPT_LOCKFILES,
+    });
     if roots.is_empty() {
         return Ok(Analysis::default());
     }

@@ -8,6 +8,7 @@ mod javascript;
 mod lock;
 mod lockfiles;
 mod model;
+mod python;
 mod registry;
 mod report;
 mod repository_path;

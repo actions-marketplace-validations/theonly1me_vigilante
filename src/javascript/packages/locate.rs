@@ -2,9 +2,8 @@ use super::decide::{Decision, Planned};
 use super::{Installed, Locate, Located, Packages};
 use crate::Error;
 use crate::deep::Skip;
-use crate::javascript::files::{folder_files, package_root};
 use crate::javascript::manifest::Manifest;
-use crate::registry::Fetched;
+use crate::registry::{Fetched, folder_files, package_root};
 
 const MANIFEST: &str = "package.json";
 
@@ -64,6 +63,11 @@ impl Packages<'_> {
         };
         let folder = match planned.fetch_from(self.registry) {
             Ok(Fetched::Folder(folder)) => package_root(&folder),
+            Ok(Fetched::TooLarge) => {
+                let reason =
+                    format!("{label} is larger than 256 MiB, so Vigilante did not read it.");
+                return self.missing(missing(reason));
+            }
             Ok(Fetched::NotFound) => {
                 let reason = format!("{label} is not at `{}`.", planned.download.url);
                 return self.missing(missing(reason));

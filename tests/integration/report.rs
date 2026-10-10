@@ -8,6 +8,7 @@ const MAIN_AND_FEATURE: Branches = Branches {
     head: "feature",
 };
 
+const PYTHON_PATTERNS: &str = "[engines]\npython = \"patterns\"\n";
 const HOSTILE_SERVER: &str =
     r#"{"mcpServers": {"x](https://evil.example) @org/team | y": {"command": "npx"}}}"#;
 
@@ -30,7 +31,10 @@ fn unescaped_pipes(line: &str) -> usize {
 #[test]
 fn markdown_lists_each_new_power_and_the_fix() {
     let review = feature_review(&[
-        ("services/billing/export.py", "import subprocess\n"),
+        (
+            "services/billing/export.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
         (".mcp.json", HOSTILE_SERVER),
     ]);
 
@@ -38,7 +42,7 @@ fn markdown_lists_each_new_power_and_the_fix() {
 
     assert!(markdown.starts_with("## Vigilante: this pull request adds 2 new powers\n"));
     assert!(markdown.contains(
-        "| HIGH | `services` (code) | `exec` | Can run other programs | `services/billing/export.py:1` | **not in lock** |"
+        "| HIGH | `services` (code) | `exec` | Can run other programs | `services/billing/export.py:1 via export.init → subprocess.run` | **not in lock** |"
     ));
     assert!(markdown.ends_with(
         "**Result: fail.** 2 powers are not in vigilante.lock. Run `vigilante lock` and commit the file.\n"
@@ -65,7 +69,10 @@ fn markdown_keeps_hostile_names_inside_one_table_cell() {
 #[test]
 fn markdown_hides_locked_system_state_reads_but_counts_them() {
     let repository = TestRepository::new();
-    repository.write(&[("README.md", "# app\n")]);
+    repository.write(&[
+        ("README.md", "# app\n"),
+        ("vigilante.toml", PYTHON_PATTERNS),
+    ]);
     repository.commit("base");
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
     repository.write(&[(
@@ -95,7 +102,10 @@ fn markdown_hides_locked_system_state_reads_but_counts_them() {
 
 #[test]
 fn json_and_sarif_mark_the_blocking_finding() {
-    let review = feature_review(&[("services/billing/export.py", "import subprocess\n")]);
+    let review = feature_review(&[(
+        "services/billing/export.py",
+        "import subprocess; subprocess.run(['true'])\n",
+    )]);
 
     let json: Value = serde_json::from_str(&review.render(Format::Json)).expect("JSON");
     let sarif: Value = serde_json::from_str(&review.render(Format::Sarif)).expect("SARIF");
@@ -119,7 +129,10 @@ fn json_and_sarif_mark_the_blocking_finding() {
 fn a_hidden_power_is_shown_and_fails_until_the_lock_has_it() {
     let writes_a_file = "with open('out.csv', 'w') as out:\n    out.write('x')\n";
     let repository = TestRepository::new();
-    repository.write(&[("README.md", "# app\n")]);
+    repository.write(&[
+        ("README.md", "# app\n"),
+        ("vigilante.toml", PYTHON_PATTERNS),
+    ]);
     repository.commit("base");
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
     repository.write(&[("services/report.py", writes_a_file)]);

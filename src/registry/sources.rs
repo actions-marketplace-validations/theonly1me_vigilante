@@ -4,6 +4,8 @@ const PUBLIC_SOURCES: &[&str] = &[
     "https://registry.npmjs.org/",
     "https://registry.yarnpkg.com/",
     "https://codeload.github.com/",
+    "https://pypi.org/",
+    "https://files.pythonhosted.org/",
 ];
 
 #[derive(Clone, Debug, Default)]

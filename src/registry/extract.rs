@@ -27,6 +27,7 @@ pub fn extract(request: ExtractRequest) -> Result<(), Error> {
     };
     match request.archive {
         Archive::TarGzip => writer.tar(GzDecoder::new(Cursor::new(request.bytes))),
+        Archive::Zip => writer.zip(request.bytes),
     }
 }
 
@@ -51,6 +52,29 @@ impl Writer<'_> {
                 path: &path,
                 size,
                 reader: &mut entry,
+            })?;
+        }
+        Ok(())
+    }
+
+    fn zip(&mut self, bytes: &[u8]) -> Result<(), Error> {
+        let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(invalid)?;
+        for index in 0..archive.len() {
+            let mut file = archive.by_index(index).map_err(invalid)?;
+            if file.is_dir() || file.is_symlink() {
+                continue;
+            }
+            let Some(path) = file.enclosed_name() else {
+                let name = file.name().map(|name| name.to_string()).unwrap_or_default();
+                return Err(Error::new(format!(
+                    "the archive has a path outside the package: {name}"
+                )));
+            };
+            let size = file.size();
+            self.write(Entry {
+                path: &path,
+                size,
+                reader: &mut file,
             })?;
         }
         Ok(())

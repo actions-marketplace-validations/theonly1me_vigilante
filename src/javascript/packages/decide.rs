@@ -1,18 +1,15 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::thread;
-
 use super::{Locate, Located, Packages};
 use crate::Error;
 use crate::javascript::paths::is_code_file;
 use crate::lockfiles::{Found, LockedPackage, Lookup, PackageSource, Place};
 use crate::registry::{
-    Archive, Checksum, Download, FetchRequest, Fetched, PackageId, Registry, github_archive,
+    Archive, Checksum, Download, FetchRequest, Fetched, PackageId, Prefetch, Registry,
+    github_archive,
 };
 use crate::repository_path::Folder;
 
 const ECOSYSTEM: &str = "npm";
 const MANIFEST: &str = "package.json";
-const MAXIMUM_DOWNLOADS_AT_ONCE: usize = 16;
 
 pub enum Decision {
     Located(Located),
@@ -33,6 +30,19 @@ impl Planned {
         format!("`{}@{}`", self.package.name, self.package.version)
     }
 
+    fn prefetch(&self) -> Prefetch {
+        Prefetch {
+            ecosystem: ECOSYSTEM,
+            name: self.package.name.clone(),
+            version: self
+                .commit
+                .clone()
+                .unwrap_or_else(|| self.package.version.clone()),
+            download: self.download.clone(),
+            keep: is_kept,
+        }
+    }
+
     pub fn fetch_from(&self, registry: &Registry) -> Result<Fetched, Error> {
         registry.fetch(FetchRequest {
             package: PackageId {
@@ -41,7 +51,7 @@ impl Planned {
                 version: self.commit.as_deref().unwrap_or(&self.package.version),
             },
             download: &self.download,
-            keep: &|path| is_code_file(path) || path.ends_with(MANIFEST),
+            keep: &is_kept,
         })
     }
 }
@@ -123,26 +133,16 @@ impl Packages<'_> {
     }
 
     pub fn prefetch(&self, requests: &[Locate]) {
-        let mut planned: Vec<Planned> = requests
+        let mut planned: Vec<Prefetch> = requests
             .iter()
             .filter_map(|request| match self.decide(request) {
-                Decision::Fetch(planned) => Some(planned),
+                Decision::Fetch(planned) => Some(planned.prefetch()),
                 _ => None,
             })
             .collect();
         planned.sort_by(|left, right| left.download.url.cmp(&right.download.url));
         planned.dedup_by(|left, right| left.download.url == right.download.url);
-        let next = AtomicUsize::new(0);
-        let workers = MAXIMUM_DOWNLOADS_AT_ONCE.min(planned.len());
-        thread::scope(|scope| {
-            for _ in 0..workers {
-                scope.spawn(|| {
-                    while let Some(item) = planned.get(next.fetch_add(1, Ordering::Relaxed)) {
-                        let _ = item.fetch_from(self.registry);
-                    }
-                });
-            }
-        });
+        self.registry.prefetch(&planned);
     }
 }
 
@@ -151,4 +151,8 @@ fn origin(url: &str) -> String {
     let host = after_scheme.split('/').next().unwrap_or(after_scheme);
     let scheme = url.split_once("://").map_or("https", |(scheme, _)| scheme);
     format!("{scheme}://{}", host.rsplit('@').next().unwrap_or(host))
+}
+
+fn is_kept(path: &str) -> bool {
+    is_code_file(path) || path.ends_with(MANIFEST)
 }

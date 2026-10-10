@@ -1,5 +1,6 @@
 mod npm;
 mod pnpm;
+pub mod python;
 mod yarn;
 
 use std::collections::HashMap;

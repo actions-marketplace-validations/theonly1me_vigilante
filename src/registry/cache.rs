@@ -33,6 +33,10 @@ impl Cache {
             .join(escaped(key.identity))
     }
 
+    pub fn json_file(&self, identity: &str) -> PathBuf {
+        self.root.join("json").join(escaped(identity))
+    }
+
     pub fn complete_folder(&self, key: &CacheKey) -> Option<PathBuf> {
         let folder = self.folder(key);
         folder.join(COMPLETE_MARKER).is_file().then_some(folder)

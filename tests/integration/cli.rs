@@ -25,7 +25,10 @@ fn diff_exits_1_until_the_lock_is_committed_and_then_exits_0() {
     repository.write(&[
         (".mcp.json", MCP_SERVER),
         (".github/workflows/release.yml", WRITE_WORKFLOW),
-        ("services/billing/export.py", "import subprocess\n"),
+        (
+            "services/billing/export.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
     ]);
     repository.commit("add powers");
 
@@ -63,7 +66,10 @@ fn lock_writes_the_same_bytes_every_time() {
             "web/app.ts",
             "const key = process.env.KEY;\nawait fetch(url);\n",
         ),
-        ("services/run.py", "import subprocess\nimport socket\n"),
+        (
+            "services/run.py",
+            "import socket, subprocess; subprocess.run(['true']); socket.socket()\n",
+        ),
         ("crates/core/src/lib.rs", "use std::process::Command;\n"),
         (".mcp.json", MCP_SERVER),
     ]);
@@ -137,7 +143,10 @@ fn a_folder_that_is_not_a_repository_exits_with_code_2() {
 fn scan_prints_each_power_and_never_runs_install_scripts() {
     let repository = TestRepository::new();
     repository.write(&[
-        ("services/run.py", "import subprocess\n"),
+        (
+            "services/run.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
         ("web/package.json", MARKER_SCRIPT),
     ]);
 
@@ -165,7 +174,10 @@ fn scan_prints_each_power_and_never_runs_install_scripts() {
 #[test]
 fn lock_counts_a_single_power_in_the_singular() {
     let repository = TestRepository::new();
-    repository.write(&[("services/run.py", "import subprocess\n")]);
+    repository.write(&[(
+        "services/run.py",
+        "import subprocess; subprocess.run(['true'])\n",
+    )]);
 
     let run = repository.vigilante(&["lock"]);
 

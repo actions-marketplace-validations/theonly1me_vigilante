@@ -32,6 +32,10 @@ impl Checksum {
         strongest
     }
 
+    pub fn sha256_hex(text: &str) -> Option<Self> {
+        hex_bytes(text).map(Self::Sha256)
+    }
+
     pub fn matches(&self, bytes: &[u8]) -> bool {
         match self {
             Self::Sha512(expected) => Sha512::digest(bytes).as_slice() == expected.as_slice(),
@@ -47,4 +51,15 @@ impl Checksum {
             Self::Sha1(_) => 1,
         }
     }
+}
+
+fn hex_bytes(text: &str) -> Option<Vec<u8>> {
+    let text = text.trim();
+    if !text.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(text.get(index..index + 2)?, 16).ok())
+        .collect()
 }

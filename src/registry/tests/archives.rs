@@ -1,5 +1,6 @@
 use super::{INDEX, Served, serve};
-use crate::registry::test_server::{Symlink, tar_gzip, tar_with_symlink};
+use crate::registry::test_server::{Symlink, tar_gzip, tar_with_symlink, zip};
+use crate::registry::{Archive, Download};
 
 #[test]
 fn a_tar_path_outside_the_package_stops_the_fetch() {
@@ -27,4 +28,22 @@ fn a_symbolic_link_is_not_followed() {
     let folder = setup.fetch(setup.download(None)).expect("fetch");
 
     assert!(!folder.join("package/link.js").exists());
+}
+
+#[test]
+fn a_zip_path_outside_the_package_stops_the_fetch() {
+    let setup = serve(Served {
+        path: "/package",
+        bytes: zip(&[("../evil.py", INDEX)]),
+    });
+
+    let error = setup
+        .fetch(Download {
+            url: format!("{}/package", setup.server.base_url),
+            checksum: None,
+            archive: Archive::Zip,
+        })
+        .expect_err("outside");
+
+    assert!(error.to_string().contains("outside the package"), "{error}");
 }

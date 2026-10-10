@@ -1,14 +1,12 @@
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
 use std::process::Command;
-use std::thread;
 
 use base64::Engine;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha512};
 use tempfile::TempDir;
 
+use crate::file_server::{allow_config, serve_files};
 use crate::support::{Run, TestRepository};
 
 pub struct FakePackage<'a> {
@@ -37,31 +35,7 @@ impl NpmRegistry {
             integrities.insert(path_of(package), format!("sha512-{digest}"));
             tarballs.insert(path_of(package), bytes);
         }
-        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
-        let base_url = format!("http://{}", listener.local_addr().expect("address"));
-        thread::spawn(move || {
-            for stream in listener.incoming() {
-                let Ok(mut stream) = stream else { continue };
-                let mut reader = BufReader::new(stream.try_clone().expect("clone"));
-                let mut request_line = String::new();
-                reader.read_line(&mut request_line).expect("request line");
-                let mut header = String::new();
-                while reader.read_line(&mut header).is_ok_and(|read| read > 2) {
-                    header.clear();
-                }
-                let path = request_line.split_whitespace().nth(1).unwrap_or("/");
-                let (status, body) = match tarballs.get(path) {
-                    Some(body) => ("200 OK", body.clone()),
-                    None => ("404 Not Found", Vec::new()),
-                };
-                let head = format!(
-                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                    body.len()
-                );
-                let _ = stream.write_all(head.as_bytes());
-                let _ = stream.write_all(&body);
-            }
-        });
+        let base_url = serve_files(tarballs);
         Self {
             base_url,
             integrities,
@@ -75,7 +49,7 @@ impl NpmRegistry {
     }
 
     pub fn allow_config(&self) -> String {
-        format!("[registries]\nallow = [\"{}\"]\n", self.base_url)
+        allow_config(&self.base_url)
     }
 
     pub fn lockfile(&self, entries: &[LockEntry]) -> String {

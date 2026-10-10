@@ -3,7 +3,8 @@ use std::time::Duration;
 
 use crate::Error;
 
-const MAXIMUM_DOWNLOAD_BYTES: u64 = 256 * 1024 * 1024;
+pub const MAXIMUM_DOWNLOAD_BYTES: u64 = 256 * 1024 * 1024;
+const CONTENT_LENGTH: &str = "content-length";
 const ATTEMPTS: u32 = 3;
 const PAUSE: Duration = Duration::from_secs(2);
 const NOT_FOUND: u16 = 404;
@@ -13,26 +14,37 @@ const FIRST_SERVER_ERROR: u16 = 500;
 pub enum Downloaded {
     Bytes(Vec<u8>),
     NotFound,
+    TooLarge,
 }
 
 pub struct Request<'a> {
     pub agent: &'a ureq::Agent,
     pub url: &'a str,
+    pub limit: u64,
 }
 
 pub fn download(request: Request) -> Result<Downloaded, Error> {
-    let Request { agent, url } = request;
+    let Request { agent, url, limit } = request;
     let mut attempt = 1;
     loop {
         let result = agent.get(url).call().and_then(|mut response| {
+            let declared = response
+                .headers()
+                .get(CONTENT_LENGTH)
+                .and_then(|value| value.to_str().ok()?.parse::<u64>().ok());
+            if declared.is_some_and(|length| length > limit) {
+                return Ok(None);
+            }
             response
                 .body_mut()
                 .with_config()
-                .limit(MAXIMUM_DOWNLOAD_BYTES)
+                .limit(limit)
                 .read_to_vec()
+                .map(Some)
         });
         match result {
-            Ok(bytes) => return Ok(Downloaded::Bytes(bytes)),
+            Ok(Some(bytes)) => return Ok(Downloaded::Bytes(bytes)),
+            Ok(None) | Err(ureq::Error::BodyExceedsLimit(_)) => return Ok(Downloaded::TooLarge),
             Err(ureq::Error::StatusCode(NOT_FOUND)) => return Ok(Downloaded::NotFound),
             Err(error) if attempt < ATTEMPTS && is_temporary(&error) => {
                 thread::sleep(PAUSE * attempt);

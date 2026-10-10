@@ -5,7 +5,9 @@ use tempfile::TempDir;
 
 use super::{INDEX, Served, Setup, integrity, serve};
 use crate::registry::test_server::{Serving, TestServer, tar_gzip};
-use crate::registry::{Archive, Download, Registry};
+use crate::registry::{
+    Archive, Download, FetchRequest, Fetched, PackageId, Registry, RegistryLimit,
+};
 
 #[test]
 fn a_package_is_verified_and_only_wanted_files_are_kept() {
@@ -132,4 +134,33 @@ fn a_server_error_is_tried_again() {
 
     assert_eq!(setup.server.request_count(), 2);
     assert!(folder.join("package/index.js").is_file());
+}
+
+#[test]
+fn a_package_over_the_size_limit_is_reported_as_too_large() {
+    let bytes = tar_gzip(&[("package/index.js", INDEX)]);
+    let server = TestServer::serve(BTreeMap::from([("/package".to_string(), bytes)]));
+    let cache = TempDir::new().expect("cache");
+    let registry = Registry::with_limit(RegistryLimit {
+        cache_root: cache.path().to_path_buf(),
+        limit: 16,
+    });
+
+    let fetched = registry
+        .fetch(FetchRequest {
+            package: PackageId {
+                ecosystem: "npm",
+                name: "large",
+                version: "1.0.0",
+            },
+            download: &Download {
+                url: format!("{}/package", server.base_url),
+                checksum: None,
+                archive: Archive::TarGzip,
+            },
+            keep: &|_| true,
+        })
+        .expect("fetch");
+
+    assert!(matches!(fetched, Fetched::TooLarge), "the package was read");
 }

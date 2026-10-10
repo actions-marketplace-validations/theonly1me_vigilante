@@ -18,6 +18,7 @@ pub struct Config {
     pub rule_paths: Vec<String>,
     pub go_engine: GoEngine,
     pub javascript_engine: LanguageEngine,
+    pub python_engine: LanguageEngine,
     registry_sources: Sources,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
@@ -64,6 +65,7 @@ impl Config {
             rule_paths: file.rules.paths,
             go_engine: file.engines.go,
             javascript_engine: file.engines.javascript,
+            python_engine: file.engines.python,
             registry_sources: Sources::new(&file.registries.allow)?,
             excluded: excluded
                 .build()

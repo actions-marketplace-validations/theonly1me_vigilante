@@ -5,8 +5,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
+pub type Files = BTreeMap<String, Vec<u8>>;
+
 pub struct Serving {
-    pub files: BTreeMap<String, Vec<u8>>,
+    pub files: Files,
     pub failures: usize,
 }
 
@@ -26,9 +28,17 @@ impl TestServer {
     }
 
     pub fn serve_with(serving: Serving) -> Self {
-        let Serving { files, failures } = serving;
+        Self::serve_lazy(Box::new(move |_| serving.files), serving.failures)
+    }
+
+    pub fn serve_built(build: Box<dyn FnOnce(&str) -> Files>) -> Self {
+        Self::serve_lazy(build, 0)
+    }
+
+    fn serve_lazy(build: Box<dyn FnOnce(&str) -> Files>, failures: usize) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
         let base_url = format!("http://{}", listener.local_addr().expect("address"));
+        let files = build(&base_url);
         let requests = Arc::new(AtomicUsize::new(0));
         let counter = Arc::clone(&requests);
         thread::spawn(move || {
@@ -91,4 +101,15 @@ pub fn tar_with_symlink(symlink: Symlink) -> Vec<u8> {
         .append_link(&mut header, link, target)
         .expect("symlink");
     builder.into_inner().expect("tar").finish().expect("gzip")
+}
+
+pub fn zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    for (path, contents) in entries {
+        writer
+            .start_file(*path, zip::write::SimpleFileOptions::default())
+            .expect("zip entry");
+        writer.write_all(contents).expect("zip write");
+    }
+    writer.finish().expect("zip").into_inner()
 }

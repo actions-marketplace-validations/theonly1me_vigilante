@@ -84,6 +84,7 @@ pub struct CiSection {
 pub struct EnginesSection {
     pub go: GoEngine,
     pub javascript: LanguageEngine,
+    pub python: LanguageEngine,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]

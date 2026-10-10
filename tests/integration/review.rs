@@ -35,7 +35,10 @@ fn diff_fails_until_the_lock_lists_the_new_powers() {
             ".github/workflows/release.yml",
             "on: push\npermissions:\n  contents: write\njobs: {}\n",
         ),
-        ("services/billing/export.py", "import subprocess\n"),
+        (
+            "services/billing/export.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
     ]);
     repository.commit("add powers");
 
@@ -68,7 +71,10 @@ fn diff_fails_until_the_lock_lists_the_new_powers() {
 fn diff_compares_with_the_merge_base_not_the_moving_main_branch() {
     let repository = TestRepository::new();
     repository.write(&[
-        ("services/worker.py", "import subprocess\n"),
+        (
+            "services/worker.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
         ("services/app.py", "value = 1\n"),
     ]);
     repository.commit("base");
@@ -89,14 +95,20 @@ fn diff_compares_with_the_merge_base_not_the_moving_main_branch() {
 fn diff_reports_a_power_only_the_first_time_it_appears_in_a_scope() {
     let repository = TestRepository::new();
     repository.write(&[
-        ("services/client.py", "import requests\n"),
+        (
+            "services/client.py",
+            "import requests; requests.get('https://example.com')\n",
+        ),
         ("web/app.py", "value = 1\n"),
     ]);
     repository.commit("base");
     start_feature(&repository);
     repository.write(&[
         ("services/other_client.py", "import httpx\n"),
-        ("web/client.py", "import requests\n"),
+        (
+            "web/client.py",
+            "import requests; requests.get('https://example.com')\n",
+        ),
     ]);
     repository.commit("more network");
 
@@ -119,7 +131,10 @@ fn diff_reads_the_config_from_the_base_so_a_pull_request_cannot_hide_itself() {
             "vigilante.toml",
             "[scan]\nexclude = [\"**\"]\n\n[policy]\nmode = \"report\"\n",
         ),
-        ("tools/run.py", "import subprocess\n"),
+        (
+            "tools/run.py",
+            "import subprocess; subprocess.run(['true'])\n",
+        ),
     ]);
     repository.commit("hide the power");
 

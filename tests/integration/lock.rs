@@ -21,7 +21,7 @@ fn fixture() -> Vec<(&'static str, &'static str)> {
     vec![
         (
             "services/billing/export.py",
-            "import subprocess\nimport requests\n",
+            "import requests, subprocess; subprocess.run(['true']); requests.get('https://example.com')\n",
         ),
         (
             ".mcp.json",

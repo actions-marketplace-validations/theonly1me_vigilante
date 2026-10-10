@@ -36,3 +36,4 @@ tar = "0.4.46"
 tempfile = "3.27.0"
 toml = "1.1.6"
 ureq = "3.4.2"
+zip = { version = "9.0.0", default-features = false, features = ["deflate"] }
