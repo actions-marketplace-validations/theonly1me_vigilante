@@ -130,8 +130,28 @@ jobs:
           merge-multiple: true
       - run: packaging/smoke-wheel.sh wheels
 
-  release:
+  checksums:
     needs: [build, npm-smoke, wheel-smoke]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+      - working-directory: dist
+        run: sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS
+      - run: packaging/homebrew.sh dist/SHA256SUMS > dist/vigilante.rb
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: checksums
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
@@ -142,10 +162,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          name: release-files
           path: dist
-          merge-multiple: true
-      - working-directory: dist
-        run: sha256sum -- * > SHA256SUMS
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/*
