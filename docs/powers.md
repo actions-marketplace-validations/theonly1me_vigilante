@@ -8,9 +8,16 @@ A power is something that a change lets code, CI, a build, or an AI agent do. Vi
 | --- | --- | --- | --- | --- |
 | `exec` | code | high | Can run other programs | `import subprocess`, `child_process`, `ProcessBuilder`, `os/exec`, `std::process::Command` |
 | `network` | code | medium | Can use the network | `requests`, `fetch(`, `java.net.http`, `net/http`, `reqwest` |
-| `native` | code | high | Can run unsafe or native code | `ctypes`, JNI, cgo, `unsafe`, FFI, `DllImport` |
-| `dynamic_code` | code | medium | Can run code that is built at run time | `eval`, `new Function`, reflection, `Class.forName` |
-| `env` | code | low | Reads environment variables | `os.environ`, `process.env`, `System.getenv` |
+| `files` | code | medium | Can read or change files | `open(`, `fs`, `java.nio.file`, `File.ReadAllText`, `std::fs` |
+| `native` | code | high | Can run unsafe or native code | `ctypes`, JNI, cgo, `unsafe`, FFI, `DllImport`. Go details: `native:cgo`, `native:unsafe_pointer` |
+| `dynamic_code` | code | medium | Can run code that is built at run time | `eval`, `new Function`, reflection, `Class.forName`. Go detail: `dynamic_code:reflect` |
+| `read_system_state` | code | low | Reads environment variables or system information | `os.environ`, `process.env`, `System.getenv`, `os.Hostname`, `process.cwd()` |
+| `modify_system_state` | code | medium | Can change environment variables, the working folder, or signal handlers | `os.environ['A'] = b`, `process.chdir`, `os.Setenv`, `signal.Notify`, `System.setProperty` |
+| `system_calls` | code | high | Can make system calls directly | `syscall.Syscall`, `libc::syscall`, `nix`, Ruby `syscall` |
+| `operating_system` | code | low | Uses other operating system functions | Go only: other functions in the `os` package |
+| `arbitrary_execution` | code | high | Can run code that the analysis cannot follow | Go only: assembly, `go:linkname` |
+| `runtime` | code | low | Can change the language runtime | Go only: `runtime` settings such as the garbage collector |
+| `unanalyzed` | code | low | Has calls that the analysis could not follow | Go only |
 | `token_write` | ci | medium | The CI token can write to the repository | `permissions: contents: write` |
 | `oidc` | ci | high | The CI job can get cloud credentials (OIDC) | `permissions: id-token: write` |
 | `untrusted_trigger` | ci | high | The workflow runs with secrets on events that forks can start | `on: pull_request_target`, `on: workflow_run` |
@@ -27,10 +34,41 @@ Change a severity with `[severity]` in `vigilante.toml`. See [configuration.md](
 
 The rules for code are in [packs/](../packs), one file for each language: Rust, JavaScript and TypeScript, Python, Ruby, C#, Java, and Go. Each rule has test cases in `packs/tests/`.
 
+## Go: Capslock
+
+For Go modules, Vigilante runs [Capslock](https://github.com/google/capslock) v0.3.3 or later, Google's capability analysis for Go. Capslock type-checks the code, builds a call graph, and follows each call through every dependency down to the standard library. So Vigilante sees a power that a new dependency brings, with the call path that reaches it.
+
+| Capslock capability | Vigilante power |
+| --- | --- |
+| `EXEC` | `exec` |
+| `NETWORK` | `network` |
+| `FILES` | `files` |
+| `READ_SYSTEM_STATE` | `read_system_state` |
+| `MODIFY_SYSTEM_STATE` (and `/ENV`, `/CHDIR`, `/SIGNALS`, `/LOGGING`) | `modify_system_state` (with the detail `env`, `chdir`, `signals`, or `logging`) |
+| `OPERATING_SYSTEM` | `operating_system` |
+| `SYSTEM_CALLS` | `system_calls` |
+| `ARBITRARY_EXECUTION` | `arbitrary_execution` |
+| `RUNTIME` | `runtime` |
+| `CGO` | `native:cgo` |
+| `UNSAFE_POINTER` | `native:unsafe_pointer` |
+| `REFLECT` | `dynamic_code:reflect` |
+| `UNANALYZED` | `unanalyzed` |
+
+How it works:
+
+1. Vigilante finds the Go modules (folders with `go.mod`) that the pull request changes.
+2. It makes a shared clone of the repository in a temporary folder for the base and for the head, as `capslock-git-diff` does. Your checkout does not change.
+3. In each module, it runs `capslock -packages=./... -output=json -granularity=intermediate`, with `GOFLAGS=-mod=readonly`.
+4. A capability that one of your Go packages did not have at the base is a finding. It must be in `vigilante.lock`, like every other power.
+5. A package that is new on a call path to a power is a note, for example a new dependency on the path to `network`. Notes appear in their own report section and do not fail the check. Together, findings and notes cover what `capslock-git-diff` reports.
+
+Vigilante stops with exit code 2 when `go` or `capslock` is missing, when `capslock` is older than v0.3.3, when Capslock reports a capability that Vigilante does not know, or when Capslock cannot load the packages (for example a private module without credentials, or code that does not compile). To use the Go pattern rules instead, set `[engines] go = "patterns"` in `vigilante.toml`. Go files that are not in a module always use the pattern rules.
+
 ## Scopes
 
 Vigilante groups powers by scope, and reports a power only the first time that it appears in its scope.
 
+- **Go, with Capslock:** the Go package folder, as in `capslock-git-diff`.
 - **Code:** the nearest folder with a package file (`Cargo.toml`, `package.json`, `pyproject.toml`, `setup.py`, `setup.cfg`, `go.mod`, `pom.xml`, `build.gradle`, `build.gradle.kts`, `Gemfile`, `*.gemspec`, or `*.csproj`). If there is none, the scope is the top folder of the file. `[scopes]` in `vigilante.toml` can put files in a named scope.
 - **Third-party actions:** all workflows together (`.github/workflows`). An action that one workflow already uses is not new in another workflow.
 - **Everything else:** the file, for example `.github/workflows/release.yml` or `.mcp.json`.
@@ -45,9 +83,9 @@ These rules keep the report short. Each rule leaves out a change that a reviewer
 
 Vigilante skips test folders and test files (`tests/`, `__tests__/`, `*_test.go`, `*.spec.ts`, `*Test.java`, `test_*.py`, and more), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. Add more globs with `[scan] exclude`.
 
-### Environment variables
+### Low-signal powers
 
-`env` is in the lock, but the report hides it when the lock already lists it. Most reads are like `process.env.NODE_ENV`. Change this with `[report] hide`.
+`read_system_state`, `files`, `operating_system`, `runtime`, and `unanalyzed` are in the lock, but the report hides them when the lock already lists them. Most of them are reads like `process.env.NODE_ENV` or a log file. A low-signal power that is not in the lock still fails the check and is shown. Low-signal notes are counted in one line. Change the list with `[report] hide`.
 
 ### Agent allow rules
 
@@ -77,7 +115,8 @@ The Go `native` rule skips generated protobuf files (`*.pb.go`), which import `u
 
 ## Known limits
 
-- Vigilante sees direct use in your code, not what a dependency does inside.
+- For Go, Vigilante follows calls into dependencies with Capslock. For the other languages, it sees direct use in your code, not what a dependency does inside.
+- Capslock does not resolve every call. It reports what it cannot follow as `unanalyzed`. See its [caveats](https://github.com/google/capslock/blob/main/docs/caveats.md).
 - A rule for a prefix such as `Bash(git rebase:*)` is not a power, but some programs can run code through options (`git rebase --exec`).
 - A change to a script that an existing hook calls does not change the power, so it is not reported.
 - A power that moves to a new file or a new package is reported as new.

@@ -19,7 +19,7 @@ deny = [
 ]
 
 [report]
-hide = ["env"]
+hide = ["read_system_state", "files", "operating_system", "runtime", "unanalyzed"]
 
 [severity]
 network = "high"
@@ -30,6 +30,9 @@ paths = [".vigilante/rules"]
 
 [ci]
 trusted_owners = ["your-org"]
+
+[engines]
+go = "capslock"
 ```
 
 ## Keys
@@ -40,10 +43,11 @@ trusted_owners = ["your-org"]
 | `scopes.<name>` | none | Puts the code files that match the glob in one scope with this name. Without it, the scope of a code file is its nearest package root. |
 | `policy.mode` | `"lock"` | `"lock"` fails when a power is not in `vigilante.lock`. `"report"` only reports. |
 | `policy.deny` | `[]` | Powers that always fail the check, even when they are in the lock. `scope` is a glob that matches the scope path, and its default is every scope. `capability` is a power name from [powers.md](powers.md). |
-| `report.hide` | `["env"]` | Powers that the report hides when they are in the lock. They are still in `vigilante.lock`. A hidden power that is not in the lock is shown. |
+| `report.hide` | `["read_system_state", "files", "operating_system", "runtime", "unanalyzed"]` | Powers that the report hides when they are in the lock. They are still in `vigilante.lock`. A hidden power that is not in the lock is shown. |
 | `severity.<power>` | See [powers.md](powers.md) | `"low"`, `"medium"`, or `"high"` for a power. |
 | `rules.paths` | `[]` | Folders with your own code rules. See [Your own rules](#your-own-rules). |
 | `ci.trusted_owners` | `[]` | GitHub owners whose actions count as first party, like `actions/` and `github/`. The match ignores case. |
+| `engines.go` | `"capslock"` | `"capslock"` follows Go calls into dependencies with Capslock and needs `go` and `capslock`. `"patterns"` uses the direct-use rules in `packs/go.yml`. See [powers.md](powers.md#go-capslock). |
 
 Globs use `/` between folders. `*` matches inside one folder, and `**` matches any number of folders. `services/**` matches the scopes `services/billing` and `services/billing/api`, but not the scope `services` itself.
 
@@ -104,7 +108,7 @@ rule:
     regex: ^acme\.http(\.|$)
 ```
 
-- `metadata.capability` is the power that the rule finds: `exec`, `network`, `native`, `dynamic_code`, or `env`.
+- `metadata.capability` is the power that the rule finds. It must be a code power from [powers.md](powers.md), for example `exec`, `network`, `files`, or `modify_system_state`.
 - `language` is one of `rust`, `tsx`, `python`, `ruby`, `csharp`, `java`, or `go`. Vigilante reads every JavaScript and TypeScript file with the `tsx` grammar, so use `tsx` for both.
 - `files` and `ignores` limit the rule to some paths, as in ast-grep.
 - A file can have more than one rule. Put `---` between them. Each `id` must be unique, also across the built-in rules.

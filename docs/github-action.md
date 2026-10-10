@@ -25,11 +25,12 @@ jobs:
 
 ### What the action does
 
-1. It downloads the Vigilante release archive for the runner.
-2. It verifies the build attestation of the archive with `gh attestation verify`. The attestation must come from `.github/workflows/release.yml` in `theonly1me/vigilante`, from the tag of the version, on a GitHub-hosted runner. If the check fails, the job stops before Vigilante runs.
-3. On a `pull_request` event, it runs `vigilante diff --base <base commit> --head <head commit>`. On any other event, it runs `vigilante check`.
-4. It writes the report to the job log and to the job summary.
-5. The job fails with exit code 1 when a power is not in the lock, the lock is stale, or a `deny` rule matches. It fails with exit code 2 on an error.
+1. If the repository has a `go.mod` file, it installs the latest stable Go (`actions/setup-go`, no cache) and Capslock v0.3.3 (`go install`, which checks module checksums).
+2. It downloads the Vigilante release archive for the runner.
+3. It verifies the build attestation of the archive with `gh attestation verify`. The attestation must come from `.github/workflows/release.yml` in `theonly1me/vigilante`, from the tag of the version, on a GitHub-hosted runner. If the check fails, the job stops before Vigilante runs.
+4. On a `pull_request` event, it runs `vigilante diff --base <base commit> --head <head commit>`. On any other event, it runs `vigilante check`.
+5. It writes the report to the job log and to the job summary.
+6. The job fails with exit code 1 when a power is not in the lock, the lock is stale, or a `deny` rule matches. It fails with exit code 2 on an error.
 
 ### Inputs
 
@@ -42,6 +43,7 @@ jobs:
 - `fetch-depth: 0` on `actions/checkout`. `vigilante diff` needs the merge base of the pull request. With a shallow checkout, the action stops with exit code 2 and tells you to set `fetch-depth: 0`.
 - A Linux or macOS runner. The action stops with exit code 2 on Windows.
 - `gh` on the runner. GitHub-hosted runners have it.
+- For Go: code that compiles, because Capslock type-checks it. Private Go modules need `GOPRIVATE` and git credentials in the job, as for `go build`. Without them, Vigilante stops with exit code 2.
 
 ### Permissions and forks
 
@@ -83,7 +85,7 @@ Vigilante needs the full git history and the two commits of the change. Install 
 vigilante diff --base "$BASE_COMMIT" --head "$HEAD_COMMIT"
 ```
 
-`BASE_COMMIT` is the commit of the target branch, and `HEAD_COMMIT` is the commit of the change. Vigilante finds their merge base. The exit codes are the same as in GitHub Actions. To check the whole repository against the lock, for example on the main branch, run `vigilante check`.
+`BASE_COMMIT` is the commit of the target branch, and `HEAD_COMMIT` is the commit of the change. Vigilante finds their merge base. For a repository with Go modules, also install Go and `go install github.com/google/capslock/cmd/capslock@v0.3.3`. The exit codes are the same as in GitHub Actions. To check the whole repository against the lock, for example on the main branch, run `vigilante check`.
 
 ## On your machine
 

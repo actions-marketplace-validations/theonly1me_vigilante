@@ -14,7 +14,7 @@
 
 Vigilante reads a pull request and lists the new powers that it adds. A power is something like the first `subprocess` call in a package, a CI token that can push, a new MCP server that your agents connect to, or a new install script. You approve powers in a `vigilante.lock` file that your security team owns. If a pull request adds a power that is not in the lock, the check fails.
 
-Vigilante only reads files. It never runs code from the repository that it checks.
+Vigilante never runs code from the repository that it checks. It reads files, and for Go it type-checks the code with [Capslock](https://github.com/google/capslock).
 
 ## Why
 
@@ -43,12 +43,15 @@ The same pull request also added a second network call to `services/billing`, th
 
 | Surface | Files | Powers |
 | --- | --- | --- |
-| Code | Rust, JavaScript, TypeScript, Python, Ruby, C#, Java, and Go | `exec`, `network`, `native`, `dynamic_code`, `env` |
+| Code | Rust, JavaScript, TypeScript, Python, Ruby, C#, Java, and Go | `exec`, `network`, `files`, `native`, `dynamic_code`, `read_system_state`, `modify_system_state`, `system_calls` |
+| Go, through dependencies | Every Go module, with [Capslock](https://github.com/google/capslock) | All 13 Capslock capabilities, with the call path, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
 | CI | `.github/workflows/*.yml` | `token_write`, `oidc`, `untrusted_trigger`, `third_party_action`, `secret` |
 | AI agents | `.claude/settings.json`, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
 | Build | `package.json` install scripts, `build.rs`, `setup.py`, `.husky/`, `.pre-commit-config.yaml` | `install_hook`, `git_hook` |
 
-Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root. Tests, fixtures, and vendored code are skipped. [docs/powers.md](docs/powers.md) explains each power and the rules that keep the report short.
+Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root, and for Go it is the Go package. Tests, fixtures, and vendored code are skipped. [docs/powers.md](docs/powers.md) explains each power and the rules that keep the report short.
+
+For Go, Vigilante also reports new packages on a call path to a power, as `capslock-git-diff` does. A new dependency that reaches the network shows up there, even when the package already used the network. These notes do not fail the check.
 
 ## Install
 
@@ -68,7 +71,7 @@ Each release archive has a build attestation. To check that an archive came from
 gh attestation verify vigilante-x86_64-unknown-linux-musl.tar.gz --repo theonly1me/vigilante
 ```
 
-Windows is not supported yet.
+Windows is not supported yet. To check Go code, Vigilante needs `go` and `capslock` (`go install github.com/google/capslock/cmd/capslock@v0.3.3`). The GitHub Action installs both.
 
 ## Quick start
 
@@ -148,7 +151,7 @@ In a pull request, Vigilante reads `vigilante.toml` from the merge base, so a pu
 ## What Vigilante is not
 
 - It is not a malware detector. It shows what changed, and a person decides if the change is acceptable.
-- It sees direct use in your code, not what a dependency does inside.
+- For Go, it follows calls into every dependency. For the other languages, it sees direct use in your code, not what a dependency does inside.
 - It uses no AI to find or rank powers. The same input gives the same output, offline, in seconds.
 
 ## License
