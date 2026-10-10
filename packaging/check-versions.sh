@@ -16,6 +16,12 @@ expect_version() {
 
 expect_version Cargo.toml "$crate_version"
 
+npm_manifest=npm/vigilante/package.json
+expect_version "$npm_manifest" "$(node -p "require('./$npm_manifest').version")"
+while read -r name version; do
+  expect_version "$npm_manifest optionalDependencies $name" "$version"
+done < <(node -p "Object.entries(require('./$npm_manifest').optionalDependencies).map((entry) => entry.join(' ')).join('\\n')")
+
 if [ "$mismatches" -gt 0 ]; then
   exit 1
 fi
