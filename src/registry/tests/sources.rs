@@ -10,6 +10,7 @@ fn the_default_download_hosts_of_each_ecosystem_are_public() {
         "https://repo1.maven.org/maven2/com/acme/app/1/app-1.jar",
         "https://static.crates.io/crates/serde/serde-1.0.219.crate",
         "https://api.nuget.org/v3-flatcontainer/serilog/3.1.1/serilog.3.1.1.nupkg",
+        "https://rubygems.org/downloads/faraday-2.9.0.gem",
     ] {
         assert!(sources.allows(url), "{url}");
     }

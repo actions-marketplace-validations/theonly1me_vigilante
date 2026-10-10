@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 use super::parse::{ParseInput, Parsed, Source, parse_all};
 use super::{
@@ -136,11 +136,13 @@ impl<'a> Program<'a> {
 
     fn resolve_all(&mut self, file: ParsedFile) -> Result<HashMap<String, FileKey>, Error> {
         let ParsedFile { from, parsed } = file;
-        let specifiers: BTreeSet<String> = parsed
+        let mut seen = HashSet::new();
+        let specifiers: Vec<String> = parsed
             .index
             .loads
             .iter()
             .map(|load| load.specifier.clone())
+            .filter(|specifier| seen.insert(specifier.clone()))
             .collect();
         let mut resolved = HashMap::new();
         for specifier in specifiers {

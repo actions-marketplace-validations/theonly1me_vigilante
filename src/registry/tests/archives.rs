@@ -1,5 +1,5 @@
 use super::{INDEX, Served, serve};
-use crate::registry::test_server::{Symlink, tar_gzip, tar_with_symlink, zip};
+use crate::registry::test_server::{Symlink, gem, tar_gzip, tar_with_symlink, zip};
 use crate::registry::{Archive, Download};
 
 #[test]
@@ -46,4 +46,43 @@ fn a_zip_path_outside_the_package_stops_the_fetch() {
         .expect_err("outside");
 
     assert!(error.to_string().contains("outside the package"), "{error}");
+}
+
+#[test]
+fn a_gem_is_read_through_its_data_archive_and_paths_stay_inside() {
+    let setup = serve(Served {
+        path: "/package",
+        bytes: gem(&[("lib/tool.js", INDEX), ("../evil.js", INDEX)]),
+    });
+
+    let error = setup
+        .fetch(Download {
+            url: format!("{}/package", setup.server.base_url),
+            checksum: None,
+            archive: Archive::Gem,
+        })
+        .expect_err("outside");
+
+    assert!(error.to_string().contains("outside the package"), "{error}");
+}
+
+#[test]
+fn a_gem_keeps_the_files_of_its_data_archive() {
+    let setup = serve(Served {
+        path: "/package",
+        bytes: gem(&[("lib/tool.js", INDEX)]),
+    });
+
+    let folder = setup
+        .fetch(Download {
+            url: format!("{}/package", setup.server.base_url),
+            checksum: None,
+            archive: Archive::Gem,
+        })
+        .expect("fetch");
+
+    assert_eq!(
+        std::fs::read(folder.join("lib/tool.js")).expect("file"),
+        INDEX
+    );
 }

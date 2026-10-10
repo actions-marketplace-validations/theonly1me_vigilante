@@ -15,6 +15,7 @@ mod registry;
 mod report;
 mod repository_path;
 mod review;
+mod ruby;
 mod rust;
 mod scan;
 mod scope;

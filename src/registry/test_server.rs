@@ -113,3 +113,15 @@ pub fn zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
     }
     writer.finish().expect("zip").into_inner()
 }
+
+pub fn gem(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let data = tar_gzip(entries);
+    let mut builder = tar::Builder::new(Vec::new());
+    let mut header = tar::Header::new_gnu();
+    header.set_size(data.len() as u64);
+    header.set_mode(0o644);
+    builder
+        .append_data(&mut header, "data.tar.gz", data.as_slice())
+        .expect("gem data");
+    builder.into_inner().expect("gem")
+}

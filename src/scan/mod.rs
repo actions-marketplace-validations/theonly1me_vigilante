@@ -169,5 +169,6 @@ impl<'a> Scanner<'a> {
             || (self.config.java_engine == LanguageEngine::Deep && crate::java::owns(path))
             || (self.config.rust_engine == LanguageEngine::Deep && crate::rust::owns(path))
             || (self.config.csharp_engine == LanguageEngine::Deep && crate::csharp::owns(path))
+            || (self.config.ruby_engine == LanguageEngine::Deep && crate::ruby::owns(path))
     }
 }

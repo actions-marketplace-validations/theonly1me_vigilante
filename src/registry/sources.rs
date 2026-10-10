@@ -11,6 +11,7 @@ const PUBLIC_SOURCES: &[&str] = &[
     "https://dl.google.com/dl/android/maven2/",
     "https://static.crates.io/",
     "https://api.nuget.org/",
+    "https://rubygems.org/",
 ];
 
 #[derive(Clone, Debug, Default)]

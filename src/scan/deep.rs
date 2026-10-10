@@ -7,6 +7,7 @@ use crate::go::GoRequest;
 use crate::java::{self, JavaRequest};
 use crate::javascript::{self, JavaScriptRequest};
 use crate::python::{self, PythonRequest};
+use crate::ruby::{self, RubyRequest};
 use crate::rust::{self, RustRequest};
 
 impl Scanner<'_> {
@@ -61,6 +62,18 @@ impl Scanner<'_> {
         }
         if self.config.csharp_engine == LanguageEngine::Deep {
             let found = csharp::analyze(CSharpRequest {
+                tree: self.tree,
+                config: self.config,
+                rules: &self.rules,
+                scope_of: &|path| self.scopes.code_scope_of(path),
+                selection,
+            })?;
+            analysis.sightings.extend(found.sightings);
+            analysis.reaches.extend(found.reaches);
+            analysis.skipped.extend(found.skipped);
+        }
+        if self.config.ruby_engine == LanguageEngine::Deep {
+            let found = ruby::analyze(RubyRequest {
                 tree: self.tree,
                 config: self.config,
                 rules: &self.rules,

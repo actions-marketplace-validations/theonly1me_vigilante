@@ -36,6 +36,7 @@ const IDENTITY_LENGTH: usize = 16;
 pub enum Archive {
     TarGzip,
     Zip,
+    Gem,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

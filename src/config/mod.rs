@@ -22,6 +22,7 @@ pub struct Config {
     pub java_engine: LanguageEngine,
     pub rust_engine: LanguageEngine,
     pub csharp_engine: LanguageEngine,
+    pub ruby_engine: LanguageEngine,
     registry_sources: Sources,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
@@ -72,6 +73,7 @@ impl Config {
             java_engine: file.engines.java,
             rust_engine: file.engines.rust,
             csharp_engine: file.engines.csharp,
+            ruby_engine: file.engines.ruby,
             registry_sources: Sources::new(&file.registries.allow)?,
             excluded: excluded
                 .build()

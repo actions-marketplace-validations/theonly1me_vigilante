@@ -10,6 +10,7 @@ use crate::Error;
 const MAXIMUM_FILE_BYTES: u64 = 64 * 1024 * 1024;
 const MAXIMUM_TOTAL_BYTES: u64 = 1024 * 1024 * 1024;
 const MAXIMUM_ENTRIES: usize = 200_000;
+const GEM_DATA: &str = "data.tar.gz";
 
 pub struct ExtractRequest<'a> {
     pub bytes: &'a [u8],
@@ -28,6 +29,10 @@ pub fn extract(request: ExtractRequest) -> Result<(), Error> {
     match request.archive {
         Archive::TarGzip => writer.tar(GzDecoder::new(Cursor::new(request.bytes))),
         Archive::Zip => writer.zip(request.bytes),
+        Archive::Gem => {
+            let data = gem_data(request.bytes)?;
+            writer.tar(GzDecoder::new(Cursor::new(data)))
+        }
     }
 }
 
@@ -129,6 +134,23 @@ fn safe_relative(path: &Path) -> Option<PathBuf> {
         }
     }
     (!relative.as_os_str().is_empty()).then_some(relative)
+}
+
+fn gem_data(bytes: &[u8]) -> Result<Vec<u8>, Error> {
+    let mut archive = tar::Archive::new(Cursor::new(bytes));
+    for entry in archive.entries().map_err(invalid)? {
+        let mut entry = entry.map_err(invalid)?;
+        if entry.path().map_err(invalid)?.as_ref() == Path::new(GEM_DATA) {
+            let mut data = Vec::new();
+            entry
+                .by_ref()
+                .take(MAXIMUM_TOTAL_BYTES)
+                .read_to_end(&mut data)
+                .map_err(invalid)?;
+            return Ok(data);
+        }
+    }
+    Err(Error::new(format!("the gem has no {GEM_DATA}")))
 }
 
 fn invalid(error: impl std::fmt::Display) -> Error {
