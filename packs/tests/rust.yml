@@ -1,6 +1,7 @@
 id: rust-exec
 valid:
   - "fn main() { std::process::exit(1); }"
+  - "use std::{env, process::exit};"
   - "fn main() { let app = clap::Command::new(\"vigilante\"); }"
   - "/// Runs commands through [`std::process::Command`].\nfn run() {}"
 invalid:
@@ -8,13 +9,17 @@ invalid:
   - "use std::process::{Command, Stdio};"
   - "fn main() { std::process::Command::new(\"ls\"); }"
   - "use tokio::process::Command;"
+  - "use std::{env, ffi::OsStr, process::Command};"
+  - "use std::{io, process::{Child, Stdio}};"
 ---
 id: rust-network
 valid:
   - "use std::net::IpAddr;"
   - "use crate::hyper_utils::Client;"
+  - "use std::{io, net::IpAddr};"
 invalid:
   - "use std::net::{IpAddr, TcpStream};"
+  - "use std::{io, net::TcpListener};"
   - "fn main() { let body = reqwest::blocking::get(url); }"
   - "use reqwest::Client;"
   - "fn main() { let stream = TcpStream::connect(address); }"
