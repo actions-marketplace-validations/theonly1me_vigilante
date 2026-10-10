@@ -34,6 +34,7 @@ pub struct GoAnalysis {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReachKind {
     OnlyThroughOtherPackages,
+    OwnCodeThatDoesNotBlock,
     NewPackageOnPath,
 }
 

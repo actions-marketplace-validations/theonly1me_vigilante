@@ -51,7 +51,7 @@ The same pull request also added a second network call to `services/billing`, th
 
 Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root, and for Go it is the Go package. Tests, fixtures, and vendored code are skipped. [docs/powers.md](docs/powers.md) explains each power and the rules that keep the report short.
 
-For Go, a finding is a power that your package reaches through its own code. A power that comes only through a dependency, and a new package on a call path to a power, are notes, as in `capslock-git-diff`. A new dependency that reaches the network shows up there. Notes do not fail the check.
+For Go, a finding is `exec`, `network`, or `native` that your package reaches through its own code. Every other Go power, a power that comes only through a dependency, and a new package on a call path to a power, are notes, as in `capslock-git-diff`. A new dependency that reaches the network shows up there. Notes do not fail the check.
 
 ## Install
 

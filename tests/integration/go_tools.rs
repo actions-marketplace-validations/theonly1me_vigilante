@@ -69,19 +69,32 @@ fn each_capslock_capability_maps_to_a_vigilante_power() {
         .iter()
         .map(|(name, _)| *name)
         .collect();
-    let repository = repository_with(&names);
+    let repository = repository_with(&[]);
+    repository.commit("base");
+    repository.git(&["checkout", "--quiet", "-b", "feature"]);
+    let head = repository_with(&names);
+    let head_output = std::fs::read_to_string(head.directory.path().join("app/capslock.json"))
+        .expect("capslock output");
+    repository.write(&[("app/capslock.json", &head_output)]);
+    repository.commit("use every capability");
+    let tools = FakeTools::new();
 
-    let run = scan(&repository, Tools::Fake, &[]);
+    let run = run_vigilante(GoRun {
+        repository: &repository,
+        tools: &tools,
+        available: Tools::Fake,
+        arguments: &[
+            "diff", "--base", "main", "--head", "feature", "--format", "json",
+        ],
+        environment: &[],
+    });
 
-    assert_eq!(run.code, 0, "{}", run.stderr);
     let report = report_of(&run);
-    let powers: BTreeSet<String> = report
-        .as_array()
-        .expect("scopes")
+    let powers: BTreeSet<String> = ["findings", "notes"]
         .iter()
-        .filter(|scope| scope["scope"] == "app/fetch")
-        .flat_map(|scope| scope["powers"].as_array().cloned().unwrap_or_default())
-        .map(|power| power["power"].as_str().unwrap_or_default().to_string())
+        .flat_map(|list| report[*list].as_array().cloned().unwrap_or_default())
+        .filter(|entry| entry["scope"]["path"] == "app/fetch")
+        .map(|entry| entry["power"].as_str().unwrap_or_default().to_string())
         .collect();
     let wanted: Vec<&str> = CAPSLOCK_TO_VIGILANTE
         .iter()
