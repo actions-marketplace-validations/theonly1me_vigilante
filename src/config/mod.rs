@@ -8,7 +8,7 @@ use globset::{Glob, GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder};
 pub use file::Mode;
 
 use crate::tree::Tree;
-use crate::{Capability, Error, Scope, Severity};
+use crate::{Capability, Error, Power, Scope, Severity};
 use excludes::TEST_AND_VENDORED_PATHS;
 use file::ConfigFile;
 
@@ -20,6 +20,7 @@ pub struct Config {
     denied: Vec<(GlobMatcher, Capability)>,
     hidden: BTreeSet<Capability>,
     severity: BTreeMap<Capability, Severity>,
+    trusted_owners: Vec<String>,
 }
 
 impl Config {
@@ -64,6 +65,7 @@ impl Config {
             denied,
             hidden: file.report.hide.into_iter().collect(),
             severity: file.severity,
+            trusted_owners: file.ci.trusted_owners,
         })
     }
 
@@ -88,6 +90,20 @@ impl Config {
 
     pub fn is_hidden(&self, capability: Capability) -> bool {
         self.hidden.contains(&capability)
+    }
+
+    pub fn trusts(&self, power: &Power) -> bool {
+        let owner = power
+            .detail
+            .as_deref()
+            .and_then(|action| action.split_once('/'))
+            .map(|(owner, _)| owner);
+        power.capability == Capability::ThirdPartyAction
+            && owner.is_some_and(|owner| {
+                self.trusted_owners
+                    .iter()
+                    .any(|trusted| trusted.eq_ignore_ascii_case(owner))
+            })
     }
 
     pub fn severity_of(&self, capability: Capability) -> Severity {

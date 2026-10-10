@@ -13,6 +13,7 @@ pub struct ConfigFile {
     pub report: ReportSection,
     pub severity: BTreeMap<Capability, Severity>,
     pub rules: RulesSection,
+    pub ci: CiSection,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -62,6 +63,12 @@ impl Default for ReportSection {
 #[serde(default, deny_unknown_fields)]
 pub struct RulesSection {
     pub paths: Vec<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CiSection {
+    pub trusted_owners: Vec<String>,
 }
 
 fn every_scope() -> String {

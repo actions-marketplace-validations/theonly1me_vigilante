@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::code::Rules;
 use crate::config::Config;
 use crate::scope::{Scopes, ScopesInput};
-use crate::surfaces::Surfaces;
+use crate::surfaces::{self, Placement, Surfaces};
 use crate::tree::{DirectoryTree, Git, Tree};
 use crate::{Error, Evidence, PowerMap, Scope, Sighting, SourceFile, Surface};
 
@@ -103,11 +103,19 @@ impl<'a> Scanner<'a> {
                 text: &file.text,
             };
             let detections = self.surfaces.detect(source)?;
-            for detection in detections.into_iter().chain(self.rules.detect(source)) {
+            for detection in detections
+                .into_iter()
+                .chain(self.rules.detect(source))
+                .filter(|detection| !self.config.trusts(&detection.power))
+            {
                 let surface = detection.power.capability.surface();
                 let scope_path = match surface {
                     Surface::Code => self.scopes.code_scope_of(&file.path),
-                    _ => file.path.clone(),
+                    _ => surfaces::scope_path_of(Placement {
+                        path: &file.path,
+                        capability: detection.power.capability,
+                    })
+                    .to_string(),
                 };
                 map.insert(Sighting {
                     scope: Scope {

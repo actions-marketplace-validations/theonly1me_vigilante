@@ -1,5 +1,7 @@
 use crate::support::{expected, scan_files, sightings};
 
+const WORKFLOWS: &str = ".github/workflows";
+
 const RELEASE_WORKFLOW: &str = "name: release
 on:
   pull_request_target:
@@ -38,10 +40,10 @@ fn workflow_powers_are_found_with_their_lines() {
             &format!("ci {file} token_write:contents {file}:7"),
             &format!("ci {file} oidc {file}:8"),
             &format!("ci {file} token_write:packages {file}:13"),
-            &format!("ci {file} third_party_action:softprops/action-gh-release {file}:18"),
+            &format!("ci {WORKFLOWS} third_party_action:softprops/action-gh-release {file}:18"),
             &format!("ci {file} secret:NPM_TOKEN {file}:20"),
             &format!(
-                "ci {file} third_party_action:other-org/workflows/.github/workflows/build.yml {file}:23"
+                "ci {WORKFLOWS} third_party_action:other-org/workflows/.github/workflows/build.yml {file}:23"
             ),
             &format!("ci {file} secret:inherit {file}:24"),
         ])
@@ -108,5 +110,48 @@ fn a_secret_is_read_only_from_an_expression_and_on_its_own_line() {
     assert_eq!(
         sightings(&map),
         expected(&[&format!("ci {file} secret:DEPLOY_TOKEN {file}:7")])
+    );
+}
+
+#[test]
+fn an_action_is_one_power_for_all_workflows() {
+    let build = ".github/workflows/build.yml";
+    let deploy = ".github/workflows/deploy.yml";
+    let map = scan_files(&[
+        (
+            build,
+            "on: push\njobs:\n  image:\n    steps:\n      - uses: docker/login-action@v3\n",
+        ),
+        (
+            deploy,
+            "on: push\njobs:\n  ship:\n    steps:\n      - uses: docker/login-action@v3\n      - uses: webfactory/ssh-agent@v0.9.0\n",
+        ),
+    ]);
+
+    assert_eq!(
+        sightings(&map),
+        expected(&[
+            &format!("ci {WORKFLOWS} third_party_action:docker/login-action {build}:5"),
+            &format!("ci {WORKFLOWS} third_party_action:webfactory/ssh-agent {deploy}:6"),
+        ])
+    );
+}
+
+#[test]
+fn actions_of_a_trusted_owner_are_first_party() {
+    let file = ".github/workflows/release.yml";
+    let map = scan_files(&[
+        ("vigilante.toml", "[ci]\ntrusted_owners = [\"Acme\"]\n"),
+        (
+            file,
+            "on: push\njobs:\n  release:\n    steps:\n      - uses: acme/setup-node@v1\n      - uses: acme-labs/publish@v2\n",
+        ),
+    ]);
+
+    assert_eq!(
+        sightings(&map),
+        expected(&[&format!(
+            "ci {WORKFLOWS} third_party_action:acme-labs/publish {file}:6"
+        )])
     );
 }

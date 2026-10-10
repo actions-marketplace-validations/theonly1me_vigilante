@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use install_hooks::{HookFile, HookPath};
 
 use crate::document::Node;
-use crate::{Detection, Error, SourceFile};
+use crate::{Capability, Detection, Error, SourceFile};
 
 pub struct Surfaces<'a> {
     paths: &'a BTreeSet<String>,
@@ -56,6 +56,18 @@ impl<'a> Surfaces<'a> {
             path,
             paths: self.paths,
         })
+    }
+}
+
+pub struct Placement<'a> {
+    pub path: &'a str,
+    pub capability: Capability,
+}
+
+pub fn scope_path_of(placement: Placement<'_>) -> &str {
+    match placement.capability {
+        Capability::ThirdPartyAction => ci::WORKFLOWS,
+        _ => placement.path,
     }
 }
 

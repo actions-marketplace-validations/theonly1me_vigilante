@@ -131,3 +131,24 @@ fn diff_reads_the_config_from_the_base_so_a_pull_request_cannot_hide_itself() {
     );
     assert!(!review.passed());
 }
+
+#[test]
+fn diff_does_not_report_an_action_that_another_workflow_already_uses() {
+    let repository = TestRepository::new();
+    let steps = "on: push\njobs:\n  ship:\n    steps:\n      - uses: docker/login-action@v3\n";
+    repository.write(&[(".github/workflows/ci.yml", steps)]);
+    repository.commit("base");
+    start_feature(&repository);
+    repository.write(&[(
+        ".github/workflows/deploy.yml",
+        &format!("{steps}      - uses: webfactory/ssh-agent@v0.9.0\n"),
+    )]);
+    repository.commit("add a deploy workflow");
+
+    let review = repository.diff(MAIN_AND_FEATURE);
+
+    assert_eq!(
+        finding_lines(&review),
+        ["ci .github/workflows third_party_action:webfactory/ssh-agent locked=false denied=false"]
+    );
+}
