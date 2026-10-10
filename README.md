@@ -1,10 +1,16 @@
-<p align="center">
-  <img src="assets/vigilante-banner-white-bg.webp" alt="Vigilante" width="420">
-</p>
-
-<p align="center">
-  <b>See what a pull request lets your code, your CI, and your AI agents do, before you merge it.</b>
-</p>
+<div align="center">
+  <img src="assets/vigilante-wordmark-white-bg.webp" alt="Vigilante" width="360">
+  <p><b>See what a pull request lets your code, your CI, and your AI agents do, before you merge it.</b></p>
+  <p>
+    <a href="https://github.com/theonly1me/vigilante/actions/workflows/ci.yml"><img src="https://github.com/theonly1me/vigilante/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+    <a href="https://github.com/theonly1me/vigilante/releases/latest"><img src="https://img.shields.io/github/v/release/theonly1me/vigilante?label=release" alt="Latest release"></a>
+    <a href="https://crates.io/crates/vigilante"><img src="https://img.shields.io/crates/v/vigilante?logo=rust" alt="crates.io"></a>
+    <a href="https://www.npmjs.com/package/@theonly1me/vigilante"><img src="https://img.shields.io/npm/v/@theonly1me/vigilante?logo=npm" alt="npm"></a>
+    <a href="https://pypi.org/project/vigilante-scan/"><img src="https://img.shields.io/pypi/v/vigilante-scan?logo=pypi&amp;logoColor=white" alt="PyPI"></a>
+    <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue" alt="License: MIT OR Apache-2.0"></a>
+    <img src="https://img.shields.io/badge/rust-1.88%2B-orange?logo=rust" alt="Rust 1.88 or later">
+  </p>
+</div>
 
 Vigilante reads a pull request and lists the new powers that it adds. A power is something like the first `subprocess` call in a package, a CI token that can push, a new MCP server that your agents connect to, or a new install script. You approve powers in a `vigilante.lock` file that your security team owns. If a pull request adds a power that is not in the lock, the check fails.
 
