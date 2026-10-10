@@ -22,12 +22,6 @@ pub struct LockEntry<'a> {
     pub package: &'a FakePackage<'a>,
 }
 
-pub struct PnpmEntry<'a> {
-    pub package: &'a FakePackage<'a>,
-    pub dependencies: &'a [(&'a str, &'a str)],
-    pub is_direct: bool,
-}
-
 pub struct NpmRegistry {
     pub base_url: String,
     integrities: BTreeMap<String, String>,
@@ -74,6 +68,12 @@ impl NpmRegistry {
         }
     }
 
+    pub fn tarball(&self, package: &FakePackage) -> (String, String) {
+        let path = path_of(package);
+        let integrity = self.integrities.get(&path).cloned().unwrap_or_default();
+        (format!("{}{path}", self.base_url), integrity)
+    }
+
     pub fn allow_config(&self) -> String {
         format!("[registries]\nallow = [\"{}\"]\n", self.base_url)
     }
@@ -95,53 +95,6 @@ impl NpmRegistry {
         let lockfile =
             json!({ "name": "app", "lockfileVersion": 3, "requires": true, "packages": packages });
         serde_json::to_string_pretty(&lockfile).expect("lockfile")
-    }
-}
-
-impl NpmRegistry {
-    pub fn pnpm_lockfile(&self, entries: &[PnpmEntry]) -> String {
-        let mut lines = vec![
-            "lockfileVersion: '9.0'".to_string(),
-            String::new(),
-            "importers:".to_string(),
-            "  .:".to_string(),
-            "    dependencies:".to_string(),
-        ];
-        for entry in entries.iter().filter(|entry| entry.is_direct) {
-            lines.push(format!("      {}:", entry.package.name));
-            lines.push(format!("        specifier: ^{}", entry.package.version));
-            lines.push(format!("        version: {}", entry.package.version));
-        }
-        lines.push("packages:".to_string());
-        for entry in entries {
-            let path = path_of(entry.package);
-            let integrity = self.integrities.get(&path).cloned().unwrap_or_default();
-            lines.push(format!(
-                "  {}@{}:",
-                entry.package.name, entry.package.version
-            ));
-            lines.push(format!(
-                "    resolution: {{integrity: {integrity}, tarball: '{}{path}'}}",
-                self.base_url
-            ));
-        }
-        lines.push("snapshots:".to_string());
-        for entry in entries {
-            lines.push(format!(
-                "  {}@{}:",
-                entry.package.name, entry.package.version
-            ));
-            if !entry.dependencies.is_empty() {
-                lines.push("    dependencies:".to_string());
-                lines.extend(
-                    entry
-                        .dependencies
-                        .iter()
-                        .map(|(name, version)| format!("      {name}: {version}")),
-                );
-            }
-        }
-        lines.join("\n") + "\n"
     }
 }
 

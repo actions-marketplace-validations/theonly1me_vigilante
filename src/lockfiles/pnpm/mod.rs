@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 mod sources;
 
-use super::{Found, LockedPackage, PackageSource, Place};
-use sources::{name_and_version, source_of};
+use super::{Found, LockedPackage, Lookup, PackageSource, Place};
 use crate::Error;
 use crate::document::Node;
 use crate::repository_path::joined;
+use sources::{name_and_version, source_of};
 
 const ROOT_IMPORTER: &str = ".";
 const DEPENDENCY_LISTS: &[&str] = &["dependencies", "devDependencies", "optionalDependencies"];
@@ -82,8 +82,9 @@ impl PnpmLockfile {
         })
     }
 
-    pub fn find(&self, place: Place, name: &str) -> Option<Found> {
-        let (reference, importer) = match place {
+    pub fn find(&self, lookup: Lookup) -> Option<Found> {
+        let name = lookup.name;
+        let (reference, importer) = match lookup.place {
             Place::Repository { folder } => {
                 let mut enclosing: Vec<(&String, &HashMap<String, String>)> = self
                     .importers

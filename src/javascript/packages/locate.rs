@@ -13,7 +13,7 @@ impl Packages<'_> {
         match self.decide(&request) {
             Decision::Located(located) => Ok(located),
             Decision::NotInLockfile => {
-                if request.is_from_repository && request.is_declared {
+                if request.is_from_repository && request.declared.is_some() {
                     let reason = format!("`{}` is not in the lockfile.", request.name);
                     self.skip(&lockfile_path, reason);
                 }

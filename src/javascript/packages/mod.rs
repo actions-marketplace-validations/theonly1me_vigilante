@@ -29,7 +29,7 @@ pub struct Locate<'a> {
     pub folder: &'a str,
     pub name: &'a str,
     pub is_from_repository: bool,
-    pub is_declared: bool,
+    pub declared: Option<&'a str>,
 }
 
 pub struct PackagesInput<'a> {

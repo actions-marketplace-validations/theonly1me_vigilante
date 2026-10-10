@@ -4,7 +4,7 @@ use std::thread;
 use super::{Locate, Located, Packages};
 use crate::Error;
 use crate::javascript::paths::{is_code_file, joined};
-use crate::lockfiles::{Found, LockedPackage, PackageSource, Place};
+use crate::lockfiles::{Found, LockedPackage, Lookup, PackageSource, Place};
 use crate::registry::{
     Archive, Checksum, Download, FetchRequest, Fetched, PackageId, Registry, github_archive,
 };
@@ -45,7 +45,12 @@ impl Packages<'_> {
                 key: request.folder,
             }
         };
-        let Some(Found { key, package }) = project.lockfile.find(place, request.name) else {
+        let lookup = Lookup {
+            place,
+            name: request.name,
+            declared: request.declared,
+        };
+        let Some(Found { key, package }) = project.lockfile.find(lookup) else {
             return Decision::NotInLockfile;
         };
         if let Some(known) = self.installed_at.get(&(request.project, key.clone())) {

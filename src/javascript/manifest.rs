@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 use serde::Deserialize;
-use serde::de::{self, IgnoredAny, MapAccess, SeqAccess, Visitor};
+use serde::de::{self, MapAccess, SeqAccess, Visitor};
+use serde_json::Value;
 
 const CONDITIONS: &[&str] = &["node", "require", "import", "module-sync", "default"];
 const ROOT_SUBPATH: &str = ".";
@@ -11,17 +12,19 @@ const ROOT_SUBPATH: &str = ".";
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
     #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
     main: Option<String>,
     #[serde(default)]
     exports: Option<Exports>,
     #[serde(default)]
-    dependencies: HashMap<String, IgnoredAny>,
+    dependencies: HashMap<String, Value>,
     #[serde(default)]
-    dev_dependencies: HashMap<String, IgnoredAny>,
+    dev_dependencies: HashMap<String, Value>,
     #[serde(default)]
-    optional_dependencies: HashMap<String, IgnoredAny>,
+    optional_dependencies: HashMap<String, Value>,
     #[serde(default)]
-    peer_dependencies: HashMap<String, IgnoredAny>,
+    peer_dependencies: HashMap<String, Value>,
 }
 
 #[derive(Debug)]
@@ -37,7 +40,11 @@ impl Manifest {
         serde_json::from_str(text).unwrap_or_default()
     }
 
-    pub fn declares(&self, name: &str) -> bool {
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
+    pub fn range_of(&self, name: &str) -> Option<String> {
         [
             &self.dependencies,
             &self.dev_dependencies,
@@ -45,7 +52,8 @@ impl Manifest {
             &self.peer_dependencies,
         ]
         .iter()
-        .any(|listed| listed.contains_key(name))
+        .find_map(|listed| listed.get(name))
+        .map(|range| range.as_str().unwrap_or_default().to_string())
     }
 
     pub fn entries(&self, subpath: &str) -> Vec<String> {

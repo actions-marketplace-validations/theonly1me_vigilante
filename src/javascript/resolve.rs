@@ -8,13 +8,14 @@ use super::program::{FileKey, Program, Root};
 use crate::Error;
 
 const MANIFEST: &str = "package.json";
-const NO_LOCKFILE: &str = "No package-lock.json, npm-shrinkwrap.json, or pnpm-lock.yaml covers this code, so Vigilante did not read its packages.";
+const NO_LOCKFILE: &str = "No package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or yarn.lock covers this code, so Vigilante did not read its packages.";
 
 struct Wanted {
     project: usize,
     folder: String,
     name: String,
     is_from_repository: bool,
+    declared: Option<String>,
 }
 
 impl Program<'_> {
@@ -66,11 +67,21 @@ impl Program<'_> {
                     continue;
                 };
                 if let Some((project, folder)) = self.place_of(from)? {
+                    let is_from_repository = from.root == Root::Repository;
+                    let declared = if is_from_repository {
+                        self.input
+                            .packages
+                            .projects
+                            .declared(&from.path, package.name)?
+                    } else {
+                        None
+                    };
                     wanted.push(Wanted {
                         project,
                         folder,
                         name: package.name.to_string(),
-                        is_from_repository: from.root == Root::Repository,
+                        is_from_repository,
+                        declared,
                     });
                 }
             }
@@ -82,7 +93,7 @@ impl Program<'_> {
                 folder: &item.folder,
                 name: &item.name,
                 is_from_repository: item.is_from_repository,
-                is_declared: false,
+                declared: item.declared.as_deref(),
             })
             .collect();
         self.input.packages.prefetch(&requests);
@@ -109,14 +120,17 @@ impl Program<'_> {
         };
         let is_from_repository = from.root == Root::Repository;
         let packages = &mut self.input.packages;
-        let is_declared =
-            is_from_repository && packages.projects.declares(&from.path, package.name)?;
+        let declared = if is_from_repository {
+            packages.projects.declared(&from.path, package.name)?
+        } else {
+            None
+        };
         let located = packages.locate(Locate {
             project,
             folder: &folder,
             name: package.name,
             is_from_repository,
-            is_declared,
+            declared: declared.as_deref(),
         })?;
         let entries = match &located {
             Located::Missing => return Ok(None),

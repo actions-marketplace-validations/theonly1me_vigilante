@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::manifest::Manifest;
 use super::paths::{joined, parent_folder};
 use crate::Error;
-use crate::lockfiles::{JAVASCRIPT_LOCKFILES, JavaScriptLockfile};
+use crate::lockfiles::{JAVASCRIPT_LOCKFILES, JavaScriptLockfile, YARN_LOCKFILE};
 use crate::tree::Tree;
 
 pub struct Project {
@@ -56,7 +56,7 @@ impl<'a> Projects<'a> {
         }
     }
 
-    pub fn declares(&mut self, path: &str, name: &str) -> Result<bool, Error> {
+    pub fn declared(&mut self, path: &str, name: &str) -> Result<Option<String>, Error> {
         let mut folder = parent_folder(path);
         loop {
             let manifest_path = joined(folder, "package.json").unwrap_or_default();
@@ -66,10 +66,10 @@ impl<'a> Projects<'a> {
                     self.manifests
                         .insert(manifest_path.clone(), Manifest::parse(&text));
                 }
-                return Ok(self.manifests[&manifest_path].declares(name));
+                return Ok(self.manifests[&manifest_path].range_of(name));
             }
             if folder.is_empty() {
-                return Ok(false);
+                return Ok(None);
             }
             folder = parent_folder(folder);
         }
@@ -88,15 +88,45 @@ impl<'a> Projects<'a> {
             return Ok(*index);
         }
         let text = self.read_repository(&file)?.unwrap_or_default();
-        let lockfile = JavaScriptLockfile::parse(&file, &text)
+        let mut lockfile = JavaScriptLockfile::parse(&file, &text)
             .map_err(|error| Error::new(format!("{file}: {error}")))?;
+        let folder = parent_folder(&file);
+        if file.ends_with(YARN_LOCKFILE) {
+            lockfile.add_workspaces(self.workspaces_under(folder)?);
+        }
         self.projects.push(Project {
-            folder: parent_folder(&file).to_string(),
+            folder: folder.to_string(),
             file: file.clone(),
             lockfile,
         });
         let index = self.projects.len() - 1;
         self.loaded.insert(file, index);
         Ok(index)
+    }
+
+    fn workspaces_under(&self, folder: &str) -> Result<HashMap<String, String>, Error> {
+        let manifests: Vec<&str> = self
+            .tree
+            .paths()
+            .iter()
+            .map(String::as_str)
+            .filter(|path| {
+                path.rsplit('/').next() == Some("package.json")
+                    && !path.contains("node_modules/")
+                    && (folder.is_empty() || path.starts_with(&format!("{folder}/")))
+            })
+            .collect();
+        let mut workspaces = HashMap::new();
+        for manifest in self.tree.read(&manifests)? {
+            if let Some(name) = Manifest::parse(&manifest.text).name() {
+                let package_folder = parent_folder(&manifest.path);
+                let relative = package_folder
+                    .strip_prefix(folder)
+                    .unwrap_or(package_folder)
+                    .trim_start_matches('/');
+                workspaces.insert(name.to_string(), relative.to_string());
+            }
+        }
+        Ok(workspaces)
     }
 }

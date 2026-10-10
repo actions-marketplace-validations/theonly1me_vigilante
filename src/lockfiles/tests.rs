@@ -1,4 +1,4 @@
-use super::{Found, JavaScriptLockfile, PackageSource, Place};
+use super::{Found, JavaScriptLockfile, Lookup, PackageSource, Place};
 
 const VERSION_9: &str = "lockfileVersion: '9.0'
 importers:
@@ -69,7 +69,13 @@ fn found(
     place: Place,
     name: &str,
 ) -> (String, String, PackageSource) {
-    let Found { key, package } = lockfile.find(place, name).expect("found");
+    let Found { key, package } = lockfile
+        .find(Lookup {
+            place,
+            name,
+            declared: None,
+        })
+        .expect("found");
     (
         key,
         format!("{}@{}", package.name, package.version),
@@ -143,7 +149,11 @@ fn a_workspace_folder_also_finds_the_dependencies_of_enclosing_importers() {
         },
         "runner",
     );
-    let missing = lockfile.find(Place::Repository { folder: "apps/web" }, "absent");
+    let missing = lockfile.find(Lookup {
+        place: Place::Repository { folder: "apps/web" },
+        name: "absent",
+        declared: None,
+    });
 
     assert_eq!(runner.1, "runner@1.0.0");
     assert_eq!(missing, None);

@@ -16,6 +16,7 @@ mod javascript_pnpm;
 mod javascript_skips;
 mod javascript_workspaces;
 mod lock;
+mod lockfile_writers;
 mod npm_registry;
 mod packs;
 mod report;

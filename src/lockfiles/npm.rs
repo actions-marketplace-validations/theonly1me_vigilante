@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
-use super::{Found, LockedPackage, PackageSource, Place, default_url};
+use super::{Found, LockedPackage, Lookup, PackageSource, Place, default_url};
 use crate::Error;
 
 const INSTALL_FOLDER: &str = "node_modules/";
@@ -29,8 +29,9 @@ impl NpmLockfile {
         Ok(lockfile)
     }
 
-    pub fn find(&self, place: Place, name: &str) -> Option<Found> {
-        let folder = match place {
+    pub fn find(&self, lookup: Lookup) -> Option<Found> {
+        let name = lookup.name;
+        let folder = match lookup.place {
             Place::Repository { folder } => folder,
             Place::Package { key } => key,
         };
