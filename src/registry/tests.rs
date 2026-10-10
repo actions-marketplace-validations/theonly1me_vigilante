@@ -138,3 +138,33 @@ fn a_missing_package_is_an_error() {
 
     assert!(error.to_string().contains("404"), "{error}");
 }
+
+#[test]
+fn the_same_version_with_another_checksum_is_downloaded_again() {
+    let first = tar_gzip(&[("package/index.js", INDEX)]);
+    let second = tar_gzip(&[("package/index.js", b"module.exports = 2;\n")]);
+    let server = TestServer::serve(BTreeMap::from([
+        ("/first".to_string(), first.clone()),
+        ("/second".to_string(), second.clone()),
+    ]));
+    let cache = TempDir::new().expect("cache");
+    let setup = Setup {
+        registry: Registry::new(cache.path().to_path_buf()),
+        server,
+        cache,
+    };
+    let at = |path: &str, bytes: &[u8]| Download {
+        url: format!("{}{path}", setup.server.base_url),
+        checksum: Some(integrity(bytes)),
+        archive: Archive::TarGzip,
+    };
+
+    fetch(&setup, at("/first", &first)).expect("first fetch");
+    let folder = fetch(&setup, at("/second", &second)).expect("second fetch");
+
+    assert_eq!(setup.server.request_count(), 2);
+    assert_eq!(
+        fs::read(folder.join("package/index.js")).expect("index"),
+        b"module.exports = 2;\n"
+    );
+}

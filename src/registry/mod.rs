@@ -12,16 +12,19 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use cache::{Cache, CacheFill};
+use cache::{Cache, CacheFill, CacheKey};
 pub use checksum::Checksum;
 use extract::{ExtractRequest, extract};
 pub use git::github_archive;
 pub use sources::Sources;
 
+use sha2::{Digest, Sha256};
+
 use crate::Error;
 
 const MAXIMUM_DOWNLOAD_BYTES: u64 = 256 * 1024 * 1024;
 const TIMEOUT: Duration = Duration::from_secs(120);
+const IDENTITY_LENGTH: usize = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Archive {
@@ -82,7 +85,12 @@ impl Registry {
     }
 
     pub fn fetch(&self, request: FetchRequest) -> Result<PathBuf, Error> {
-        if let Some(folder) = self.cache.complete_folder(&request.package) {
+        let identity = identity_of(request.download);
+        let key = CacheKey {
+            package: &request.package,
+            identity: &identity,
+        };
+        if let Some(folder) = self.cache.complete_folder(&key) {
             return Ok(folder);
         }
         let url = &request.download.url;
@@ -106,7 +114,7 @@ impl Registry {
             )));
         }
         self.cache.fill(CacheFill {
-            package: &request.package,
+            key: &key,
             fill: &|target| {
                 extract(ExtractRequest {
                     bytes: &bytes,
@@ -117,4 +125,15 @@ impl Registry {
             },
         })
     }
+}
+
+fn identity_of(download: &Download) -> String {
+    let digest = Sha256::digest(format!("{}\n{:?}", download.url, download.checksum));
+    digest
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>()
+        .chars()
+        .take(IDENTITY_LENGTH)
+        .collect()
 }
