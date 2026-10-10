@@ -101,7 +101,8 @@ fn parse(text: &str) -> Option<Framework> {
         (Family::CoreApp, dotted(rest)?)
     } else if let Some(rest) = name.strip_prefix(".netframework") {
         (Family::Classic, dotted(rest)?)
-    } else if let Some(rest) = name.strip_prefix("net") {
+    } else {
+        let rest = name.strip_prefix("net")?;
         if rest.contains('.') {
             (Family::Modern, dotted(rest)?)
         } else {
@@ -112,8 +113,6 @@ fn parse(text: &str) -> Option<Framework> {
                     .collect::<Option<Vec<u32>>>()?,
             )
         }
-    } else {
-        return None;
     };
     Some(Framework {
         family,
