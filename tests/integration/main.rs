@@ -3,6 +3,7 @@ mod check;
 mod ci;
 mod cli;
 mod file_server;
+mod go_blocking;
 mod go_capslock;
 mod go_engine;
 mod go_fixtures;
