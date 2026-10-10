@@ -2,17 +2,33 @@ mod claude;
 mod codex;
 mod mcp;
 
-use crate::Detection;
-use crate::document::Node;
+use super::parse_json;
+use crate::{Detection, Error, Power, SourceFile};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AgentFile {
+enum AgentFile {
     ClaudeSettings,
     McpServers { key: &'static str },
     CodexConfig,
 }
 
-pub fn kind_of(path: &str) -> Option<AgentFile> {
+pub fn handles(path: &str) -> bool {
+    kind_of(path).is_some()
+}
+
+pub fn detect(file: SourceFile) -> Result<Vec<Detection>, Error> {
+    match kind_of(file.path) {
+        Some(AgentFile::ClaudeSettings) => Ok(claude::detect(&parse_json(file)?)),
+        Some(AgentFile::McpServers { key }) => Ok(parse_json(file)?
+            .get(key)
+            .map(mcp::detect)
+            .unwrap_or_default()),
+        Some(AgentFile::CodexConfig) => codex::detect(file),
+        None => Ok(Vec::new()),
+    }
+}
+
+fn kind_of(path: &str) -> Option<AgentFile> {
     let mut parts = path.rsplit('/');
     let name = parts.next()?;
     let folder = parts.next().unwrap_or_default();
@@ -27,23 +43,6 @@ pub fn kind_of(path: &str) -> Option<AgentFile> {
     }
 }
 
-pub fn detect_json(file: JsonFile) -> Vec<Detection> {
-    match file.kind {
-        AgentFile::ClaudeSettings => claude::detect(file.document),
-        AgentFile::McpServers { key } => {
-            file.document.get(key).map(mcp::detect).unwrap_or_default()
-        }
-        AgentFile::CodexConfig => Vec::new(),
-    }
-}
-
-pub use codex::detect as detect_codex;
-
-pub struct JsonFile<'a> {
-    pub kind: AgentFile,
-    pub document: &'a Node,
-}
-
 fn detection(found: Found) -> Detection {
     Detection {
         power: found.power,
@@ -53,6 +52,6 @@ fn detection(found: Found) -> Detection {
 }
 
 struct Found {
-    power: crate::Power,
+    power: Power,
     line: usize,
 }

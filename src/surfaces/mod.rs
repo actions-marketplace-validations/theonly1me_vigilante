@@ -4,7 +4,6 @@ mod install_hooks;
 
 use std::collections::BTreeSet;
 
-use agent::{AgentFile, JsonFile};
 use install_hooks::{HookFile, HookPath};
 
 use crate::document::Node;
@@ -20,21 +19,15 @@ impl<'a> Surfaces<'a> {
     }
 
     pub fn handles(&self, path: &str) -> bool {
-        ci::is_workflow(path) || agent::kind_of(path).is_some() || self.hook_kind_of(path).is_some()
+        ci::is_workflow(path) || agent::handles(path) || self.hook_kind_of(path).is_some()
     }
 
     pub fn detect(&self, file: SourceFile) -> Result<Vec<Detection>, Error> {
         if ci::is_workflow(file.path) {
             return Ok(ci::detect(&parse(file)?));
         }
-        if let Some(kind) = agent::kind_of(file.path) {
-            return match kind {
-                AgentFile::CodexConfig => agent::detect_codex(file),
-                _ => Ok(agent::detect_json(JsonFile {
-                    kind,
-                    document: &parse_json(file)?,
-                })),
-            };
+        if agent::handles(file.path) {
+            return agent::detect(file);
         }
         match self.hook_kind_of(file.path) {
             Some(HookFile::PackageManifest) => {
