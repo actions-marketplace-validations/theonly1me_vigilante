@@ -86,6 +86,7 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     );
     let notes = new_notes(NotesInput {
         base: &base_scan.reaches,
+        base_powers: &base_powers,
         head: head_scan.reaches,
         config: &config,
     });

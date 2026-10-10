@@ -59,8 +59,10 @@ How it works:
 1. Vigilante finds the Go modules (folders with `go.mod`) that the pull request changes.
 2. It makes a shared clone of the repository in a temporary folder for the base and for the head, as `capslock-git-diff` does. Your checkout does not change.
 3. In each module, it runs `capslock -packages=./... -output=json -granularity=intermediate`, with `GOFLAGS=-mod=readonly`.
-4. A capability that one of your Go packages did not have at the base is a finding. It must be in `vigilante.lock`, like every other power.
-5. A package that is new on a call path to a power is a note, for example a new dependency on the path to `network`. Notes appear in their own report section and do not fail the check. Together, findings and notes cover what `capslock-git-diff` reports.
+4. A capability that one of your Go packages reaches through your own code, and did not have at the base, is a finding. The example call path stays in your packages until the privileged call, for example your code calling `exec.Command`. It must be in `vigilante.lock`, like every other power.
+5. Everything else that `capslock-git-diff` reports is a note: a capability that your package reaches only through other packages (a dependency or the standard library), and a package that is new on a call path to a power. Each note names the first outside package on the path, for example a new dependency that reaches `network`. Notes appear in their own report section and do not fail the check. Together, findings and notes cover what `capslock-git-diff` reports.
+
+Why the split: on 20 real agent pull requests, 14 of 16 findings through the repository's own code were useful to a reviewer, but only 3 of 57 findings through other packages were. Most of those came from library internals (hash assembly, terminal checks, JSON reflection) or from Capslock's interface over-approximation. As notes, they stay visible without failing the check.
 
 Vigilante stops with exit code 2 when `go` or `capslock` is missing, when `capslock` is older than v0.3.3, when Capslock reports a capability that Vigilante does not know, or when Capslock cannot load the packages (for example a private module without credentials, or code that does not compile). To use the Go pattern rules instead, set `[engines] go = "patterns"` in `vigilante.toml`. Go files that are not in a module always use the pattern rules.
 

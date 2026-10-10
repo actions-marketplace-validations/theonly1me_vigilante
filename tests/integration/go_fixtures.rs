@@ -119,3 +119,20 @@ pub fn finding_summaries(report: &Value) -> Vec<String> {
         })
         .collect()
 }
+
+pub const DIRECT_EXEC: Call = Call {
+    function: "os/exec.Command",
+    package: "os/exec",
+    site: Some(("fetch.go", 4)),
+};
+
+pub fn direct_exec_reaches() -> Vec<Reach<'static>> {
+    [FETCH_PACKAGE, "os/exec"]
+        .into_iter()
+        .map(|package| Reach {
+            package,
+            capability: "EXEC",
+            calls: &[PAGE, DIRECT_EXEC],
+        })
+        .collect()
+}

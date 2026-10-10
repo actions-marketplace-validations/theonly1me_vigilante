@@ -47,6 +47,7 @@ pub struct Note {
     pub scope: Scope,
     pub power: Power,
     pub through: String,
+    pub package: String,
     pub evidence: Evidence,
     pub hidden: bool,
 }

@@ -3,17 +3,13 @@ use std::collections::BTreeSet;
 use serde_json::Value;
 
 use crate::go_fixtures::{
-    APP_MODULE, APP_MODULE_FILE, Call, DIFF, EXEC_COMMAND, FETCH_PACKAGE, FETCH_SOURCE, PAGE,
-    Reach, capslock_output, exec_reaches, module_repository, network_reaches,
+    APP_MODULE, APP_MODULE_FILE, DIFF, DIRECT_EXEC, EXEC_COMMAND, FETCH_PACKAGE, FETCH_SOURCE,
+    PAGE, Reach, capslock_output, direct_exec_reaches, exec_reaches, finding_summaries,
+    module_repository, network_reaches,
 };
 use crate::go_support::{FakeTools, GoRun, Tools, report_of, run_vigilante};
 use crate::support::{Run, TestRepository};
 
-const DIRECT_EXEC: Call = Call {
-    function: "os/exec.Command",
-    package: "os/exec",
-    site: Some(("fetch.go", 4)),
-};
 const MARKDOWN_DIFF: &[&str] = &["diff", "--base", "main", "--head", "feature"];
 
 fn diff(repository: &TestRepository, arguments: &[&str]) -> Run {
@@ -78,7 +74,7 @@ fn existing_exec_reaches_a_new_dependency() -> TestRepository {
 }
 
 #[test]
-fn diff_notes_each_new_package_on_a_call_path() {
+fn a_power_reached_only_through_a_dependency_is_a_note_and_the_check_passes() {
     let repository = module_repository(&network_reaches());
     repository.commit("base");
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
@@ -87,18 +83,30 @@ fn diff_notes_each_new_package_on_a_call_path() {
         .chain(exec_reaches())
         .collect();
     repository.write(&[("app/capslock.json", &capslock_output(&both))]);
-    repository.commit("run a tool");
+    repository.commit("run a tool from a dependency");
 
-    let report = report_of(&diff(&repository, DIFF));
+    let run = diff(&repository, DIFF);
 
-    let expected: BTreeSet<String> = [
-        "app/fetch exec via example.com/dep/run app/fetch/fetch.go:6",
-        "app/fetch exec via os/exec app/fetch/fetch.go:6",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect();
-    assert_eq!(note_summaries(&report), expected);
+    let report = report_of(&run);
+    assert!(finding_summaries(&report).is_empty(), "{}", run.stdout);
+    assert_eq!(
+        note_summaries(&report),
+        BTreeSet::from(["app/fetch exec via example.com/dep/run app/fetch/fetch.go:6".to_string()])
+    );
+    let packages: BTreeSet<&str> = report["notes"]
+        .as_array()
+        .expect("notes")
+        .iter()
+        .filter_map(|note| note["package"].as_str())
+        .collect();
+    assert_eq!(
+        packages,
+        BTreeSet::from(["example.com/app/fetch", "example.com/dep/run", "os/exec"])
+    );
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    let markdown = diff(&repository, MARKDOWN_DIFF).stdout;
+    let row = "| `app/fetch` (code) | `exec` | `example.com/dep/run` | `app/fetch/fetch.go:6 via fetch.Page → run.Tool → exec.Command` |";
+    assert_eq!(markdown.matches(row).count(), 1, "{markdown}");
 }
 
 #[test]
@@ -106,6 +114,25 @@ fn a_new_path_to_a_locked_power_is_a_note_and_the_check_passes() {
     let repository = existing_exec_reaches_a_new_dependency();
 
     let run = diff(&repository, MARKDOWN_DIFF);
+    let notes: BTreeSet<String> = report_of(&diff(&repository, DIFF))["notes"]
+        .as_array()
+        .expect("notes")
+        .iter()
+        .map(|note| {
+            format!(
+                "{} {}",
+                note["package"].as_str().unwrap_or_default(),
+                note["power"].as_str().unwrap_or_default()
+            )
+        })
+        .collect();
+    assert_eq!(
+        notes,
+        BTreeSet::from([
+            "example.com/dep/run exec".to_string(),
+            "example.com/dep/run files".to_string()
+        ])
+    );
 
     assert_eq!(run.code, 0, "{}{}", run.stdout, run.stderr);
     assert!(
@@ -132,7 +159,7 @@ fn sarif_and_json_carry_the_call_path() {
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
     let both: Vec<Reach> = network_reaches()
         .into_iter()
-        .chain(exec_reaches())
+        .chain(direct_exec_reaches())
         .collect();
     repository.write(&[("app/capslock.json", &capslock_output(&both))]);
     repository.commit("run a tool");
@@ -147,15 +174,8 @@ fn sarif_and_json_carry_the_call_path() {
 
     assert_eq!(
         json["findings"][0]["evidence"]["call_path"],
-        serde_json::json!([
-            "example.com/app/fetch.Page",
-            "example.com/dep/run.Tool",
-            "os/exec.Command"
-        ])
+        serde_json::json!(["example.com/app/fetch.Page", "os/exec.Command"])
     );
     let message = sarif["runs"][0]["results"][0]["message"]["text"].to_string();
-    assert!(
-        message.contains("fetch.Page → run.Tool → exec.Command"),
-        "{message}"
-    );
+    assert!(message.contains("fetch.Page → exec.Command"), "{message}");
 }

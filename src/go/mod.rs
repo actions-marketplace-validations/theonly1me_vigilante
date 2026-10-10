@@ -1,5 +1,6 @@
 mod capslock;
 mod checkout;
+mod classify;
 mod mapping;
 
 use std::collections::BTreeSet;
@@ -8,9 +9,10 @@ use std::path::Path;
 use crate::config::Config;
 use crate::scan::Location;
 use crate::tree::Tree;
-use crate::{Error, Evidence, Power, Scope, Sighting, Surface};
+use crate::{Error, Evidence, Power, Scope, Sighting};
 use checkout::{Checkout, CheckoutRequest};
-use mapping::{EvidenceStart, Module};
+use classify::{Classified, ClassifyInput, classify};
+use mapping::Module;
 
 const MODULE_FILE: &str = "go.mod";
 
@@ -29,8 +31,16 @@ pub struct GoAnalysis {
     pub reaches: Vec<Reach>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReachKind {
+    OnlyThroughOtherPackages,
+    NewPackageOnPath,
+}
+
 pub struct Reach {
+    pub package: String,
     pub through: String,
+    pub kind: ReachKind,
     pub power: Power,
     pub scope: Scope,
     pub evidence: Evidence,
@@ -104,53 +114,27 @@ impl GoModules {
         let mut analysis = GoAnalysis::default();
         for module in selected {
             for info in capslock::analyze(&root.join(&module.folder))? {
-                let power = mapping::power_of(&info.capability_name)?;
-                let owned_folder = mapping::folder_of(&info.package_dir, &self.modules)
-                    .filter(|folder| self.is_owned_by(OwnedFolder { folder, module }));
-                let (package, folder) = match owned_folder {
-                    Some(folder) => (info.package_dir.as_str(), folder),
-                    None => {
-                        let Some(root) = info.path.first() else {
-                            continue;
-                        };
-                        let Some(folder) = mapping::folder_of(&root.package, &self.modules) else {
-                            continue;
-                        };
-                        (root.package.as_str(), folder)
-                    }
-                };
-                let evidence = mapping::evidence_of(EvidenceStart {
+                match classify(ClassifyInput {
                     info: &info,
-                    package,
-                    folder: &folder,
-                });
-                if request.config.is_excluded(&evidence.path) {
-                    continue;
-                }
-                let scope = Scope {
-                    surface: Surface::Code,
-                    path: request
-                        .config
-                        .named_scope_of(&evidence.path)
-                        .map_or(folder, str::to_string),
-                };
-                if package == info.package_dir {
-                    analysis.sightings.push(Sighting {
-                        scope,
-                        power,
-                        evidence,
-                    });
-                } else {
-                    analysis.reaches.push(Reach {
-                        through: info.package_dir.clone(),
-                        power,
-                        scope,
-                        evidence,
-                    });
+                    module,
+                    modules: self,
+                    config: request.config,
+                })? {
+                    Some(Classified::Sighting(sighting)) => analysis.sightings.push(sighting),
+                    Some(Classified::Reach(reach)) => analysis.reaches.push(reach),
+                    None => {}
                 }
             }
         }
         Ok(analysis)
+    }
+
+    fn folder_of(&self, package: &str) -> Option<String> {
+        mapping::folder_of(package, &self.modules)
+    }
+
+    fn is_repo_package(&self, package: &str) -> bool {
+        self.folder_of(package).is_some()
     }
 
     fn is_owned_by(&self, owned: OwnedFolder) -> bool {

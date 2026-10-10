@@ -29,7 +29,13 @@ pub fn markdown_section(review: &Review) -> Vec<String> {
     if review.notes.is_empty() {
         return Vec::new();
     }
-    let shown: Vec<&Note> = review.notes.iter().filter(|note| !note.hidden).collect();
+    let mut rows = BTreeSet::new();
+    let shown: Vec<&Note> = review
+        .notes
+        .iter()
+        .filter(|note| !note.hidden)
+        .filter(|note| rows.insert((&note.scope, &note.power, &note.through)))
+        .collect();
     let mut lines = vec![
         "### New packages on call paths".to_string(),
         String::new(),
@@ -61,7 +67,7 @@ pub fn markdown_section(review: &Review) -> Vec<String> {
         let names: Vec<&str> = hidden.into_iter().collect();
         lines.push(format!(
             "Hidden notes for low-signal powers: {} ({}). They are in the JSON report.",
-            review.notes.len() - shown.len(),
+            review.notes.iter().filter(|note| note.hidden).count(),
             names.join(", ")
         ));
         lines.push(String::new());

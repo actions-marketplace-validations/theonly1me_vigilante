@@ -1,6 +1,6 @@
 use crate::go_fixtures::{
-    DIFF, Reach, capslock_output, exec_reaches, finding_summaries, module_repository,
-    network_reaches,
+    DIFF, Reach, capslock_output, direct_exec_reaches, exec_reaches, finding_summaries,
+    module_repository, network_reaches,
 };
 use crate::go_support::{FakeTools, GoRun, Tools, report_of, run_vigilante};
 #[test]
@@ -11,7 +11,7 @@ fn diff_reports_a_capability_that_a_go_package_gains_at_the_head() {
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
     let both: Vec<Reach> = network_reaches()
         .into_iter()
-        .chain(exec_reaches())
+        .chain(direct_exec_reaches())
         .collect();
     repository.write(&[("app/capslock.json", &capslock_output(&both))]);
     repository.commit("run a tool");
@@ -26,7 +26,7 @@ fn diff_reports_a_capability_that_a_go_package_gains_at_the_head() {
 
     assert_eq!(
         finding_summaries(&report_of(&run)),
-        ["app/fetch exec app/fetch/fetch.go:6"]
+        ["app/fetch exec app/fetch/fetch.go:4"]
     );
     assert_eq!(run.code, 1, "{}", run.stderr);
     let calls: Vec<String> = tools.log().lines().map(String::from).collect();
@@ -41,7 +41,7 @@ fn the_lock_records_the_capabilities_of_each_go_package() {
     let tools = FakeTools::new();
     let all: Vec<Reach> = network_reaches()
         .into_iter()
-        .chain(exec_reaches())
+        .chain(direct_exec_reaches())
         .collect();
     let repository = module_repository(&all);
 
