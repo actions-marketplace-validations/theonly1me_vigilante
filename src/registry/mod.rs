@@ -1,5 +1,6 @@
 mod cache;
 mod checksum;
+mod download;
 mod extract;
 mod git;
 mod sources;
@@ -14,6 +15,7 @@ use std::time::Duration;
 
 use cache::{Cache, CacheFill, CacheKey};
 pub use checksum::Checksum;
+use download::{Downloaded, download};
 use extract::{ExtractRequest, extract};
 pub use git::github_archive;
 pub use sources::Sources;
@@ -22,8 +24,7 @@ use sha2::{Digest, Sha256};
 
 use crate::Error;
 
-const MAXIMUM_DOWNLOAD_BYTES: u64 = 256 * 1024 * 1024;
-const TIMEOUT: Duration = Duration::from_secs(120);
+const TIMEOUT: Duration = Duration::from_secs(60);
 const IDENTITY_LENGTH: usize = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,6 +37,11 @@ pub struct Download {
     pub url: String,
     pub checksum: Option<Checksum>,
     pub archive: Archive,
+}
+
+pub enum Fetched {
+    Folder(PathBuf),
+    NotFound,
 }
 
 pub struct PackageId<'a> {
@@ -84,28 +90,19 @@ impl Registry {
         base.join("vigilante")
     }
 
-    pub fn fetch(&self, request: FetchRequest) -> Result<PathBuf, Error> {
+    pub fn fetch(&self, request: FetchRequest) -> Result<Fetched, Error> {
         let identity = identity_of(request.download);
         let key = CacheKey {
             package: &request.package,
             identity: &identity,
         };
         if let Some(folder) = self.cache.complete_folder(&key) {
-            return Ok(folder);
+            return Ok(Fetched::Folder(folder));
         }
         let url = &request.download.url;
-        let bytes = self
-            .agent
-            .get(url)
-            .call()
-            .and_then(|mut response| {
-                response
-                    .body_mut()
-                    .with_config()
-                    .limit(MAXIMUM_DOWNLOAD_BYTES)
-                    .read_to_vec()
-            })
-            .map_err(|error| Error::new(format!("cannot download {url}: {error}")))?;
+        let Downloaded::Bytes(bytes) = download(&self.agent, url)? else {
+            return Ok(Fetched::NotFound);
+        };
         if let Some(checksum) = &request.download.checksum
             && !checksum.matches(&bytes)
         {
@@ -113,17 +110,19 @@ impl Registry {
                 "{url} does not match the checksum in the lockfile"
             )));
         }
-        self.cache.fill(CacheFill {
-            key: &key,
-            fill: &|target| {
-                extract(ExtractRequest {
-                    bytes: &bytes,
-                    archive: request.download.archive,
-                    target,
-                    keep: request.keep,
-                })
-            },
-        })
+        self.cache
+            .fill(CacheFill {
+                key: &key,
+                fill: &|target| {
+                    extract(ExtractRequest {
+                        bytes: &bytes,
+                        archive: request.download.archive,
+                        target,
+                        keep: request.keep,
+                    })
+                },
+            })
+            .map(Fetched::Folder)
     }
 }
 

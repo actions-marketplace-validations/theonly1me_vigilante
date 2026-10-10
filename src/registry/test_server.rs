@@ -12,6 +12,10 @@ pub struct TestServer {
 
 impl TestServer {
     pub fn serve(files: BTreeMap<String, Vec<u8>>) -> Self {
+        Self::serve_after_failures(files, 0)
+    }
+
+    pub fn serve_after_failures(files: BTreeMap<String, Vec<u8>>, failures: usize) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
         let base_url = format!("http://{}", listener.local_addr().expect("address"));
         let requests = Arc::new(AtomicUsize::new(0));
@@ -19,7 +23,7 @@ impl TestServer {
         thread::spawn(move || {
             for stream in listener.incoming() {
                 let Ok(mut stream) = stream else { continue };
-                counter.fetch_add(1, Ordering::SeqCst);
+                let seen = counter.fetch_add(1, Ordering::SeqCst);
                 let mut reader = BufReader::new(stream.try_clone().expect("clone"));
                 let mut request_line = String::new();
                 reader.read_line(&mut request_line).expect("request line");
@@ -29,6 +33,7 @@ impl TestServer {
                 }
                 let path = request_line.split_whitespace().nth(1).unwrap_or("/");
                 let (status, body) = match files.get(path) {
+                    _ if seen < failures => ("503 Service Unavailable", Vec::new()),
                     Some(body) => ("200 OK", body.clone()),
                     None => ("404 Not Found", Vec::new()),
                 };

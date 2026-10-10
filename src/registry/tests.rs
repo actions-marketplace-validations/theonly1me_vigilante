@@ -6,7 +6,7 @@ use sha2::{Digest, Sha512};
 use tempfile::TempDir;
 
 use super::test_server::{TestServer, tar_gzip, tar_with_symlink};
-use super::{Archive, Checksum, Download, FetchRequest, PackageId, Registry};
+use super::{Archive, Checksum, Download, FetchRequest, Fetched, PackageId, Registry};
 use crate::Error;
 
 const INDEX: &[u8] = b"module.exports = require('child_process')\n";
@@ -34,7 +34,7 @@ fn serve(path: &str, bytes: Vec<u8>) -> Setup {
 }
 
 fn fetch(setup: &Setup, download: Download) -> Result<std::path::PathBuf, Error> {
-    setup.registry.fetch(FetchRequest {
+    let fetched = setup.registry.fetch(FetchRequest {
         package: PackageId {
             ecosystem: "npm",
             name: "@scope/tool",
@@ -42,7 +42,11 @@ fn fetch(setup: &Setup, download: Download) -> Result<std::path::PathBuf, Error>
         },
         download: &download,
         keep: &|path| path.ends_with(".js"),
-    })
+    })?;
+    match fetched {
+        Fetched::Folder(folder) => Ok(folder),
+        Fetched::NotFound => Err(Error::new("not found")),
+    }
 }
 
 fn download(setup: &Setup, archive: Archive, checksum: Option<Checksum>) -> Download {
@@ -131,12 +135,12 @@ fn a_symbolic_link_is_not_followed() {
 }
 
 #[test]
-fn a_missing_package_is_an_error() {
-    let setup = serve("/other", Vec::new());
+fn a_missing_package_is_not_found() {
+    let setup = serve("/elsewhere", Vec::new());
 
     let error = fetch(&setup, download(&setup, Archive::TarGzip, None)).expect_err("missing");
 
-    assert!(error.to_string().contains("404"), "{error}");
+    assert_eq!(error.to_string(), "not found");
 }
 
 #[test]
@@ -167,4 +171,28 @@ fn the_same_version_with_another_checksum_is_downloaded_again() {
         fs::read(folder.join("package/index.js")).expect("index"),
         b"module.exports = 2;\n"
     );
+}
+
+#[test]
+fn a_server_error_is_tried_again() {
+    let bytes = tar_gzip(&[("package/index.js", INDEX)]);
+    let server = TestServer::serve_after_failures(
+        BTreeMap::from([("/package".to_string(), bytes.clone())]),
+        1,
+    );
+    let cache = TempDir::new().expect("cache");
+    let setup = Setup {
+        registry: Registry::new(cache.path().to_path_buf()),
+        server,
+        cache,
+    };
+
+    let folder = fetch(
+        &setup,
+        download(&setup, Archive::TarGzip, Some(integrity(&bytes))),
+    )
+    .expect("fetch");
+
+    assert_eq!(setup.server.request_count(), 2);
+    assert!(folder.join("package/index.js").is_file());
 }

@@ -4,7 +4,9 @@ use crate::javascript::files::{folder_files, package_root};
 use crate::javascript::manifest::Manifest;
 use crate::javascript::paths::{install_candidates, is_code_file, joined};
 use crate::lockfiles::PackageSource;
-use crate::registry::{Archive, Checksum, Download, FetchRequest, PackageId, github_archive};
+use crate::registry::{
+    Archive, Checksum, Download, FetchRequest, Fetched, PackageId, github_archive,
+};
 
 const ECOSYSTEM: &str = "npm";
 const MANIFEST: &str = "package.json";
@@ -80,7 +82,11 @@ impl Packages<'_> {
             keep: &|path| is_code_file(path) || path.ends_with(MANIFEST),
         });
         let folder = match fetched {
-            Ok(folder) => package_root(&folder, MANIFEST),
+            Ok(Fetched::Folder(folder)) => package_root(&folder, MANIFEST),
+            Ok(Fetched::NotFound) => {
+                let reason = format!("{label} is not at `{}`.", download.url);
+                return self.missing(&lockfile_path, (request.project, key), reason);
+            }
             Err(error) if is_git => {
                 let reason = format!("{label} could not be downloaded from GitHub: {error}");
                 return self.missing(&lockfile_path, (request.project, key), reason);
