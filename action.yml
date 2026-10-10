@@ -1,0 +1,25 @@
+name: Vigilante
+description: Show the new powers that a pull request gives to code, CI, build, and AI agents
+author: theonly1me
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  version:
+    description: The Vigilante version to download and verify
+    default: "0.1.0"
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/install.sh"'
+      env:
+        VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ github.token }}
+    - shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/review.sh"'
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
