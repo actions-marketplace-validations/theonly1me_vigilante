@@ -39,6 +39,7 @@ invalid:
 id: js-native-module
 valid:
   - "import data from './data.json';"
+  - "import { buildServerRenderer } from 'react-on-rails-rsc/server.node';"
 invalid:
   - "const addon = require('./build/Release/addon.node');"
   - "import koffi from 'koffi';"

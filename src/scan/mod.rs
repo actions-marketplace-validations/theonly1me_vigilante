@@ -1,3 +1,4 @@
+mod deep;
 mod rule_files;
 mod source;
 
@@ -5,9 +6,9 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use crate::code::Rules;
-use crate::config::{Config, GoEngine};
-use crate::deep::Reach;
-use crate::go::{DiscoverInput, GoModules, GoRequest};
+use crate::config::{Config, GoEngine, LanguageEngine};
+use crate::deep::{Reach, Skip};
+use crate::go::{DiscoverInput, GoModules};
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::{self, Placement, Surfaces};
 use crate::tree::Tree;
@@ -36,6 +37,7 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
 pub struct Scanned {
     pub map: PowerMap,
     pub reaches: Vec<Reach>,
+    pub skipped: Vec<Skip>,
 }
 
 pub enum Selection {
@@ -106,7 +108,9 @@ impl<'a> Scanner<'a> {
             .map(String::as_str)
             .filter(|path| {
                 let is_wanted = self.surfaces.handles(path)
-                    || (self.rules.handles(path) && is_selected_code(path) && !self.go_owns(path));
+                    || (self.rules.handles(path)
+                        && is_selected_code(path)
+                        && !self.deep_owns(path));
                 is_wanted && !self.config.is_excluded(path)
             })
             .collect();
@@ -146,26 +150,20 @@ impl<'a> Scanner<'a> {
                 });
             }
         }
-        let mut reaches = Vec::new();
-        if let Some(go) = &self.go {
-            let changed = match selection {
-                Selection::Everything => None,
-                Selection::Changes(changes) => Some(&changes.paths),
-            };
-            let analysis = go.analyze(GoRequest {
-                changed,
-                location: self.location,
-                config: self.config,
-            })?;
-            for sighting in analysis.sightings {
-                map.insert(sighting);
-            }
-            reaches = analysis.reaches;
+        let analysis = self.deep(selection)?;
+        for sighting in analysis.sightings {
+            map.insert(sighting);
         }
-        Ok(Scanned { map, reaches })
+        Ok(Scanned {
+            map,
+            reaches: analysis.reaches,
+            skipped: analysis.skipped,
+        })
     }
 
-    fn go_owns(&self, path: &str) -> bool {
+    fn deep_owns(&self, path: &str) -> bool {
         self.go.as_ref().is_some_and(|go| go.owns(path))
+            || (self.config.javascript_engine == LanguageEngine::Deep
+                && crate::javascript::owns(path))
     }
 }

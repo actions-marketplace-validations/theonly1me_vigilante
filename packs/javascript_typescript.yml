@@ -60,7 +60,7 @@ metadata:
   capability: native
 rule:
   kind: string
-  regex: ^["']((ffi-napi|koffi|bindings|node-gyp-build)|[^"']+\.node)["']$
+  regex: ^["']((ffi-napi|koffi|bindings|node-gyp-build)|(\.{1,2}/|/)[^"']*\.node)["']$
   any:
     - inside: { kind: import_statement, field: source }
     - inside:

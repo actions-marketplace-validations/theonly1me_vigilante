@@ -96,6 +96,7 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
         findings,
         notes,
         stale: Vec::new(),
+        skipped: head_scan.skipped,
     })
 }
 
@@ -104,13 +105,13 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
     let tree = located.tree.as_ref();
     let config = Config::load(tree)?;
     let lock = Lock::load(tree)?;
-    let map = Scanner::new(ScannerInput {
+    let scanned = Scanner::new(ScannerInput {
         tree,
         config: &config,
         location: located.location(),
     })?
-    .scan(&Selection::Everything)?
-    .map;
+    .scan(&Selection::Everything)?;
+    let map = scanned.map;
     let judge = Judge {
         config: &config,
         lock: &lock,
@@ -141,6 +142,7 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         findings,
         notes: Vec::new(),
         stale,
+        skipped: scanned.skipped,
     })
 }
 

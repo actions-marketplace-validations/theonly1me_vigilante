@@ -1,5 +1,6 @@
 mod file_filter;
 mod language;
+mod matches;
 
 use std::collections::BTreeSet;
 
@@ -9,7 +10,9 @@ use ast_grep_language::SupportLang;
 
 use crate::{Capability, Detection, Error, Power, SourceFile, Surface};
 use file_filter::{FileFilter, RuleGlobs};
-use language::{SUPPORTED_LANGUAGES, language_of};
+use language::SUPPORTED_LANGUAGES;
+pub use language::language_of;
+pub use matches::{MatchRequest, SyntaxNode};
 
 const BUILT_IN_PACKS: &[(&str, &str)] = &[
     ("packs/csharp.yml", include_str!("../../packs/csharp.yml")),

@@ -3,6 +3,8 @@ version = 1
 [code."."]
 powers = [
     "exec",
+    "network",
+    "read_system_state",
     "files",
 ]
 

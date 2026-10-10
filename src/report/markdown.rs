@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::notes::{evidence_text, markdown_section};
+use super::notes::{evidence_text, markdown_section, skipped_section};
 use super::summary;
 use crate::{Finding, Lock, Review, ReviewMode};
 
@@ -32,6 +32,7 @@ pub fn render(review: &Review) -> String {
         lines.push(String::new());
     }
     lines.extend(markdown_section(review));
+    lines.extend(skipped_section(review));
     if !review.stale.is_empty() {
         lines.push(format!("Stale entries in {}:", Lock::FILE));
         lines.extend(review.stale.iter().map(|entry| {

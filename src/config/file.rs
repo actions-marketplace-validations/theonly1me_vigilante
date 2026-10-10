@@ -15,6 +15,7 @@ pub struct ConfigFile {
     pub rules: RulesSection,
     pub ci: CiSection,
     pub engines: EnginesSection,
+    pub registries: RegistriesSection,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -82,6 +83,21 @@ pub struct CiSection {
 #[serde(default, deny_unknown_fields)]
 pub struct EnginesSection {
     pub go: GoEngine,
+    pub javascript: LanguageEngine,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LanguageEngine {
+    #[default]
+    Deep,
+    Patterns,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct RegistriesSection {
+    pub allow: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]

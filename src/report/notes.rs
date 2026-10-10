@@ -75,6 +75,26 @@ pub fn markdown_section(review: &Review) -> Vec<String> {
     lines
 }
 
+pub fn skipped_section(review: &Review) -> Vec<String> {
+    if review.skipped.is_empty() {
+        return Vec::new();
+    }
+    let mut lines = vec![
+        "### Not analyzed".to_string(),
+        String::new(),
+        "Vigilante did not read this code, so the report does not show its powers.".to_string(),
+        String::new(),
+    ];
+    lines.extend(
+        review
+            .skipped
+            .iter()
+            .map(|skip| format!("- {}: {}", code(&skip.source), skip.reason)),
+    );
+    lines.push(String::new());
+    lines
+}
+
 fn short_name(function: &str) -> String {
     let Some(start) = function.find(|character| character != '(' && character != '*') else {
         return function.to_string();

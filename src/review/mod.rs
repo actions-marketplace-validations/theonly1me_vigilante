@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 use crate::config::Mode;
+pub use crate::deep::Skip;
 use crate::{Error, Evidence, Power, Scope, Severity, Source};
 
 #[derive(Clone, Debug)]
@@ -22,6 +23,7 @@ pub struct Review {
     pub findings: Vec<Finding>,
     pub notes: Vec<Note>,
     pub stale: Vec<LockEntry>,
+    pub skipped: Vec<Skip>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

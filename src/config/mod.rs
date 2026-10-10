@@ -5,8 +5,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use globset::{Glob, GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder};
 
-pub use file::{GoEngine, Mode};
+pub use file::{GoEngine, LanguageEngine, Mode};
 
+use crate::registry::Sources;
 use crate::tree::Tree;
 use crate::{Capability, Error, Power, Scope, Severity};
 use excludes::TEST_AND_VENDORED_PATHS;
@@ -16,6 +17,8 @@ pub struct Config {
     pub mode: Mode,
     pub rule_paths: Vec<String>,
     pub go_engine: GoEngine,
+    pub javascript_engine: LanguageEngine,
+    registry_sources: Sources,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
     denied: Vec<(GlobMatcher, Capability)>,
@@ -60,6 +63,8 @@ impl Config {
             mode: file.policy.mode,
             rule_paths: file.rules.paths,
             go_engine: file.engines.go,
+            javascript_engine: file.engines.javascript,
+            registry_sources: Sources::new(&file.registries.allow)?,
             excluded: excluded
                 .build()
                 .map_err(|error| Error::new(format!("invalid exclude pattern: {error}")))?,
@@ -69,6 +74,10 @@ impl Config {
             severity: file.severity,
             trusted_owners: file.ci.trusted_owners,
         })
+    }
+
+    pub fn registry_sources(&self) -> &Sources {
+        &self.registry_sources
     }
 
     pub fn is_excluded(&self, path: &str) -> bool {

@@ -75,7 +75,7 @@ fn lock_writes_the_same_bytes_every_time() {
 
     assert_eq!(
         run.stdout,
-        "Wrote vigilante.lock with 6 powers in 4 scopes.\n"
+        "Wrote vigilante.lock with 5 powers in 4 scopes.\n"
     );
     assert_eq!(first, second);
 }
