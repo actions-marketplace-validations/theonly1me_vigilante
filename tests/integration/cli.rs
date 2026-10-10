@@ -68,12 +68,15 @@ fn lock_writes_the_same_bytes_every_time() {
         (".mcp.json", MCP_SERVER),
     ]);
 
-    repository.vigilante(&["lock"]);
+    let run = repository.vigilante(&["lock"]);
     let first = fs::read(repository.directory.path().join("vigilante.lock")).expect("lock");
     repository.vigilante(&["lock"]);
     let second = fs::read(repository.directory.path().join("vigilante.lock")).expect("lock");
 
-    assert!(!first.is_empty());
+    assert_eq!(
+        run.stdout,
+        "Wrote vigilante.lock with 6 powers in 4 scopes.\n"
+    );
     assert_eq!(first, second);
 }
 
@@ -141,4 +144,17 @@ fn scan_prints_each_power_and_never_runs_install_scripts() {
             .exists()
     );
     assert!(!repository.directory.path().join("postinstall-ran").exists());
+}
+
+#[test]
+fn lock_counts_a_single_power_in_the_singular() {
+    let repository = TestRepository::new();
+    repository.write(&[("services/run.py", "import subprocess\n")]);
+
+    let run = repository.vigilante(&["lock"]);
+
+    assert_eq!(
+        run.stdout,
+        "Wrote vigilante.lock with 1 power in 1 scope.\n"
+    );
 }

@@ -115,9 +115,16 @@ fn run(cli: Cli) -> Result<Outcome, Error> {
             })?;
             let power_count: usize = lock.powers.values().map(|powers| powers.len()).sum();
             println!(
-                "Wrote {} with {power_count} powers in {} scopes.",
+                "Wrote {} with {} in {}.",
                 Lock::FILE,
-                lock.powers.len()
+                counted(Counted {
+                    count: power_count,
+                    noun: "power"
+                }),
+                counted(Counted {
+                    count: lock.powers.len(),
+                    noun: "scope"
+                })
             );
             Ok(Outcome::Pass)
         }
@@ -157,4 +164,14 @@ fn report(report: Report) -> Result<Outcome, Error> {
 
 fn source_of(commit: Option<String>) -> Source {
     commit.map_or(Source::WorkingDirectory, Source::Commit)
+}
+
+struct Counted {
+    count: usize,
+    noun: &'static str,
+}
+
+fn counted(counted: Counted) -> String {
+    let suffix = if counted.count == 1 { "" } else { "s" };
+    format!("{} {}{suffix}", counted.count, counted.noun)
 }
