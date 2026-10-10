@@ -14,6 +14,12 @@ pub struct Git {
     repository: PathBuf,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct CommitPair<'a> {
+    pub base: &'a str,
+    pub head: &'a str,
+}
+
 pub struct GitTree {
     git: Git,
     objects: BTreeMap<String, String>,
@@ -32,6 +38,26 @@ impl Git {
         self.run(&["rev-parse", "--verify", "--end-of-options", &revision])
             .map(first_line)
             .map_err(|_| Error::new(format!("`{reference}` is not a commit in this repository")))
+    }
+
+    pub fn merge_base(&self, pair: CommitPair) -> Result<String, Error> {
+        self.run(&["merge-base", pair.base, pair.head])
+            .map(first_line)
+            .map_err(|_| Error::new("the base and head commits have no common ancestor"))
+    }
+
+    pub fn changed_paths(&self, pair: CommitPair) -> Result<BTreeSet<String>, Error> {
+        let output = self.run(&[
+            "diff",
+            "--name-only",
+            "-z",
+            "--no-renames",
+            "--no-ext-diff",
+            "--no-textconv",
+            pair.base,
+            pair.head,
+        ])?;
+        Ok(split_at_nul(&output).collect())
     }
 
     pub fn tree(&self, commit: &str) -> Result<GitTree, Error> {

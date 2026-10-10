@@ -4,7 +4,7 @@ mod git;
 use std::collections::BTreeSet;
 
 pub use directory::DirectoryTree;
-pub use git::Git;
+pub use git::{CommitPair, Git};
 
 use crate::Error;
 

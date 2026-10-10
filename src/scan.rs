@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::code::Rules;
@@ -26,7 +27,12 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
         tree: tree.as_ref(),
         config: &config,
     })?
-    .scan()
+    .scan(&Selection::Everything)
+}
+
+pub enum Selection {
+    Everything,
+    CodeScopes(BTreeSet<String>),
 }
 
 impl Source {
@@ -70,15 +76,24 @@ impl<'a> Scanner<'a> {
         })
     }
 
-    pub fn scan(&self) -> Result<PowerMap, Error> {
+    pub fn code_scope_of(&self, path: &str) -> String {
+        self.scopes.code_scope_of(path)
+    }
+
+    pub fn scan(&self, selection: &Selection) -> Result<PowerMap, Error> {
+        let is_selected_code = |path: &str| match selection {
+            Selection::Everything => true,
+            Selection::CodeScopes(scopes) => scopes.contains(&self.code_scope_of(path)),
+        };
         let wanted: Vec<&str> = self
             .tree
             .paths()
             .iter()
             .map(String::as_str)
             .filter(|path| {
-                (self.surfaces.handles(path) || self.rules.handles(path))
-                    && !self.config.is_excluded(path)
+                let is_wanted = self.surfaces.handles(path)
+                    || (self.rules.handles(path) && is_selected_code(path));
+                is_wanted && !self.config.is_excluded(path)
             })
             .collect();
         let mut map = PowerMap::default();
