@@ -142,6 +142,9 @@ impl Linker<'_> {
                 target: Target::Sink(sink),
             });
         }
+        if !self.language.imports_run_code() {
+            return;
+        }
         let init = self.functions[file][0];
         for load in &loaded.index.loads {
             let Some(target) = loaded

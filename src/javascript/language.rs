@@ -23,4 +23,8 @@ impl Language for JavaScript {
     fn stem<'p>(&self, path: &'p str) -> &'p str {
         stem(path)
     }
+
+    fn imports_run_code(&self) -> bool {
+        true
+    }
 }

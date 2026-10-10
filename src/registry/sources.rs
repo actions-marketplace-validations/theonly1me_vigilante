@@ -6,29 +6,35 @@ const PUBLIC_SOURCES: &[&str] = &[
     "https://codeload.github.com/",
     "https://pypi.org/",
     "https://files.pythonhosted.org/",
+    "https://repo1.maven.org/maven2/",
+    "https://repo.maven.apache.org/maven2/",
+    "https://dl.google.com/dl/android/maven2/",
 ];
 
 #[derive(Clone, Debug, Default)]
 pub struct Sources {
-    allowed: Vec<String>,
+    configured: Vec<String>,
 }
 
 impl Sources {
     pub fn new(allowed: &[String]) -> Result<Self, Error> {
-        let mut prefixes: Vec<String> = PUBLIC_SOURCES
+        let configured = allowed
             .iter()
-            .map(|source| source.to_string())
-            .collect();
-        for entry in allowed {
-            prefixes.push(normalized(entry)?);
-        }
-        Ok(Self { allowed: prefixes })
+            .map(|entry| normalized(entry))
+            .collect::<Result<_, _>>()?;
+        Ok(Self { configured })
     }
 
     pub fn allows(&self, url: &str) -> bool {
-        self.allowed
+        PUBLIC_SOURCES
             .iter()
-            .any(|prefix| url.starts_with(prefix.as_str()))
+            .copied()
+            .chain(self.configured.iter().map(String::as_str))
+            .any(|prefix| url.starts_with(prefix))
+    }
+
+    pub fn configured(&self) -> &[String] {
+        &self.configured
     }
 }
 

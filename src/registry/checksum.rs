@@ -3,6 +3,8 @@ use base64::engine::general_purpose::STANDARD;
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha512};
 
+const SHA1_LENGTH: usize = 20;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Checksum {
     Sha512(Vec<u8>),
@@ -34,6 +36,13 @@ impl Checksum {
 
     pub fn sha256_hex(text: &str) -> Option<Self> {
         hex_bytes(text).map(Self::Sha256)
+    }
+
+    pub fn sha1_hex(text: &str) -> Option<Self> {
+        let digest = text.split_whitespace().next()?;
+        hex_bytes(digest)
+            .filter(|bytes| bytes.len() == SHA1_LENGTH)
+            .map(Self::Sha1)
     }
 
     pub fn matches(&self, bytes: &[u8]) -> bool {

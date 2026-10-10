@@ -33,8 +33,8 @@ impl Cache {
             .join(escaped(key.identity))
     }
 
-    pub fn json_file(&self, identity: &str) -> PathBuf {
-        self.root.join("json").join(escaped(identity))
+    pub fn document_file(&self, identity: &str) -> PathBuf {
+        self.root.join("documents").join(escaped(identity))
     }
 
     pub fn complete_folder(&self, key: &CacheKey) -> Option<PathBuf> {

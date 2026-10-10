@@ -4,6 +4,7 @@ mod deep;
 mod document;
 mod error;
 mod go;
+mod java;
 mod javascript;
 mod lock;
 mod lockfiles;

@@ -70,6 +70,8 @@ pub trait Language: Sync {
     fn privileged_module(&self, node: &SyntaxNode) -> Option<String>;
 
     fn stem<'p>(&self, path: &'p str) -> &'p str;
+
+    fn imports_run_code(&self) -> bool;
 }
 
 pub trait Resolver {

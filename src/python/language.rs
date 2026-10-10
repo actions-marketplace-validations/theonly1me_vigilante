@@ -31,4 +31,8 @@ impl Language for Python {
             .or_else(|| path.strip_suffix(".pyi"))
             .unwrap_or(path)
     }
+
+    fn imports_run_code(&self) -> bool {
+        true
+    }
 }

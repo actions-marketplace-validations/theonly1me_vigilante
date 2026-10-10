@@ -19,6 +19,7 @@ pub struct Config {
     pub go_engine: GoEngine,
     pub javascript_engine: LanguageEngine,
     pub python_engine: LanguageEngine,
+    pub java_engine: LanguageEngine,
     registry_sources: Sources,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
@@ -66,6 +67,7 @@ impl Config {
             go_engine: file.engines.go,
             javascript_engine: file.engines.javascript,
             python_engine: file.engines.python,
+            java_engine: file.engines.java,
             registry_sources: Sources::new(&file.registries.allow)?,
             excluded: excluded
                 .build()
