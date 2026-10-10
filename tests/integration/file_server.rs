@@ -4,8 +4,13 @@ use std::net::TcpListener;
 use std::thread;
 
 pub fn serve_files(files: BTreeMap<String, Vec<u8>>) -> String {
+    serve_built(|_| files)
+}
+
+pub fn serve_built(build: impl FnOnce(&str) -> BTreeMap<String, Vec<u8>>) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
     let base_url = format!("http://{}", listener.local_addr().expect("address"));
+    let files = build(&base_url);
     thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };

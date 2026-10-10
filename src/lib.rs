@@ -14,6 +14,7 @@ mod registry;
 mod report;
 mod repository_path;
 mod review;
+mod rust;
 mod scan;
 mod scope;
 mod surfaces;

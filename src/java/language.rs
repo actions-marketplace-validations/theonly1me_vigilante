@@ -31,4 +31,8 @@ impl Language for Java {
     fn imports_run_code(&self) -> bool {
         false
     }
+
+    fn finds_members_by_type(&self) -> bool {
+        false
+    }
 }

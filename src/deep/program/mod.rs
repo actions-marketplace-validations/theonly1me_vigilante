@@ -72,6 +72,8 @@ pub trait Language: Sync {
     fn stem<'p>(&self, path: &'p str) -> &'p str;
 
     fn imports_run_code(&self) -> bool;
+
+    fn finds_members_by_type(&self) -> bool;
 }
 
 pub trait Resolver {

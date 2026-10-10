@@ -97,6 +97,10 @@ fn parse(input: SourceRules) -> Parsed {
         language: language.grammar(),
         root: &root,
     }) {
+        let start = found.node.range().start;
+        if index.ignored.iter().any(|range| range.contains(&start)) {
+            continue;
+        }
         let privilege = Privilege {
             capability: found.capability,
             rule: found.rule,

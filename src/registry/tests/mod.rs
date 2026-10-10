@@ -10,6 +10,7 @@ use crate::Error;
 
 mod archives;
 mod downloads;
+mod sources;
 
 const INDEX: &[u8] = b"module.exports = require('child_process')\n";
 

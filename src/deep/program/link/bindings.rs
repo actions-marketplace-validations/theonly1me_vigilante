@@ -84,6 +84,17 @@ impl Linker<'_> {
                 }),
             })
             .collect();
+        if found.is_empty() && self.language.finds_members_by_type() {
+            let unit = unit_of(&self.files[target]);
+            return inner
+                .and_then(|member| {
+                    self.by_full_name
+                        .get(&unit)?
+                        .get(&format!("{wanted}.{member}"))
+                })
+                .map(|ids| ids.iter().map(|id| Target::Function(*id)).collect())
+                .unwrap_or_default();
+        }
         if found.is_empty() {
             let unit = unit_of(&self.files[target]);
             let simple = inner.unwrap_or(&wanted);

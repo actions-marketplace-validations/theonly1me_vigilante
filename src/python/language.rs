@@ -35,4 +35,8 @@ impl Language for Python {
     fn imports_run_code(&self) -> bool {
         true
     }
+
+    fn finds_members_by_type(&self) -> bool {
+        false
+    }
 }

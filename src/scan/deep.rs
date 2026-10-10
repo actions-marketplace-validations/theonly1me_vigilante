@@ -6,6 +6,7 @@ use crate::go::GoRequest;
 use crate::java::{self, JavaRequest};
 use crate::javascript::{self, JavaScriptRequest};
 use crate::python::{self, PythonRequest};
+use crate::rust::{self, RustRequest};
 
 impl Scanner<'_> {
     pub(super) fn deep(&self, selection: &Selection) -> Result<Analysis, Error> {
@@ -47,6 +48,18 @@ impl Scanner<'_> {
         }
         if self.config.java_engine == LanguageEngine::Deep {
             let found = java::analyze(JavaRequest {
+                tree: self.tree,
+                config: self.config,
+                rules: &self.rules,
+                scope_of: &|path| self.scopes.code_scope_of(path),
+                selection,
+            })?;
+            analysis.sightings.extend(found.sightings);
+            analysis.reaches.extend(found.reaches);
+            analysis.skipped.extend(found.skipped);
+        }
+        if self.config.rust_engine == LanguageEngine::Deep {
+            let found = rust::analyze(RustRequest {
                 tree: self.tree,
                 config: self.config,
                 rules: &self.rules,

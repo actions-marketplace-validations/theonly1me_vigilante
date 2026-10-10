@@ -1,5 +1,5 @@
 use super::bindings::{BindingUse, PrivilegedUse};
-use super::{FileUse, InFile, Linker, specifier_module, unit_of};
+use super::{FileUse, InFile, Linker, Unit, specifier_module, unit_of};
 use crate::deep::graph::Target;
 use crate::deep::program::UseTarget;
 
@@ -40,10 +40,17 @@ impl Linker<'_> {
                         member: Some(property),
                     });
                 }
-                let local = self.local(InFile {
+                let full_name = format!("{object}.{property}");
+                let mut local = self.local(InFile {
                     file,
-                    name: &format!("{object}.{property}"),
+                    name: &full_name,
                 });
+                if local.is_empty() && self.language.finds_members_by_type() {
+                    local = self.typed(InFile {
+                        file,
+                        name: &full_name,
+                    });
+                }
                 if local.is_empty() && *call {
                     self.method(method)
                 } else {
@@ -79,6 +86,25 @@ impl Linker<'_> {
 
     fn method(&self, wanted: InFile) -> Vec<Target> {
         let InFile { file, name } = wanted;
+        self.units(file)
+            .iter()
+            .filter_map(|unit| self.by_name.get(unit)?.get(name))
+            .flatten()
+            .map(|id| Target::Function(*id))
+            .collect()
+    }
+
+    fn typed(&self, wanted: InFile) -> Vec<Target> {
+        let InFile { file, name } = wanted;
+        self.units(file)
+            .iter()
+            .filter_map(|unit| self.by_full_name.get(unit)?.get(name))
+            .flatten()
+            .map(|id| Target::Function(*id))
+            .collect()
+    }
+
+    fn units(&self, file: usize) -> Vec<Unit> {
         let loaded = &self.files[file];
         let mut units = vec![unit_of(loaded)];
         for key in loaded.resolved.values() {
@@ -90,10 +116,5 @@ impl Linker<'_> {
             }
         }
         units
-            .iter()
-            .filter_map(|unit| self.by_name.get(unit)?.get(name))
-            .flatten()
-            .map(|id| Target::Function(*id))
-            .collect()
     }
 }

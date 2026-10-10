@@ -86,6 +86,7 @@ pub struct EnginesSection {
     pub javascript: LanguageEngine,
     pub python: LanguageEngine,
     pub java: LanguageEngine,
+    pub rust: LanguageEngine,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]

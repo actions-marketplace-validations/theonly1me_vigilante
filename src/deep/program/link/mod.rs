@@ -45,6 +45,7 @@ struct Linker<'p> {
     graph: Graph,
     functions: Vec<Vec<FunctionId>>,
     by_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
+    by_full_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     in_unit: HashMap<Unit, Vec<FunctionId>>,
     fallbacks: HashMap<usize, FunctionId>,
 }
@@ -59,6 +60,7 @@ pub fn link(input: LinkInput) -> Linked {
         graph: Graph::default(),
         functions: Vec::new(),
         by_name: HashMap::new(),
+        by_full_name: HashMap::new(),
         in_unit: HashMap::new(),
         fallbacks: HashMap::new(),
     };
@@ -102,6 +104,12 @@ impl Linker<'_> {
                         .entry(unit.clone())
                         .or_default()
                         .entry(definition.simple.clone())
+                        .or_default()
+                        .push(id);
+                    self.by_full_name
+                        .entry(unit.clone())
+                        .or_default()
+                        .entry(definition.name.clone())
                         .or_default()
                         .push(id);
                 }

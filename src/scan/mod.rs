@@ -167,5 +167,6 @@ impl<'a> Scanner<'a> {
                 && crate::javascript::owns(path))
             || (self.config.python_engine == LanguageEngine::Deep && crate::python::owns(path))
             || (self.config.java_engine == LanguageEngine::Deep && crate::java::owns(path))
+            || (self.config.rust_engine == LanguageEngine::Deep && crate::rust::owns(path))
     }
 }
