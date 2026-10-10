@@ -4,5 +4,6 @@ mod ci;
 mod install_hooks;
 mod lock;
 mod packs;
+mod report;
 mod review;
 mod support;

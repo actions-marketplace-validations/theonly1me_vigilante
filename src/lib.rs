@@ -4,6 +4,7 @@ mod document;
 mod error;
 mod lock;
 mod model;
+mod report;
 mod review;
 mod scan;
 mod scope;
@@ -17,5 +18,6 @@ pub use model::{
     Capability, Detection, Evidence, Power, PowerMap, PowersByScope, Scope, Severity, Sighting,
     SourceFile, Surface,
 };
+pub use report::{Format, power_map_text, summary};
 pub use review::{Finding, LockEntry, Review, ReviewMode, ReviewRequest, review};
 pub use scan::{ScanRequest, Source, scan};
