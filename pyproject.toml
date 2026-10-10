@@ -1,0 +1,27 @@
+[build-system]
+requires = ["maturin>=1.15,<2"]
+build-backend = "maturin"
+
+[project]
+name = "vigilante-scan"
+description = "Shows the new powers that a pull request gives to code, CI, build, and AI agents"
+requires-python = ">=3.8"
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
+keywords = ["security", "capabilities", "ci", "agents", "supply-chain"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Rust",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/theonly1me/vigilante"
+
+[tool.maturin]
+bindings = "bin"

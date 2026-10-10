@@ -8,6 +8,7 @@ on:
       - .github/workflows/release.yml
       - packaging/**
       - npm/**
+      - pyproject.toml
       - Cargo.toml
       - Cargo.lock
 
@@ -65,6 +66,17 @@ jobs:
           name: archive-${{ matrix.target }}
           path: dist/vigilante-${{ matrix.target }}.tar.gz
           if-no-files-found: error
+      - run: python3 -m venv "$RUNNER_TEMP/maturin" && "$RUNNER_TEMP/maturin/bin/pip" install maturin==1.15.0
+      - run: >-
+          "$RUNNER_TEMP/maturin/bin/maturin" build --release --locked
+          --target "$TARGET"
+          --compatibility manylinux2014 musllinux_1_2
+          --out wheels
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wheel-${{ matrix.target }}
+          path: wheels/*.whl
+          if-no-files-found: error
 
   npm:
     needs: build
@@ -101,8 +113,25 @@ jobs:
           path: npm-packages
       - run: packaging/smoke-npm.sh npm-packages
 
+  wheel-smoke:
+    needs: build
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: wheel-*
+          path: wheels
+          merge-multiple: true
+      - run: packaging/smoke-wheel.sh wheels
+
   release:
-    needs: [build, npm-smoke]
+    needs: [build, npm-smoke, wheel-smoke]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
