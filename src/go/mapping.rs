@@ -44,7 +44,13 @@ pub fn power_of(capslock_name: &str) -> Result<Power, Error> {
     })
 }
 
-pub fn folder_of(package: &str, modules: &[Module]) -> Option<String> {
+pub struct PackageLookup<'a> {
+    pub package: &'a str,
+    pub modules: &'a [Module],
+}
+
+pub fn folder_of(lookup: PackageLookup) -> Option<String> {
+    let PackageLookup { package, modules } = lookup;
     modules
         .iter()
         .filter_map(|module| {
@@ -56,7 +62,12 @@ pub fn folder_of(package: &str, modules: &[Module]) -> Option<String> {
             Some((module, rest))
         })
         .max_by_key(|(module, _)| module.path.len())
-        .map(|(module, rest)| joined(&module.folder, rest))
+        .map(|(module, rest)| {
+            joined(InFolder {
+                folder: &module.folder,
+                rest,
+            })
+        })
 }
 
 pub struct EvidenceStart<'a> {
@@ -79,7 +90,10 @@ pub fn evidence_of(start: EvidenceStart) -> Evidence {
         .and_then(|function| function.site.as_ref());
     let (path, line) = match site {
         Some(site) => (
-            joined(folder, &file_name(&site.filename)),
+            joined(InFolder {
+                folder,
+                rest: &file_name(&site.filename),
+            }),
             site.line.parse().unwrap_or(1),
         ),
         None => (folder.to_string(), 1),
@@ -96,7 +110,13 @@ pub fn evidence_of(start: EvidenceStart) -> Evidence {
     }
 }
 
-pub fn joined(folder: &str, rest: &str) -> String {
+pub struct InFolder<'a> {
+    pub folder: &'a str,
+    pub rest: &'a str,
+}
+
+pub fn joined(path: InFolder) -> String {
+    let InFolder { folder, rest } = path;
     match (folder, rest) {
         (_, "") => folder.to_string(),
         (".", _) => rest.to_string(),

@@ -1,12 +1,13 @@
-use crate::document::{Located, Node, Value};
+mod expressions;
+
+use crate::document::{Node, Value};
 use crate::{Capability, Detection, Power};
+pub use expressions::without_expression_braces;
+use expressions::{expressions, secrets};
 
 pub const WORKFLOWS: &str = ".github/workflows";
 const UNTRUSTED_TRIGGERS: &[&str] = &["pull_request_target", "workflow_run"];
 const FIRST_PARTY_OWNERS: &[&str] = &["actions/", "github/"];
-const BUILT_IN_SECRET: &str = "GITHUB_TOKEN";
-const EXPRESSION_START: &str = "${{";
-const EXPRESSION_END: &str = "}}";
 
 pub fn is_workflow(path: &str) -> bool {
     path.strip_prefix(WORKFLOWS)
@@ -14,24 +15,6 @@ pub fn is_workflow(path: &str) -> bool {
         .is_some_and(|name| {
             !name.contains('/') && (name.ends_with(".yml") || name.ends_with(".yaml"))
         })
-}
-
-pub fn without_expression_braces(text: &str) -> String {
-    let mut output = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(start) = rest.find(EXPRESSION_START) {
-        output.push_str(&rest[..start]);
-        output.push_str("$((");
-        rest = &rest[start + EXPRESSION_START.len()..];
-        let Some(end) = rest.find(EXPRESSION_END) else {
-            break;
-        };
-        output.push_str(&rest[..end]);
-        output.push_str("))");
-        rest = &rest[end + EXPRESSION_END.len()..];
-    }
-    output.push_str(rest);
-    output
 }
 
 pub struct Workflow<'a> {
@@ -65,10 +48,10 @@ pub fn detect(source: Workflow) -> Vec<Detection> {
             .filter_map(|job| job.value.get("secrets"))
             .filter(|secrets| secrets.text() == Some("inherit"))
             .map(|secrets| {
-                detection(
-                    Power::new(Capability::Secret).with_detail("inherit"),
-                    secrets.line,
-                )
+                detection(Found {
+                    power: Power::new(Capability::Secret).with_detail("inherit"),
+                    line: secrets.line,
+                })
             }),
     );
     detections
@@ -91,10 +74,10 @@ fn untrusted_triggers(triggers: &Node) -> Vec<Detection> {
         .into_iter()
         .filter(|(name, _)| UNTRUSTED_TRIGGERS.contains(name))
         .map(|(name, line)| {
-            detection(
-                Power::new(Capability::UntrustedTrigger).with_detail(name),
+            detection(Found {
+                power: Power::new(Capability::UntrustedTrigger).with_detail(name),
                 line,
-            )
+            })
         })
         .collect()
 }
@@ -102,7 +85,10 @@ fn untrusted_triggers(triggers: &Node) -> Vec<Detection> {
 fn token_permissions(permissions: &Node) -> Vec<Detection> {
     if permissions.text() == Some("write-all") {
         let power = Power::new(Capability::TokenWrite).with_detail("all");
-        return vec![detection(power, permissions.line)];
+        return vec![detection(Found {
+            power,
+            line: permissions.line,
+        })];
     }
     permissions
         .entries()
@@ -113,7 +99,10 @@ fn token_permissions(permissions: &Node) -> Vec<Detection> {
                 "id-token" => Power::new(Capability::Oidc),
                 scope => Power::new(Capability::TokenWrite).with_detail(scope),
             };
-            detection(power, entry.line)
+            detection(Found {
+                power,
+                line: entry.line,
+            })
         })
         .collect()
 }
@@ -129,59 +118,21 @@ fn third_party_action(uses: &Node) -> Option<Detection> {
     }
     let action = reference.split('@').next().unwrap_or(reference);
     let power = Power::new(Capability::ThirdPartyAction).with_detail(action);
-    Some(detection(power, uses.line))
-}
-
-fn expressions(text: &str) -> Vec<Located<'_>> {
-    let mut found = Vec::new();
-    let mut offset = 0;
-    while let Some(start) = text[offset..].find(EXPRESSION_START) {
-        let body_start = offset + start + EXPRESSION_START.len();
-        let Some(length) = text[body_start..].find(EXPRESSION_END) else {
-            break;
-        };
-        found.push(Located {
-            text: &text[body_start..body_start + length],
-            line: text[..body_start].matches('\n').count() + 1,
-        });
-        offset = body_start + length + EXPRESSION_END.len();
-    }
-    found
-}
-
-fn secrets(located: &Located) -> Vec<Detection> {
-    secret_names(located.text)
-        .filter(|name| !name.eq_ignore_ascii_case(BUILT_IN_SECRET))
-        .map(|name| {
-            detection(
-                Power::new(Capability::Secret).with_detail(name),
-                located.line,
-            )
-        })
-        .collect()
-}
-
-fn secret_names(text: &str) -> impl Iterator<Item = &str> {
-    const PREFIX: &str = "secrets.";
-    text.match_indices(PREFIX).filter_map(move |(index, _)| {
-        let follows_identifier = text[..index]
-            .chars()
-            .next_back()
-            .is_some_and(|character| character.is_ascii_alphanumeric() || character == '_');
-        let rest = &text[index + PREFIX.len()..];
-        let length = rest
-            .find(|character: char| {
-                !(character.is_ascii_alphanumeric() || character == '_' || character == '-')
-            })
-            .unwrap_or(rest.len());
-        (!follows_identifier && length > 0).then_some(&rest[..length])
-    })
-}
-
-fn detection(power: Power, line: usize) -> Detection {
-    Detection {
+    Some(detection(Found {
         power,
-        line,
+        line: uses.line,
+    }))
+}
+
+struct Found {
+    power: Power,
+    line: usize,
+}
+
+fn detection(found: Found) -> Detection {
+    Detection {
+        power: found.power,
+        line: found.line,
         rule: "github-workflow".to_string(),
     }
 }

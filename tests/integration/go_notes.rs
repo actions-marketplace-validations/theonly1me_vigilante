@@ -12,7 +12,16 @@ use crate::support::{Run, TestRepository};
 
 const MARKDOWN_DIFF: &[&str] = &["diff", "--base", "main", "--head", "feature"];
 
-pub fn diff(repository: &TestRepository, arguments: &[&str]) -> Run {
+pub struct Diff<'a> {
+    pub repository: &'a TestRepository,
+    pub arguments: &'a [&'a str],
+}
+
+pub fn diff(request: Diff) -> Run {
+    let Diff {
+        repository,
+        arguments,
+    } = request;
     let tools = FakeTools::new();
     run_vigilante(GoRun {
         repository,
@@ -85,7 +94,10 @@ fn a_power_reached_only_through_a_dependency_is_a_note_and_the_check_passes() {
     repository.write(&[("app/capslock.json", &capslock_output(&both))]);
     repository.commit("run a tool from a dependency");
 
-    let run = diff(&repository, DIFF);
+    let run = diff(Diff {
+        repository: &repository,
+        arguments: DIFF,
+    });
 
     let report = report_of(&run);
     assert!(finding_summaries(&report).is_empty(), "{}", run.stdout);
@@ -104,7 +116,11 @@ fn a_power_reached_only_through_a_dependency_is_a_note_and_the_check_passes() {
         BTreeSet::from(["example.com/app/fetch", "example.com/dep/run", "os/exec"])
     );
     assert_eq!(run.code, 0, "{}", run.stderr);
-    let markdown = diff(&repository, MARKDOWN_DIFF).stdout;
+    let markdown = diff(Diff {
+        repository: &repository,
+        arguments: MARKDOWN_DIFF,
+    })
+    .stdout;
     let row = "| `app/fetch` (code) | `exec` | `example.com/dep/run` | `app/fetch/fetch.go:6 via fetch.Page → run.Tool → exec.Command` |";
     assert_eq!(markdown.matches(row).count(), 1, "{markdown}");
 }
@@ -113,8 +129,14 @@ fn a_power_reached_only_through_a_dependency_is_a_note_and_the_check_passes() {
 fn a_new_path_to_a_locked_power_is_a_note_and_the_check_passes() {
     let repository = existing_exec_reaches_a_new_dependency();
 
-    let run = diff(&repository, MARKDOWN_DIFF);
-    let notes: BTreeSet<String> = report_of(&diff(&repository, DIFF))["notes"]
+    let run = diff(Diff {
+        repository: &repository,
+        arguments: MARKDOWN_DIFF,
+    });
+    let notes: BTreeSet<String> = report_of(&diff(Diff {
+        repository: &repository,
+        arguments: DIFF,
+    }))["notes"]
         .as_array()
         .expect("notes")
         .iter()

@@ -110,7 +110,10 @@ impl GoModules {
     }
 
     fn folder_of(&self, package: &str) -> Option<String> {
-        mapping::folder_of(package, &self.modules)
+        mapping::folder_of(mapping::PackageLookup {
+            package,
+            modules: &self.modules,
+        })
     }
 
     fn is_repo_package(&self, package: &str) -> bool {
@@ -118,8 +121,11 @@ impl GoModules {
     }
 
     fn is_owned_by(&self, owned: OwnedFolder) -> bool {
-        self.containing(&mapping::joined(owned.folder, "package.go"))
-            .is_some_and(|owner| owner.folder == owned.module.folder)
+        self.containing(&mapping::joined(mapping::InFolder {
+            folder: owned.folder,
+            rest: "package.go",
+        }))
+        .is_some_and(|owner| owner.folder == owned.module.folder)
     }
 
     fn containing(&self, path: &str) -> Option<&Module> {

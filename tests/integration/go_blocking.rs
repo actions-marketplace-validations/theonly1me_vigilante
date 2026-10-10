@@ -4,7 +4,7 @@ use crate::go_fixtures::{
     Call, DIFF, FETCH_PACKAGE, PAGE, Reach, capslock_output, direct_exec_reaches,
     finding_summaries, module_repository, network_reaches,
 };
-use crate::go_notes::{diff, note_summaries};
+use crate::go_notes::{Diff, diff, note_summaries};
 use crate::go_support::report_of;
 
 const SIGNAL_NOTIFY: Call = Call {
@@ -25,13 +25,16 @@ fn sarif_and_json_carry_the_call_path() {
     repository.write(&[("app/capslock.json", &capslock_output(&both))]);
     repository.commit("run a tool");
 
-    let json = report_of(&diff(&repository, DIFF));
-    let sarif = report_of(&diff(
-        &repository,
-        &[
+    let json = report_of(&diff(Diff {
+        repository: &repository,
+        arguments: DIFF,
+    }));
+    let sarif = report_of(&diff(Diff {
+        repository: &repository,
+        arguments: &[
             "diff", "--base", "main", "--head", "feature", "--format", "sarif",
         ],
-    ));
+    }));
 
     assert_eq!(
         json["findings"][0]["evidence"]["call_path"],
@@ -55,7 +58,10 @@ fn only_exec_network_and_native_block_and_other_go_powers_are_notes() {
     repository.write(&[("app/capslock.json", &capslock_output(&head))]);
     repository.commit("handle signals");
 
-    let run = diff(&repository, DIFF);
+    let run = diff(Diff {
+        repository: &repository,
+        arguments: DIFF,
+    });
 
     let report = report_of(&run);
     assert!(finding_summaries(&report).is_empty(), "{}", run.stdout);

@@ -48,11 +48,18 @@ fn repository_with(capabilities: &[&'static str]) -> TestRepository {
     repository
 }
 
-fn scan(
-    repository: &TestRepository,
+struct Scan<'a> {
+    repository: &'a TestRepository,
     available: Tools,
-    environment: &[(&str, &str)],
-) -> crate::support::Run {
+    environment: &'a [(&'a str, &'a str)],
+}
+
+fn scan(request: Scan) -> crate::support::Run {
+    let Scan {
+        repository,
+        available,
+        environment,
+    } = request;
     let tools = FakeTools::new();
     run_vigilante(GoRun {
         repository,
@@ -107,7 +114,11 @@ fn each_capslock_capability_maps_to_a_vigilante_power() {
 fn an_unknown_capslock_capability_stops_the_scan() {
     let repository = repository_with(&["TELEPORT"]);
 
-    let run = scan(&repository, Tools::Fake, &[]);
+    let run = scan(Scan {
+        repository: &repository,
+        available: Tools::Fake,
+        environment: &[],
+    });
 
     assert_eq!(run.code, 2);
     assert!(run.stderr.contains("TELEPORT"), "{}", run.stderr);
@@ -117,7 +128,11 @@ fn an_unknown_capslock_capability_stops_the_scan() {
 fn a_missing_capslock_stops_the_scan_with_the_install_command() {
     let repository = repository_with(&["NETWORK"]);
 
-    let run = scan(&repository, Tools::Missing, &[]);
+    let run = scan(Scan {
+        repository: &repository,
+        available: Tools::Missing,
+        environment: &[],
+    });
 
     assert_eq!(run.code, 2);
     assert!(
@@ -132,11 +147,11 @@ fn a_missing_capslock_stops_the_scan_with_the_install_command() {
 fn an_old_capslock_stops_the_scan() {
     let repository = repository_with(&["NETWORK"]);
 
-    let run = scan(
-        &repository,
-        Tools::Fake,
-        &[("FAKE_CAPSLOCK_VERSION", "v0.2.8")],
-    );
+    let run = scan(Scan {
+        repository: &repository,
+        available: Tools::Fake,
+        environment: &[("FAKE_CAPSLOCK_VERSION", "v0.2.8")],
+    });
 
     assert_eq!(run.code, 2);
     assert!(run.stderr.contains("v0.2.8"), "{}", run.stderr);
@@ -153,7 +168,11 @@ fn the_patterns_engine_reads_go_without_capslock() {
         ),
     ]);
 
-    let run = scan(&repository, Tools::Missing, &[]);
+    let run = scan(Scan {
+        repository: &repository,
+        available: Tools::Missing,
+        environment: &[],
+    });
 
     assert_eq!(run.code, 0, "{}", run.stderr);
     assert!(run.stdout.contains("\"go-exec-import\""), "{}", run.stdout);

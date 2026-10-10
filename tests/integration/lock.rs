@@ -1,6 +1,9 @@
+use std::fs;
+
 use vigilante::Lock;
 
-use crate::support::scan_files;
+use crate::cli::MCP_SERVER;
+use crate::support::{TestRepository, scan_files};
 
 const EXPECTED_LOCK: &str = r#"version = 1
 
@@ -53,4 +56,48 @@ fn a_lock_with_another_version_is_rejected() {
     let error = Lock::parse("version = 2\n").expect_err("version 2 is not supported");
 
     assert!(error.to_string().contains("version 2"), "{error}");
+}
+
+#[test]
+fn lock_writes_the_same_bytes_every_time() {
+    let repository = TestRepository::new();
+    repository.write(&[
+        (
+            "web/app.ts",
+            "const key = process.env.KEY;\nawait fetch(url);\n",
+        ),
+        (
+            "services/run.py",
+            "import socket, subprocess; subprocess.run(['true']); socket.socket()\n",
+        ),
+        ("crates/core/src/lib.rs", "use std::process::Command;\n"),
+        (".mcp.json", MCP_SERVER),
+    ]);
+
+    let run = repository.vigilante(&["lock"]);
+    let first = fs::read(repository.directory.path().join("vigilante.lock")).expect("lock");
+    repository.vigilante(&["lock"]);
+    let second = fs::read(repository.directory.path().join("vigilante.lock")).expect("lock");
+
+    assert_eq!(
+        run.stdout,
+        "Wrote vigilante.lock with 5 powers in 4 scopes.\n"
+    );
+    assert_eq!(first, second);
+}
+
+#[test]
+fn lock_counts_a_single_power_in_the_singular() {
+    let repository = TestRepository::new();
+    repository.write(&[(
+        "services/run.py",
+        "import subprocess; subprocess.run(['true'])\n",
+    )]);
+
+    let run = repository.vigilante(&["lock"]);
+
+    assert_eq!(
+        run.stdout,
+        "Wrote vigilante.lock with 1 power in 1 scope.\n"
+    );
 }

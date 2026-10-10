@@ -26,14 +26,21 @@ fn yaml_documents(path: &str) -> Vec<Yaml<'static>> {
     Yaml::load_from_str(Box::leak(text.into_boxed_str())).expect("valid YAML")
 }
 
-fn text_of<'a>(document: &'a Yaml, key: &str) -> &'a str {
+struct Field<'a, 'k> {
+    document: &'a Yaml<'a>,
+    key: &'k str,
+}
+
+fn text_of<'a>(field: Field<'a, '_>) -> &'a str {
+    let Field { document, key } = field;
     document
         .as_mapping_get(key)
         .and_then(|value| value.as_str())
         .unwrap_or_default()
 }
 
-fn snippets_of<'a>(document: &'a Yaml, key: &str) -> Vec<&'a str> {
+fn snippets_of<'a>(field: Field<'a, '_>) -> Vec<&'a str> {
+    let Field { document, key } = field;
     document
         .as_mapping_get(key)
         .and_then(|value| value.as_sequence())
@@ -44,9 +51,15 @@ fn snippets_of<'a>(document: &'a Yaml, key: &str) -> Vec<&'a str> {
 fn cases_of(language: &str) -> Vec<Case> {
     let mut cases = Vec::new();
     for document in yaml_documents(&format!("packs/tests/{language}.yml")) {
-        let rule = text_of(&document, "id");
+        let rule = text_of(Field {
+            document: &document,
+            key: "id",
+        });
         for (key, must_match) in [("invalid", true), ("valid", false)] {
-            for snippet in snippets_of(&document, key) {
+            for snippet in snippets_of(Field {
+                document: &document,
+                key,
+            }) {
                 cases.push(Case {
                     rule: rule.to_string(),
                     snippet: snippet.to_string(),
@@ -61,15 +74,33 @@ fn cases_of(language: &str) -> Vec<Case> {
 fn rule_ids_with_match_cases(language: &str) -> BTreeSet<String> {
     yaml_documents(&format!("packs/tests/{language}.yml"))
         .iter()
-        .filter(|document| !snippets_of(document, "invalid").is_empty())
-        .map(|document| text_of(document, "id").to_string())
+        .filter(|document| {
+            !snippets_of(Field {
+                document,
+                key: "invalid",
+            })
+            .is_empty()
+        })
+        .map(|document| {
+            text_of(Field {
+                document,
+                key: "id",
+            })
+            .to_string()
+        })
         .collect()
 }
 
 fn pack_rule_ids(language: &str) -> BTreeSet<String> {
     yaml_documents(&format!("packs/{language}.yml"))
         .iter()
-        .map(|document| text_of(document, "id").to_string())
+        .map(|document| {
+            text_of(Field {
+                document,
+                key: "id",
+            })
+            .to_string()
+        })
         .collect()
 }
 

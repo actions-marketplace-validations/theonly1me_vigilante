@@ -1,15 +1,19 @@
-use std::fs;
-
 use crate::support::TestRepository;
 
-const MCP_SERVER: &str =
+pub const MCP_SERVER: &str =
     r#"{"mcpServers": {"fs-tools": {"command": "npx", "args": ["-y", "@acme/fs-mcp"]}}}"#;
 
 const WRITE_WORKFLOW: &str = "on: push\npermissions:\n  contents: write\njobs: {}\n";
 
 const MARKER_SCRIPT: &str = r#"{"scripts": {"postinstall": "node -e \"require('fs').writeFileSync('postinstall-ran', '')\""}}"#;
 
-fn rows_with(output: &str, status: &str) -> usize {
+struct Rows<'a> {
+    output: &'a str,
+    status: &'a str,
+}
+
+fn rows_with(rows: Rows) -> usize {
+    let Rows { output, status } = rows;
     output
         .lines()
         .filter(|line| line.starts_with("| ") && line.ends_with(&format!("{status} |")))
@@ -44,7 +48,10 @@ fn diff_exits_1_until_the_lock_is_committed_and_then_exits_0() {
             .starts_with("## Vigilante: this pull request adds 3 new powers\n")
     );
     assert_eq!(
-        rows_with(&before.stdout, "**not in lock**"),
+        rows_with(Rows {
+            output: &before.stdout,
+            status: "**not in lock**"
+        }),
         3,
         "{}",
         before.stdout
@@ -54,36 +61,16 @@ fn diff_exits_1_until_the_lock_is_committed_and_then_exits_0() {
         "Wrote vigilante.lock with 3 powers in 3 scopes.\n"
     );
     assert_eq!(after.code, 0, "{}", after.stdout);
-    assert_eq!(rows_with(&after.stdout, "in lock"), 3, "{}", after.stdout);
-    assert!(after.stdout.ends_with("**Result: pass.**\n"));
-}
-
-#[test]
-fn lock_writes_the_same_bytes_every_time() {
-    let repository = TestRepository::new();
-    repository.write(&[
-        (
-            "web/app.ts",
-            "const key = process.env.KEY;\nawait fetch(url);\n",
-        ),
-        (
-            "services/run.py",
-            "import socket, subprocess; subprocess.run(['true']); socket.socket()\n",
-        ),
-        ("crates/core/src/lib.rs", "use std::process::Command;\n"),
-        (".mcp.json", MCP_SERVER),
-    ]);
-
-    let run = repository.vigilante(&["lock"]);
-    let first = fs::read(repository.directory.path().join("vigilante.lock")).expect("lock");
-    repository.vigilante(&["lock"]);
-    let second = fs::read(repository.directory.path().join("vigilante.lock")).expect("lock");
-
     assert_eq!(
-        run.stdout,
-        "Wrote vigilante.lock with 5 powers in 4 scopes.\n"
+        rows_with(Rows {
+            output: &after.stdout,
+            status: "in lock"
+        }),
+        3,
+        "{}",
+        after.stdout
     );
-    assert_eq!(first, second);
+    assert!(after.stdout.ends_with("**Result: pass.**\n"));
 }
 
 #[test]
@@ -169,20 +156,4 @@ fn scan_prints_each_power_and_never_runs_install_scripts() {
             .exists()
     );
     assert!(!repository.directory.path().join("postinstall-ran").exists());
-}
-
-#[test]
-fn lock_counts_a_single_power_in_the_singular() {
-    let repository = TestRepository::new();
-    repository.write(&[(
-        "services/run.py",
-        "import subprocess; subprocess.run(['true'])\n",
-    )]);
-
-    let run = repository.vigilante(&["lock"]);
-
-    assert_eq!(
-        run.stdout,
-        "Wrote vigilante.lock with 1 power in 1 scope.\n"
-    );
 }
