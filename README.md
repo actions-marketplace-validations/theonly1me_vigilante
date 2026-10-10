@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/vigilante.png" alt="Vigilante" width="420">
+  <img src="assets/vigilante-banner-white-bg.webp" alt="Vigilante" width="420">
 </p>
 
 <p align="center">
