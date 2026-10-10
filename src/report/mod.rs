@@ -30,7 +30,16 @@ pub fn summary(capability: Capability) -> &'static str {
         Capability::Network => "Can use the network",
         Capability::Native => "Can run unsafe or native code",
         Capability::DynamicCode => "Can run code that is built at run time",
-        Capability::Env => "Reads environment variables",
+        Capability::ReadSystemState => "Reads environment variables or system information",
+        Capability::Files => "Can read or change files",
+        Capability::ModifySystemState => {
+            "Can change environment variables, the working folder, or signal handlers"
+        }
+        Capability::OperatingSystem => "Uses other operating system functions",
+        Capability::SystemCalls => "Can make system calls directly",
+        Capability::ArbitraryExecution => "Can run code that the analysis cannot follow",
+        Capability::Runtime => "Can change the language runtime",
+        Capability::Unanalyzed => "Has calls that the analysis could not follow",
         Capability::TokenWrite => "The CI token can write to the repository",
         Capability::Oidc => "The CI job can get cloud credentials (OIDC)",
         Capability::UntrustedTrigger => {

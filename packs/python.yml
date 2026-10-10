@@ -75,7 +75,7 @@ id: python-env-read
 language: python
 message: Reads environment variables
 metadata:
-  capability: env
+  capability: read_system_state
 rule:
   kind: attribute
   regex: ^os\.(environ|getenv)$

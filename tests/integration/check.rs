@@ -1,6 +1,8 @@
+use std::collections::BTreeSet;
+
 use vigilante::Lock;
 
-use crate::support::{TestRepository, finding_lines};
+use crate::support::{TestRepository, expected, finding_lines};
 
 #[test]
 fn check_fails_on_unlocked_powers_and_on_stale_lock_entries() {
@@ -67,4 +69,38 @@ fn report_mode_passes_with_unlocked_powers() {
         ["code services exec locked=false denied=false"]
     );
     assert!(review.passed());
+}
+
+const POWERS_FROM_CAPSLOCK: &[&str] = &[
+    "arbitrary_execution",
+    "files",
+    "modify_system_state",
+    "operating_system",
+    "read_system_state",
+    "runtime",
+    "system_calls",
+    "unanalyzed",
+];
+
+#[test]
+fn a_lock_can_list_every_power_that_capslock_reports() {
+    let repository = TestRepository::new();
+    let quoted: Vec<String> = POWERS_FROM_CAPSLOCK
+        .iter()
+        .map(|power| format!("\"{power}\""))
+        .collect();
+    let lock = format!(
+        "version = 1\n\n[code.services]\npowers = [{}]\n",
+        quoted.join(", ")
+    );
+    repository.write(&[("services/README.md", "# services\n"), (Lock::FILE, &lock)]);
+
+    let review = repository.check();
+
+    let stale: BTreeSet<String> = review
+        .stale
+        .iter()
+        .map(|entry| entry.power.to_string())
+        .collect();
+    assert_eq!(stale, expected(POWERS_FROM_CAPSLOCK));
 }

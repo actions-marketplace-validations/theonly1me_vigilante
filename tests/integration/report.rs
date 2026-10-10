@@ -63,7 +63,7 @@ fn markdown_keeps_hostile_names_inside_one_table_cell() {
 }
 
 #[test]
-fn markdown_hides_locked_env_reads_but_counts_them() {
+fn markdown_hides_locked_system_state_reads_but_counts_them() {
     let repository = TestRepository::new();
     repository.write(&[("README.md", "# app\n")]);
     repository.commit("base");
@@ -83,8 +83,13 @@ fn markdown_hides_locked_env_reads_but_counts_them() {
     let markdown = repository.diff(MAIN_AND_FEATURE).render(Format::Markdown);
 
     assert!(markdown.contains("| `exec` |"), "{markdown}");
-    assert!(!markdown.contains("| `env` |"), "{markdown}");
-    assert!(markdown.contains("Hidden low-signal findings: 1 (env). They stay in vigilante.lock."));
+    assert!(!markdown.contains("| `read_system_state` |"), "{markdown}");
+    assert!(
+        markdown.contains(
+            "Hidden low-signal findings: 1 (read_system_state). They stay in vigilante.lock."
+        ),
+        "{markdown}"
+    );
     assert!(markdown.ends_with("**Result: pass.**\n"));
 }
 

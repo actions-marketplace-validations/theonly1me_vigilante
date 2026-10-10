@@ -54,7 +54,13 @@ pub struct ReportSection {
 impl Default for ReportSection {
     fn default() -> Self {
         Self {
-            hide: vec![Capability::Env],
+            hide: vec![
+                Capability::ReadSystemState,
+                Capability::Files,
+                Capability::OperatingSystem,
+                Capability::Runtime,
+                Capability::Unanalyzed,
+            ],
         }
     }
 }

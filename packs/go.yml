@@ -51,7 +51,7 @@ id: go-env-read
 language: go
 message: Reads environment variables
 metadata:
-  capability: env
+  capability: read_system_state
 rule:
   kind: selector_expression
   regex: ^os\.(Getenv|LookupEnv|Environ|Setenv|ExpandEnv)$

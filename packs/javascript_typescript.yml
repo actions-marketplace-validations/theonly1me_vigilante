@@ -87,7 +87,7 @@ id: js-env-read
 language: tsx
 message: Reads environment variables
 metadata:
-  capability: env
+  capability: read_system_state
 rule:
   kind: member_expression
   regex: ^(process|Deno|Bun)\.env$

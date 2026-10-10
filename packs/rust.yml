@@ -60,7 +60,7 @@ id: rust-env-read
 language: rust
 message: Reads environment variables
 metadata:
-  capability: env
+  capability: read_system_state
 rule:
   any:
     - kind: scoped_identifier
