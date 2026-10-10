@@ -60,7 +60,7 @@ jobs:
         run: '"target/$TARGET/release/vigilante" --version'
       - run: |
           mkdir -p "dist/vigilante-$TARGET"
-          cp "target/$TARGET/release/vigilante" LICENSE-MIT LICENSE-APACHE "dist/vigilante-$TARGET/"
+          cp "target/$TARGET/release/vigilante" README.md LICENSE-MIT LICENSE-APACHE "dist/vigilante-$TARGET/"
           tar -czf "dist/vigilante-$TARGET.tar.gz" -C dist "vigilante-$TARGET"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

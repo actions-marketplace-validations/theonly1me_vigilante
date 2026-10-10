@@ -69,6 +69,7 @@ function packPlatform(platform) {
 function packMainPackage() {
   const folder = join(stagingFolder, "main");
   cpSync(mainPackageFolder, folder, { recursive: true });
+  copyFileSync(join(repositoryRoot, "README.md"), join(folder, "README.md"));
   pack(folder);
 }
 

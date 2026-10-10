@@ -6,6 +6,7 @@ build-backend = "maturin"
 name = "vigilante-scan"
 description = "Shows the new powers that a pull request gives to code, CI, build, and AI agents"
 requires-python = ">=3.8"
+readme = "README.md"
 license = "MIT OR Apache-2.0"
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
 keywords = ["security", "capabilities", "ci", "agents", "supply-chain"]
