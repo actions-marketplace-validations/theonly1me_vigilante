@@ -2,29 +2,10 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
+use super::{Found, LockedPackage, PackageSource, Place, default_url};
 use crate::Error;
 
 const INSTALL_FOLDER: &str = "node_modules/";
-const DEFAULT_REGISTRY: &str = "https://registry.npmjs.org";
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PackageSource {
-    Registry {
-        url: String,
-        integrity: Option<String>,
-    },
-    Folder(String),
-    Git(String),
-    Bundled,
-    Unsupported(String),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LockedPackage {
-    pub name: String,
-    pub version: String,
-    pub source: PackageSource,
-}
 
 #[derive(Debug, Default)]
 pub struct NpmLockfile {
@@ -48,8 +29,17 @@ impl NpmLockfile {
         Ok(lockfile)
     }
 
-    pub fn package(&self, key: &str) -> Option<&LockedPackage> {
-        self.packages.get(key)
+    pub fn find(&self, place: Place, name: &str) -> Option<Found> {
+        let folder = match place {
+            Place::Repository { folder } => folder,
+            Place::Package { key } => key,
+        };
+        install_candidates(folder, name)
+            .into_iter()
+            .find_map(|key| {
+                let package = self.packages.get(&key)?.clone();
+                Some(Found { key, package })
+            })
     }
 
     fn insert_tree(&mut self, parent: &str, dependencies: &Map<String, Value>) {
@@ -149,7 +139,18 @@ fn source_of(located: Located) -> PackageSource {
     PackageSource::Unsupported(resolved.to_string())
 }
 
-fn default_url(name: &str, version: &str) -> String {
-    let base_name = name.rsplit('/').next().unwrap_or(name);
-    format!("{DEFAULT_REGISTRY}/{name}/-/{base_name}-{version}.tgz")
+fn install_candidates(folder: &str, name: &str) -> Vec<String> {
+    let parts: Vec<&str> = folder.split('/').filter(|part| !part.is_empty()).collect();
+    let mut candidates = Vec::new();
+    for length in (0..=parts.len()).rev() {
+        let prefix = &parts[..length];
+        if prefix.last() == Some(&"node_modules") {
+            continue;
+        }
+        candidates.push(match prefix {
+            [] => format!("node_modules/{name}"),
+            _ => format!("{}/node_modules/{name}", prefix.join("/")),
+        });
+    }
+    candidates
 }

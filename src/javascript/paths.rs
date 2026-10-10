@@ -1,3 +1,5 @@
+pub use crate::repository_path::{joined, parent_folder};
+
 const CODE_EXTENSIONS: &[&str] = &[".js", ".ts", ".tsx", ".mjs", ".cjs", ".jsx", ".mts", ".cts"];
 const TYPESCRIPT_SWAPS: &[(&str, &[&str])] = &[
     (".js", &[".ts", ".tsx"]),
@@ -117,27 +119,6 @@ fn is_package_name(name: &str) -> bool {
     }
 }
 
-pub fn parent_folder(path: &str) -> &str {
-    path.rsplit_once('/').map_or("", |(folder, _)| folder)
-}
-
-pub fn joined(folder: &str, relative: &str) -> Option<String> {
-    let mut parts: Vec<&str> = folder
-        .split('/')
-        .filter(|part| !part.is_empty() && *part != ".")
-        .collect();
-    for part in relative.split('/') {
-        match part {
-            "" | "." => {}
-            ".." => {
-                parts.pop()?;
-            }
-            other => parts.push(other),
-        }
-    }
-    Some(parts.join("/"))
-}
-
 pub fn probe(exists: &dyn Fn(&str) -> bool, base: &str) -> Option<String> {
     let base = base.trim_end_matches('/');
     let mut candidates = Vec::new();
@@ -165,22 +146,6 @@ pub fn probe(exists: &dyn Fn(&str) -> bool, base: &str) -> Option<String> {
             .map(|extension| format!("{index}{extension}")),
     );
     candidates.into_iter().find(|candidate| exists(candidate))
-}
-
-pub fn install_candidates(folder: &str, name: &str) -> Vec<String> {
-    let parts: Vec<&str> = folder.split('/').filter(|part| !part.is_empty()).collect();
-    let mut candidates = Vec::new();
-    for length in (0..=parts.len()).rev() {
-        let prefix = &parts[..length];
-        if prefix.last() == Some(&"node_modules") {
-            continue;
-        }
-        candidates.push(match prefix {
-            [] => format!("node_modules/{name}"),
-            _ => format!("{}/node_modules/{name}", prefix.join("/")),
-        });
-    }
-    candidates
 }
 
 pub fn stem(path: &str) -> &str {

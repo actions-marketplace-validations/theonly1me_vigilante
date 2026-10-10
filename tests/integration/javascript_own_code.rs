@@ -140,3 +140,22 @@ fn the_patterns_engine_reports_an_import_without_the_call_graph() {
 
     assert_eq!(entries(&report, "findings"), vec![". exec src/index.js:1 "]);
 }
+
+#[test]
+fn a_relative_module_whose_name_ends_in_node_is_code_when_the_file_exists() {
+    let report = diff_after(&[
+        (
+            "src/index.ts",
+            "export async function register() {\n  await import('./instrumentation.node');\n  return require('./addon.node');\n}\n",
+        ),
+        (
+            "src/instrumentation.node.ts",
+            "export const ready = true;\n",
+        ),
+    ]);
+
+    assert_eq!(
+        entries(&report, "findings"),
+        vec![". native src/index.ts:3 src/index.register > ./addon.node"]
+    );
+}

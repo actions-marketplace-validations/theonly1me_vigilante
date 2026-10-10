@@ -10,6 +10,7 @@ mod lockfiles;
 mod model;
 mod registry;
 mod report;
+mod repository_path;
 mod review;
 mod scan;
 mod scope;

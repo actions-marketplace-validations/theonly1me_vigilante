@@ -1,17 +1,27 @@
+use std::collections::HashMap;
 use std::fmt;
 
 use serde::Deserialize;
-use serde::de::{self, MapAccess, SeqAccess, Visitor};
+use serde::de::{self, IgnoredAny, MapAccess, SeqAccess, Visitor};
 
 const CONDITIONS: &[&str] = &["node", "require", "import", "module-sync", "default"];
 const ROOT_SUBPATH: &str = ".";
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Manifest {
     #[serde(default)]
     main: Option<String>,
     #[serde(default)]
     exports: Option<Exports>,
+    #[serde(default)]
+    dependencies: HashMap<String, IgnoredAny>,
+    #[serde(default)]
+    dev_dependencies: HashMap<String, IgnoredAny>,
+    #[serde(default)]
+    optional_dependencies: HashMap<String, IgnoredAny>,
+    #[serde(default)]
+    peer_dependencies: HashMap<String, IgnoredAny>,
 }
 
 #[derive(Debug)]
@@ -25,6 +35,17 @@ enum Exports {
 impl Manifest {
     pub fn parse(text: &str) -> Self {
         serde_json::from_str(text).unwrap_or_default()
+    }
+
+    pub fn declares(&self, name: &str) -> bool {
+        [
+            &self.dependencies,
+            &self.dev_dependencies,
+            &self.optional_dependencies,
+            &self.peer_dependencies,
+        ]
+        .iter()
+        .any(|listed| listed.contains_key(name))
     }
 
     pub fn entries(&self, subpath: &str) -> Vec<String> {

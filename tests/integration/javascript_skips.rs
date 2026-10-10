@@ -28,13 +28,13 @@ fn a_registry_that_is_not_allowed_is_listed_as_not_analyzed() {
 }
 
 #[test]
-fn a_package_that_is_not_in_the_lockfile_is_listed_as_not_analyzed() {
+fn a_declared_package_that_is_not_in_the_lockfile_is_listed_as_not_analyzed() {
     let registry = served();
     let lockfile = registry.lockfile(&lock_entries());
 
     let run = diff(Change {
         base_main: UNUSED_MAIN,
-        head_main: "import ghost from 'ghost';\n\nexport function main() {\n  return ghost();\n}\n",
+        head_main: "import ghost from 'ghost';\nimport { toast } from '@acme/components/toast';\n\nexport function main() {\n  return ghost(toast);\n}\n",
         config: &registry.allow_config(),
         lockfile: Some(&lockfile),
     });
@@ -57,7 +57,7 @@ fn code_without_a_lockfile_is_listed_as_not_analyzed() {
     assert_eq!(
         skipped(&report_of(&run)),
         vec![
-            ".: No package-lock.json or npm-shrinkwrap.json covers this code, so Vigilante did not read its packages."
+            ".: No package-lock.json, npm-shrinkwrap.json, or pnpm-lock.yaml covers this code, so Vigilante did not read its packages."
         ]
     );
 }

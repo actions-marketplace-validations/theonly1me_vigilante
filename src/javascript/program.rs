@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::packages::Packages;
+use super::parse::{Source, parse_all};
 use super::syntax::FileIndex;
 use crate::code::Rules;
 use crate::deep::graph::Owner;
@@ -95,22 +96,58 @@ impl<'a> Program<'a> {
                 .into_iter()
                 .map(|file| (file.path, file.text))
                 .collect();
-            let mut next = Vec::new();
+            let mut keys = Vec::new();
+            let mut sources = Vec::new();
             for key in frontier {
                 let text = match key.root {
                     Root::Repository => texts.remove(&key.path),
                     Root::Package(index) => self.input.packages.read(index, &key.path),
                 };
-                let Some(text) = text else {
-                    continue;
-                };
-                let file = self.parse(key, &text)?;
-                next.extend(file.resolved.values().cloned());
-                self.ids.insert(file.key.clone(), self.files.len());
-                self.files.push(file);
+                if let Some(text) = text {
+                    let (display, owner) = self.identity(&key);
+                    sources.push(Source { display, text });
+                    keys.push((key, owner));
+                }
+            }
+            let parsed = parse_all(self.input.rules, &sources)?;
+            self.prefetch(keys.iter().map(|(key, _)| key).zip(&parsed))?;
+            let mut next = Vec::new();
+            for (((key, owner), source), mut parsed) in keys.into_iter().zip(sources).zip(parsed) {
+                let resolved = self.resolve_all(&key, &mut parsed)?;
+                next.extend(resolved.values().cloned());
+                self.ids.insert(key.clone(), self.files.len());
+                self.files.push(LoadedFile {
+                    key,
+                    display: source.display,
+                    owner,
+                    index: parsed.index,
+                    privileged: parsed.privileged,
+                    sites: parsed.sites,
+                    resolved,
+                });
             }
             frontier = next;
         }
         Ok(())
+    }
+
+    fn identity(&self, key: &FileKey) -> (String, Owner) {
+        match &key.root {
+            Root::Repository => (
+                key.path.clone(),
+                Owner::Repository {
+                    scope: (self.input.scope_of)(&key.path),
+                },
+            ),
+            Root::Package(index) => {
+                let name = &self.input.packages.installed(*index).name;
+                (
+                    format!("{name}/{}", key.path),
+                    Owner::Dependency {
+                        package: name.clone(),
+                    },
+                )
+            }
+        }
     }
 }

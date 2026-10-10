@@ -6,11 +6,14 @@ use crate::support::{Run, TestRepository};
 const DIFF: &[&str] = &[
     "diff", "--base", "main", "--head", "feature", "--format", "json",
 ];
-const MANIFEST: (&str, &str) = ("package.json", "{\"name\": \"app\"}");
+const MANIFEST: (&str, &str) = (
+    "package.json",
+    "{\"name\": \"app\", \"dependencies\": {\"runner\": \"^1.0.0\", \"ghost\": \"^1.0.0\"}}",
+);
 pub const UNUSED_MAIN: &str = "export function main() {\n  return 0;\n}\n";
 pub const RUNNING_MAIN: &str =
     "import { start } from 'runner';\n\nexport function main() {\n  return start('ls');\n}\n";
-const RUNNER: FakePackage = FakePackage {
+pub const RUNNER: FakePackage = FakePackage {
     name: "runner",
     version: "1.0.0",
     files: &[
@@ -21,7 +24,7 @@ const RUNNER: FakePackage = FakePackage {
         ),
     ],
 };
-const SPAWNER: FakePackage = FakePackage {
+pub const SPAWNER: FakePackage = FakePackage {
     name: "spawner",
     version: "2.0.0",
     files: &[(
@@ -29,7 +32,7 @@ const SPAWNER: FakePackage = FakePackage {
         "const cp = require('child_process');\n\nexports.spawnIt = function spawnIt(command) {\n  return cp.execSync(command);\n};\n",
     )],
 };
-const HARMLESS_SPAWNER: FakePackage = FakePackage {
+pub const HARMLESS_SPAWNER: FakePackage = FakePackage {
     name: "spawner",
     version: "1.0.0",
     files: &[(

@@ -17,7 +17,7 @@ use crate::Error;
 use crate::code::{Rules, language_of};
 use crate::config::Config;
 use crate::deep::{self, Analysis};
-use crate::lockfiles::NPM_LOCKFILES;
+use crate::lockfiles::JAVASCRIPT_LOCKFILES;
 use crate::registry::Registry;
 use crate::scan::Selection;
 use crate::tree::Tree;
@@ -46,7 +46,7 @@ pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
             .iter()
             .filter(|path| {
                 let name = path.rsplit('/').next().unwrap_or(path);
-                NPM_LOCKFILES.contains(&name)
+                JAVASCRIPT_LOCKFILES.contains(&name)
             })
             .map(|path| parent_folder(path))
             .collect(),

@@ -1,84 +1,95 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
+use std::num::NonZero;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::thread;
 
 use ast_grep_core::tree_sitter::LanguageExt;
 use ast_grep_language::SupportLang;
 
-use super::program::{FileKey, LoadedFile, Privilege, Program, Root, SiteSink};
+use super::program::{Privilege, SiteSink};
 use super::syntax::{self, FileIndex};
 use crate::Error;
-use crate::code::{MatchRequest, SyntaxNode};
-use crate::deep::graph::Owner;
+use crate::code::{MatchRequest, Rules, SyntaxNode};
 
 const SINK_NAME_LENGTH: usize = 60;
 
-impl Program<'_> {
-    pub(super) fn parse(&mut self, key: FileKey, text: &str) -> Result<LoadedFile, Error> {
-        let (display, owner) = match &key.root {
-            Root::Repository => (
-                key.path.clone(),
-                Owner::Repository {
-                    scope: (self.input.scope_of)(&key.path),
-                },
-            ),
-            Root::Package(index) => {
-                let name = &self.input.packages.installed(*index).name;
-                (
-                    format!("{name}/{}", key.path),
-                    Owner::Dependency {
-                        package: name.clone(),
-                    },
-                )
-            }
-        };
-        let document = SupportLang::Tsx.ast_grep(text);
-        let root = document.root();
-        let index = syntax::index(&root);
-        let mut privileged: HashMap<String, Vec<Privilege>> = HashMap::new();
-        let mut sites = Vec::new();
-        for found in self.input.rules.matches(MatchRequest {
-            path: &display,
-            language: SupportLang::Tsx,
-            root: &root,
-        }) {
-            let privilege = Privilege {
-                capability: found.capability,
-                rule: found.rule,
-            };
-            if found.node.kind() == "string" {
-                let specifier = found.node.text().trim_matches(['"', '\'', '`']).to_string();
-                privileged.entry(specifier).or_default().push(privilege);
-            } else {
-                sites.push(SiteSink {
-                    definition: innermost(&index, found.node.range().start),
-                    line: syntax::line_of(&found.node),
-                    name: sink_name(&found.node),
-                    privilege,
-                });
-            }
-        }
-        let specifiers: BTreeSet<String> = index
-            .loads
-            .iter()
-            .map(|load| load.specifier.clone())
+pub struct Source {
+    pub display: String,
+    pub text: String,
+}
+
+pub struct Parsed {
+    pub index: FileIndex,
+    pub privileged: HashMap<String, Vec<Privilege>>,
+    pub sites: Vec<SiteSink>,
+}
+
+pub fn parse_all(rules: &Rules, sources: &[Source]) -> Result<Vec<Parsed>, Error> {
+    let next = AtomicUsize::new(0);
+    let workers = thread::available_parallelism()
+        .map_or(1, NonZero::get)
+        .min(sources.len())
+        .max(1);
+    let mut finished: Vec<(usize, Parsed)> = thread::scope(|scope| {
+        let handles: Vec<_> = (0..workers)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut done = Vec::new();
+                    loop {
+                        let position = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(source) = sources.get(position) else {
+                            return done;
+                        };
+                        done.push((position, parse(rules, source)));
+                    }
+                })
+            })
             .collect();
-        let mut resolved = HashMap::new();
-        for specifier in specifiers {
-            if privileged.contains_key(&specifier) {
-                continue;
-            }
-            if let Some(target) = self.resolve(&key, &specifier)? {
-                resolved.insert(specifier, target);
-            }
+        handles
+            .into_iter()
+            .map(|handle| {
+                handle
+                    .join()
+                    .map_err(|_| Error::new("a JavaScript parser thread stopped"))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|parts| parts.into_iter().flatten().collect())
+    })?;
+    finished.sort_by_key(|(position, _)| *position);
+    Ok(finished.into_iter().map(|(_, parsed)| parsed).collect())
+}
+
+fn parse(rules: &Rules, source: &Source) -> Parsed {
+    let document = SupportLang::Tsx.ast_grep(&source.text);
+    let root = document.root();
+    let index = syntax::index(&root);
+    let mut privileged: HashMap<String, Vec<Privilege>> = HashMap::new();
+    let mut sites = Vec::new();
+    for found in rules.matches(MatchRequest {
+        path: &source.display,
+        language: SupportLang::Tsx,
+        root: &root,
+    }) {
+        let privilege = Privilege {
+            capability: found.capability,
+            rule: found.rule,
+        };
+        if found.node.kind() == "string" {
+            let specifier = found.node.text().trim_matches(['"', '\'', '`']).to_string();
+            privileged.entry(specifier).or_default().push(privilege);
+        } else {
+            sites.push(SiteSink {
+                definition: innermost(&index, found.node.range().start),
+                line: syntax::line_of(&found.node),
+                name: sink_name(&found.node),
+                privilege,
+            });
         }
-        Ok(LoadedFile {
-            key,
-            display,
-            owner,
-            index,
-            privileged,
-            sites,
-            resolved,
-        })
+    }
+    Parsed {
+        index,
+        privileged,
+        sites,
     }
 }
 

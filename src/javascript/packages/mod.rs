@@ -1,3 +1,4 @@
+mod decide;
 mod locate;
 
 use std::collections::{BTreeSet, HashMap};
@@ -28,6 +29,7 @@ pub struct Locate<'a> {
     pub folder: &'a str,
     pub name: &'a str,
     pub is_from_repository: bool,
+    pub is_declared: bool,
 }
 
 pub struct PackagesInput<'a> {

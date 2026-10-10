@@ -12,6 +12,7 @@ mod install_hooks;
 mod javascript_fixtures;
 mod javascript_own_code;
 mod javascript_packages;
+mod javascript_pnpm;
 mod javascript_skips;
 mod javascript_workspaces;
 mod lock;
