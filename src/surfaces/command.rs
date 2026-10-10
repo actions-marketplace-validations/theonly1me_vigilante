@@ -70,26 +70,30 @@ pub struct LocalCommand<'a> {
 }
 
 pub fn is_plain(local: LocalCommand) -> bool {
-    let mut command = local.command;
-    for _ in 0..=MAXIMUM_SCRIPT_DEPTH {
-        if command.contains(SHELL_OPERATORS) {
+    let mut pending = vec![(local.command, 0)];
+    while let Some((command, depth)) = pending.pop() {
+        if depth > MAXIMUM_SCRIPT_DEPTH || command.contains(SHELL_OPERATORS) {
             return false;
         }
         let words: Vec<&str> = command.split_whitespace().collect();
         match words.as_slice() {
             [manager, "run" | "run-script", script, ..] if is_package_manager(manager) => {
                 let Some(scripts) = local.package_scripts else {
-                    return true;
+                    continue;
                 };
-                let Some(next) = scripts.get(script) else {
+                let Some(body) = scripts.get(script) else {
                     return false;
                 };
-                command = next;
+                let hooks = [format!("pre{script}"), format!("post{script}")];
+                let hook_bodies = hooks.iter().filter_map(|hook| scripts.get(hook.as_str()));
+                for next in std::iter::once(body).chain(hook_bodies) {
+                    pending.push((*next, depth + 1));
+                }
             }
-            [manager, "audit", ..] if is_package_manager(manager) => return true,
-            [program, ..] => return !program.contains('/') && !runs_code(program),
-            [] => return true,
+            [manager, "audit", ..] if is_package_manager(manager) => {}
+            [program, ..] if program.contains('/') || runs_code(program) => return false,
+            _ => {}
         }
     }
-    false
+    true
 }

