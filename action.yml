@@ -13,6 +13,19 @@ inputs:
 runs:
   using: composite
   steps:
+    - id: go
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/detect-go.sh"'
+    - if: steps.go.outputs.modules == 'true'
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: stable
+        cache: false
+    - if: steps.go.outputs.modules == 'true'
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/install-capslock.sh"'
+      env:
+        CAPSLOCK_VERSION: v0.3.3
     - shell: bash
       run: '"$GITHUB_ACTION_PATH/action/install.sh"'
       env:

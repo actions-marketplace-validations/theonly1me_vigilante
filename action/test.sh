@@ -114,6 +114,52 @@ check "a failed attestation adds nothing to PATH" test ! -s "$github_path"
 check "the attestation check pins the release workflow and tag" \
   grep -q -- "--signer-workflow theonly1me/vigilante/.github/workflows/release.yml --source-ref refs/tags/v0.1.0" "$gh_log"
 
+detect_go() {
+  github_output="$(mktemp)"
+  (cd "$repository" && GITHUB_OUTPUT="$github_output" "$action_folder/detect-go.sh")
+}
+
+detect_go
+check "a repository without go.mod does not set up Go" test ! -s "$github_output"
+mkdir -p "$repository/services/api"
+echo "module example.com/api" > "$repository/services/api/go.mod"
+commit_all "add a Go module" > /dev/null
+detect_go
+check "a nested go.mod sets up Go" grep -qx "modules=true" "$github_output"
+
+fake_go_folder="$scratch/fake-go"
+mkdir -p "$fake_go_folder"
+cat > "$fake_go_folder/go" <<'GO'
+#!/usr/bin/env bash
+echo "$*" >> "$FAKE_GO_LOG"
+if [ -n "$FAKE_GO_FAILS" ]; then
+  exit 1
+fi
+mkdir -p "$GOBIN"
+printf '#!/bin/sh\necho "capslock version v0.3.3"\n' > "$GOBIN/capslock"
+chmod +x "$GOBIN/capslock"
+GO
+chmod +x "$fake_go_folder/go"
+
+install_capslock() {
+  local fails="$1"
+  runner_temp="$(mktemp -d)"
+  github_path="$runner_temp/path"
+  go_log="$runner_temp/go.log"
+  : > "$github_path"
+  capslock_status=0
+  PATH="$fake_go_folder:$PATH" RUNNER_TEMP="$runner_temp" GITHUB_PATH="$github_path" \
+    CAPSLOCK_VERSION=v0.3.3 FAKE_GO_LOG="$go_log" FAKE_GO_FAILS="$fails" \
+    "$action_folder/install-capslock.sh" > /dev/null 2>&1 || capslock_status=$?
+}
+
+install_capslock ""
+check "the Capslock install pins its version" grep -qx "install github.com/google/capslock/cmd/capslock@v0.3.3" "$go_log"
+check "Capslock is on PATH after the install" test -x "$(cat "$github_path")/capslock"
+install_capslock "yes"
+check "a failed Capslock install stops the action" test "$capslock_status" -ne 0
+check "a failed Capslock install adds nothing to PATH" test ! -s "$github_path"
+
 rm -rf "$scratch"
 if [ "$failures" -gt 0 ]; then
   echo "$failures checks failed." >&2
