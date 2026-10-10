@@ -3,6 +3,8 @@ import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } 
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { registryReadme } from "../packaging/registry-readme.mjs";
+
 const PLATFORMS = [
   { target: "aarch64-apple-darwin", os: "darwin", cpu: "arm64" },
   { target: "x86_64-apple-darwin", os: "darwin", cpu: "x64" },
@@ -69,7 +71,7 @@ function packPlatform(platform) {
 function packMainPackage() {
   const folder = join(stagingFolder, "main");
   cpSync(mainPackageFolder, folder, { recursive: true });
-  copyFileSync(join(repositoryRoot, "README.md"), join(folder, "README.md"));
+  writeFileSync(join(folder, "README.md"), registryReadme());
   pack(folder);
 }
 
