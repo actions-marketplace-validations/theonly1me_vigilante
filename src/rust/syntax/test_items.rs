@@ -22,3 +22,10 @@ fn is_test_attribute(text: &str) -> bool {
         || compact.contains("::test]")
         || compact.contains("::test(")
 }
+
+pub fn test_module_names(root: &SyntaxNode) -> Vec<String> {
+    root.children()
+        .filter(|node| node.kind() == "mod_item" && is_test_item(node))
+        .filter_map(|node| node.field("name").map(|name| name.text().to_string()))
+        .collect()
+}

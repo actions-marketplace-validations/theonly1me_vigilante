@@ -4,6 +4,7 @@ mod language;
 mod modules;
 mod resolver;
 mod syntax;
+mod test_modules;
 
 use std::collections::BTreeMap;
 
@@ -20,6 +21,7 @@ use crate::tree::Tree;
 use environment::{EnvironmentInput, RustEnvironment};
 use language::Rust;
 use resolver::RustResolver;
+use test_modules::{TestModulesInput, without_test_modules};
 
 const BUILD_FILES: &[&str] = &["Cargo.toml", "Cargo.lock"];
 
@@ -57,6 +59,11 @@ pub fn analyze(request: RustRequest) -> Result<Analysis, Error> {
         scope_of: request.scope_of,
         unresolved: BTreeMap::new(),
     };
+    let roots = without_test_modules(TestModulesInput {
+        tree: request.tree,
+        environment: &resolver.environment,
+        roots,
+    })?;
     let mut program = Program::new(ProgramInput {
         tree: request.tree,
         rules: request.rules,

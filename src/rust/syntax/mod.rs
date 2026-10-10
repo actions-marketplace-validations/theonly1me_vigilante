@@ -7,6 +7,7 @@ mod uses;
 
 use std::collections::HashSet;
 
+pub use test_items::test_module_names;
 pub use uses::leaves;
 
 use crate::code::SyntaxNode;

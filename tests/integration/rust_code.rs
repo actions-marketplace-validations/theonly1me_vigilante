@@ -67,6 +67,33 @@ fn unsafe_code_in_tests_is_not_a_finding() {
 }
 
 #[test]
+fn module_files_that_only_tests_declare_are_not_findings() {
+    let findings = findings_after(&[
+        (
+            "src/lib.rs",
+            "pub fn add() {}\n\n#[cfg(test)]\nmod checks;\nmod shell;\n",
+        ),
+        (
+            "src/shell.rs",
+            "pub fn spawn() {\n    std::process::Command::new(\"make\");\n}\n",
+        ),
+        (
+            "src/checks.rs",
+            "mod support;\n\npub fn connect() {\n    std::net::TcpStream::connect(\"example.com:80\");\n}\n",
+        ),
+        (
+            "src/checks/support.rs",
+            "pub fn first(values: &[u8]) -> u8 {\n    unsafe { *values.as_ptr() }\n}\n",
+        ),
+    ]);
+
+    assert_eq!(
+        findings,
+        vec![". exec own src/shell.rs:2 src/shell.spawn > std::process::Command"]
+    );
+}
+
+#[test]
 fn unsafe_code_outside_tests_is_a_native_finding() {
     let findings = findings_after(&[(
         "src/lib.rs",
