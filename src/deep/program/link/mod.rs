@@ -91,18 +91,20 @@ impl Linker<'_> {
         for file in self.files {
             let unit = unit_of(file);
             let mut ids = Vec::new();
-            for definition in &file.index.definitions {
+            for (position, definition) in file.index.definitions.iter().enumerate() {
                 let id = self.graph.add_function(Function {
                     name: format!("{}.{}", self.language.stem(&file.display), definition.name),
                     owner: file.owner.clone(),
                     path: file.display.clone(),
                 });
-                self.by_name
-                    .entry(unit.clone())
-                    .or_default()
-                    .entry(definition.simple.clone())
-                    .or_default()
-                    .push(id);
+                if position > 0 {
+                    self.by_name
+                        .entry(unit.clone())
+                        .or_default()
+                        .entry(definition.simple.clone())
+                        .or_default()
+                        .push(id);
+                }
                 self.in_unit.entry(unit.clone()).or_default().push(id);
                 ids.push(id);
             }

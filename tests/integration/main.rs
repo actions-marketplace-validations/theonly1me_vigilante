@@ -11,6 +11,7 @@ mod go_support;
 mod go_tools;
 mod install_hooks;
 mod javascript_fixtures;
+mod javascript_modules;
 mod javascript_own_code;
 mod javascript_packages;
 mod javascript_pnpm;

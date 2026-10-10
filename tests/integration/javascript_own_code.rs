@@ -8,7 +8,7 @@ const DIFF: &[&str] = &[
 ];
 const MANIFEST: (&str, &str) = ("package.json", "{\"name\": \"app\"}");
 
-fn diff_after(change: &[(&str, &str)]) -> Value {
+pub fn diff_after(change: &[(&str, &str)]) -> Value {
     diff_with_base(Files { base: &[], change })
 }
 
@@ -29,7 +29,7 @@ fn diff_with_base(files: Files) -> Value {
     report_of(&repository.run_with_cache(DIFF))
 }
 
-fn entries(list: &Value) -> Vec<String> {
+pub fn entries(list: &Value) -> Vec<String> {
     list.as_array()
         .cloned()
         .unwrap_or_default()

@@ -135,3 +135,30 @@ fn an_import_that_is_neither_in_the_repository_nor_in_the_lockfile_is_listed() {
         "Vigilante found `ghost` neither in the repository nor in the lockfile, so it did not read it."
     );
 }
+
+#[test]
+fn importing_a_module_runs_its_top_level_code() {
+    let report = diff(Change {
+        base: &[],
+        head: &[
+            (
+                "app.py",
+                "import tools.boot\n\n\ndef main():\n    return 1\n",
+            ),
+            ("tools/pyproject.toml", "[project]\nname = \"tools\"\n"),
+            ("tools/__init__.py", ""),
+            (
+                "tools/boot.py",
+                "import subprocess\n\nsubprocess.run(['make'])\n",
+            ),
+        ],
+    });
+
+    assert_eq!(
+        summaries(&report["findings"]),
+        vec![
+            ". exec own app.py:1 app.init > tools/boot.init > subprocess.run",
+            "tools exec own tools/boot.py:3 tools/boot.init > subprocess.run",
+        ]
+    );
+}
