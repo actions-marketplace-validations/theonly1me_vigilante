@@ -6,10 +6,11 @@ mod mapping;
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use crate::Error;
 use crate::config::Config;
+use crate::deep::Analysis;
 use crate::scan::Location;
 use crate::tree::Tree;
-use crate::{Error, Evidence, Power, Scope, Sighting};
 use checkout::{Checkout, CheckoutRequest};
 use classify::{Classified, ClassifyInput, classify};
 use mapping::Module;
@@ -23,28 +24,6 @@ pub struct GoModules {
 pub struct DiscoverInput<'a> {
     pub tree: &'a dyn Tree,
     pub config: &'a Config,
-}
-
-#[derive(Default)]
-pub struct GoAnalysis {
-    pub sightings: Vec<Sighting>,
-    pub reaches: Vec<Reach>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ReachKind {
-    OnlyThroughOtherPackages,
-    OwnCodeThatDoesNotBlock,
-    NewPackageOnPath,
-}
-
-pub struct Reach {
-    pub package: String,
-    pub through: String,
-    pub kind: ReachKind,
-    pub power: Power,
-    pub scope: Scope,
-    pub evidence: Evidence,
 }
 
 pub struct GoRequest<'a> {
@@ -86,7 +65,7 @@ impl GoModules {
         path.ends_with(".go") && self.containing(path).is_some()
     }
 
-    pub fn analyze(&self, request: GoRequest) -> Result<GoAnalysis, Error> {
+    pub fn analyze(&self, request: GoRequest) -> Result<Analysis, Error> {
         let selected: Vec<&Module> = match request.changed {
             None => self.modules.iter().collect(),
             Some(changed) => self
@@ -101,7 +80,7 @@ impl GoModules {
                 .collect(),
         };
         if selected.is_empty() {
-            return Ok(GoAnalysis::default());
+            return Ok(Analysis::default());
         }
         capslock::ensure_tools()?;
         let checkout;
@@ -112,7 +91,7 @@ impl GoModules {
                 checkout.root()
             }
         };
-        let mut analysis = GoAnalysis::default();
+        let mut analysis = Analysis::default();
         for module in selected {
             for info in capslock::analyze(&root.join(&module.folder))? {
                 match classify(ClassifyInput {

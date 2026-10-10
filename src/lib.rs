@@ -1,5 +1,6 @@
 mod code;
 mod config;
+mod deep;
 mod document;
 mod error;
 mod go;

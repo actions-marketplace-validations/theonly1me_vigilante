@@ -1,11 +1,9 @@
 use super::capslock::CapabilityInfo;
 use super::mapping::{self, EvidenceStart, Module};
-use super::{GoModules, OwnedFolder, Reach, ReachKind};
+use super::{GoModules, OwnedFolder};
 use crate::config::Config;
-use crate::{Capability, Error, Scope, Sighting, Surface};
-
-const BLOCKING_CAPABILITIES: [Capability; 3] =
-    [Capability::Exec, Capability::Network, Capability::Native];
+use crate::deep::{OwnPackagePath, Reach, ReachKind, note_kind_for_own_package};
+use crate::{Error, Scope, Sighting, Surface};
 
 pub enum Classified {
     Sighting(Sighting),
@@ -37,13 +35,10 @@ pub fn classify(input: ClassifyInput) -> Result<Option<Classified>, Error> {
                     .iter()
                     .all(|function| modules.is_repo_package(&function.package))
             });
-            let kind = if !is_own_code {
-                Some(ReachKind::OnlyThroughOtherPackages)
-            } else if !BLOCKING_CAPABILITIES.contains(&power.capability) {
-                Some(ReachKind::OwnCodeThatDoesNotBlock)
-            } else {
-                None
-            };
+            let kind = note_kind_for_own_package(OwnPackagePath {
+                capability: power.capability,
+                stays_in_repository: is_own_code,
+            });
             (info.package_dir.as_str(), folder, kind)
         }
         None => {

@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use super::Note;
 use crate::PowersByScope;
 use crate::config::Config;
-use crate::go::{Reach, ReachKind};
+use crate::deep::{Reach, ReachKind};
 
 pub struct NotesInput<'a> {
     pub base: &'a [Reach],

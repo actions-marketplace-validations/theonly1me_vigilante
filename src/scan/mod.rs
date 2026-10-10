@@ -6,7 +6,8 @@ use std::path::PathBuf;
 
 use crate::code::Rules;
 use crate::config::{Config, GoEngine};
-use crate::go::{DiscoverInput, GoModules, GoRequest, Reach};
+use crate::deep::Reach;
+use crate::go::{DiscoverInput, GoModules, GoRequest};
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::{self, Placement, Surfaces};
 use crate::tree::Tree;
