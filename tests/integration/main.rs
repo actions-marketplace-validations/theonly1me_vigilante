@@ -1,6 +1,7 @@
 mod agent;
 mod check;
 mod ci;
+mod cli;
 mod install_hooks;
 mod lock;
 mod packs;

@@ -107,6 +107,20 @@ impl TestRepository {
         .expect("review")
     }
 
+    pub fn vigilante(&self, arguments: &[&str]) -> Run {
+        let output = Command::new(env!("CARGO_BIN_EXE_vigilante"))
+            .arg("--repository")
+            .arg(self.directory.path())
+            .args(arguments)
+            .output()
+            .expect("vigilante runs");
+        Run {
+            code: output.status.code().unwrap_or(-1),
+            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        }
+    }
+
     pub fn check(&self) -> Review {
         vigilante::review(ReviewRequest {
             repository: self.directory.path().to_path_buf(),
@@ -115,6 +129,12 @@ impl TestRepository {
         })
         .expect("review")
     }
+}
+
+pub struct Run {
+    pub code: i32,
+    pub stdout: String,
+    pub stderr: String,
 }
 
 pub struct Branches<'a> {

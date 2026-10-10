@@ -3,7 +3,7 @@ mod markdown;
 mod sarif;
 mod text;
 
-pub use text::power_map_text;
+pub use text::{power_map_json, power_map_text};
 
 use crate::{Capability, Review};
 
