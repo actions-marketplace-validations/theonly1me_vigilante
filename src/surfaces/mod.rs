@@ -1,5 +1,6 @@
 mod agent;
 mod ci;
+mod command;
 mod install_hooks;
 
 use std::collections::BTreeSet;

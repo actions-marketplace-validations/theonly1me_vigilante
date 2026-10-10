@@ -1,3 +1,4 @@
+mod allow_rule;
 mod claude;
 mod codex;
 mod mcp;

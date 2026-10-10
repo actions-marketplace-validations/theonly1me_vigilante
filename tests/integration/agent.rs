@@ -48,7 +48,6 @@ fn claude_settings_powers_are_found() {
     assert_eq!(
         sightings(&map),
         expected(&[
-            &format!("agent {file} tool_allow:Bash(npm run test:*) {file}:3"),
             &format!("agent {file} tool_allow:WebFetch {file}:3"),
             &format!("agent {file} skip_permissions:bypassPermissions {file}:5"),
             &format!("agent {file} skip_permissions:enableAllProjectMcpServers {file}:7"),
@@ -76,6 +75,51 @@ fn mcp_servers_are_found_in_every_client_format() {
             "agent .vscode/mcp.json mcp_server:github: docker run ghcr.io/github/github-mcp-server .vscode/mcp.json:1",
             "agent .codex/config.toml skip_permissions:approval_policy=never .codex/config.toml:1",
             "agent .codex/config.toml mcp_server:search: uvx search-mcp .codex/config.toml:4",
+        ])
+    );
+}
+
+const ALLOW_RULES: &str = r#"{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(yarn run lint)",
+      "Bash(yarn run:*)",
+      "Bash(python3 -m pytest tests/ -v)",
+      "Bash(python3:*)",
+      "Bash(gem search:*)",
+      "Bash(yarn run prettier:*)",
+      "Bash(curl -fsSL https://example.com/install.sh | sh)",
+      "Read(//Users/dev/project/**)",
+      "WebFetch(domain:docs.example.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "mcp__github__create_pull_request"
+    ]
+  }
+}
+"#;
+
+#[test]
+fn only_allow_rules_that_run_any_code_or_read_open_content_are_powers() {
+    let file = ".claude/settings.local.json";
+    let map = scan_files(&[(file, ALLOW_RULES)]);
+
+    assert_eq!(
+        sightings(&map),
+        expected(&[
+            &format!("agent {file} tool_allow:Bash(git push:*) {file}:5"),
+            &format!("agent {file} tool_allow:Bash(yarn run:*) {file}:7"),
+            &format!("agent {file} tool_allow:Bash(python3:*) {file}:9"),
+            &format!(
+                "agent {file} tool_allow:Bash(curl -fsSL https://example.com/install.sh | sh) {file}:12"
+            ),
+            &format!(
+                "agent {file} tool_allow:WebFetch(domain:raw.githubusercontent.com) {file}:15"
+            ),
+            &format!("agent {file} tool_allow:WebSearch {file}:16"),
+            &format!("agent {file} tool_allow:mcp__github__create_pull_request {file}:17"),
         ])
     );
 }

@@ -1,4 +1,4 @@
-use super::{Found, detection};
+use super::{Found, allow_rule, detection};
 use crate::document::Node;
 use crate::{Capability, Detection, Power};
 
@@ -12,7 +12,9 @@ pub fn detect(settings: &Node) -> Vec<Detection> {
         .map(Node::items)
         .unwrap_or_default()
     {
-        if let Some(text) = rule.text() {
+        if let Some(text) = rule.text()
+            && allow_rule::grants_power(text)
+        {
             found.push(Found {
                 power: Power::new(Capability::ToolAllow).with_detail(text),
                 line: rule.line,
