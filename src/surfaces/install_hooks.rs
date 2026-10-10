@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use super::command::{self, LocalCommand, PackageScripts};
 use crate::document::Node;
 use crate::{Capability, Detection, Power};
 
@@ -14,6 +15,7 @@ const INSTALL_SCRIPTS: &[&str] = &[
 ];
 const PRE_COMMIT_CONFIG: &str = ".pre-commit-config.yaml";
 const PRE_COMMIT_BUILT_IN_REPOSITORIES: &[&str] = &["meta"];
+const PRE_COMMIT_IMAGE_LANGUAGES: &[&str] = &["docker_image"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HookFile<'a> {
@@ -63,18 +65,29 @@ pub fn detect_static(kind: HookFile) -> Vec<Detection> {
 }
 
 pub fn detect_package_manifest(manifest: &Node) -> Vec<Detection> {
-    manifest
+    let entries = manifest
         .get("scripts")
         .map(Node::entries)
-        .unwrap_or_default()
+        .unwrap_or_default();
+    let scripts: PackageScripts = entries
+        .iter()
+        .map(|entry| (entry.key.as_str(), entry.value.text().unwrap_or_default()))
+        .collect();
+    entries
         .iter()
         .filter(|entry| INSTALL_SCRIPTS.contains(&entry.key.as_str()))
-        .map(|entry| {
+        .filter_map(|entry| {
             let command = entry.value.text().unwrap_or_default();
-            detection(Found {
-                power: Power::new(Capability::InstallHook)
-                    .with_detail(format!("{}: {command}", entry.key)),
-                line: entry.line,
+            let is_plain = command::is_plain(LocalCommand {
+                command,
+                package_scripts: Some(&scripts),
+            });
+            (!is_plain).then(|| {
+                detection(Found {
+                    power: Power::new(Capability::InstallHook)
+                        .with_detail(format!("{}: {command}", entry.key)),
+                    line: entry.line,
+                })
             })
         })
         .collect()
@@ -98,6 +111,9 @@ pub fn detect_pre_commit(config: &Node) -> Vec<Detection> {
         }
         for hook in repository.get("hooks").map(Node::items).unwrap_or_default() {
             let entry = hook.get("entry").and_then(Node::text).unwrap_or_default();
+            if runs_only_local_code(LocalHook { hook, entry }) {
+                continue;
+            }
             found.push(detection(Found {
                 power: Power::new(Capability::GitHook).with_detail(format!("local: {entry}")),
                 line: hook.line,
@@ -105,6 +121,29 @@ pub fn detect_pre_commit(config: &Node) -> Vec<Detection> {
         }
     }
     found
+}
+
+struct LocalHook<'a> {
+    hook: &'a Node,
+    entry: &'a str,
+}
+
+fn runs_only_local_code(local: LocalHook) -> bool {
+    let fetches_packages = local
+        .hook
+        .get("additional_dependencies")
+        .is_some_and(|dependencies| !dependencies.items().is_empty());
+    let runs_an_image = local
+        .hook
+        .get("language")
+        .and_then(Node::text)
+        .is_some_and(|language| PRE_COMMIT_IMAGE_LANGUAGES.contains(&language));
+    !fetches_packages
+        && !runs_an_image
+        && command::is_plain(LocalCommand {
+            command: local.entry,
+            package_scripts: None,
+        })
 }
 
 struct Found {
