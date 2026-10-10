@@ -1,6 +1,7 @@
 use super::{Scanner, Selection};
 use crate::Error;
 use crate::config::LanguageEngine;
+use crate::csharp::{self, CSharpRequest};
 use crate::deep::Analysis;
 use crate::go::GoRequest;
 use crate::java::{self, JavaRequest};
@@ -48,6 +49,18 @@ impl Scanner<'_> {
         }
         if self.config.java_engine == LanguageEngine::Deep {
             let found = java::analyze(JavaRequest {
+                tree: self.tree,
+                config: self.config,
+                rules: &self.rules,
+                scope_of: &|path| self.scopes.code_scope_of(path),
+                selection,
+            })?;
+            analysis.sightings.extend(found.sightings);
+            analysis.reaches.extend(found.reaches);
+            analysis.skipped.extend(found.skipped);
+        }
+        if self.config.csharp_engine == LanguageEngine::Deep {
+            let found = csharp::analyze(CSharpRequest {
                 tree: self.tree,
                 config: self.config,
                 rules: &self.rules,

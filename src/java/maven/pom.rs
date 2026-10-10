@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::xml::{Element, parse};
+use crate::xml::{Element, parse};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Coordinates {

@@ -118,7 +118,7 @@ fn each_rule_matches_its_invalid_cases_and_no_valid_case() {
             .map(|(path, case)| (path.as_str(), case.snippet.as_str()))
             .chain([(
                 "vigilante.toml",
-                "[engines]\ngo = \"patterns\"\njavascript = \"patterns\"\npython = \"patterns\"\njava = \"patterns\"\nrust = \"patterns\"\n",
+                "[engines]\ngo = \"patterns\"\njavascript = \"patterns\"\npython = \"patterns\"\njava = \"patterns\"\nrust = \"patterns\"\ncsharp = \"patterns\"\n",
             )])
             .collect();
         let directory = write_files(&files);

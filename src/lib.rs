@@ -1,5 +1,6 @@
 mod code;
 mod config;
+mod csharp;
 mod deep;
 mod document;
 mod error;
@@ -19,6 +20,7 @@ mod scan;
 mod scope;
 mod surfaces;
 mod tree;
+mod xml;
 
 pub use config::Mode as PolicyMode;
 pub use error::Error;

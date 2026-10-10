@@ -10,6 +10,7 @@ const PUBLIC_SOURCES: &[&str] = &[
     "https://repo.maven.apache.org/maven2/",
     "https://dl.google.com/dl/android/maven2/",
     "https://static.crates.io/",
+    "https://api.nuget.org/",
 ];
 
 #[derive(Clone, Debug, Default)]

@@ -21,6 +21,7 @@ pub struct Config {
     pub python_engine: LanguageEngine,
     pub java_engine: LanguageEngine,
     pub rust_engine: LanguageEngine,
+    pub csharp_engine: LanguageEngine,
     registry_sources: Sources,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
@@ -70,6 +71,7 @@ impl Config {
             python_engine: file.engines.python,
             java_engine: file.engines.java,
             rust_engine: file.engines.rust,
+            csharp_engine: file.engines.csharp,
             registry_sources: Sources::new(&file.registries.allow)?,
             excluded: excluded
                 .build()
