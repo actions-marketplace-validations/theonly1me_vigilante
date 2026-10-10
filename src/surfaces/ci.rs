@@ -32,7 +32,13 @@ pub fn without_expression_braces(text: &str) -> String {
     output
 }
 
-pub fn detect(workflow: &Node) -> Vec<Detection> {
+pub struct Workflow<'a> {
+    pub document: &'a Node,
+    pub text: &'a str,
+}
+
+pub fn detect(source: Workflow) -> Vec<Detection> {
+    let workflow = source.document;
     let mut detections = Vec::new();
     let jobs = workflow.get("jobs").map(Node::entries).unwrap_or_default();
     if let Some(triggers) = workflow.get("on") {
@@ -51,7 +57,7 @@ pub fn detect(workflow: &Node) -> Vec<Detection> {
             .chain(steps.iter().filter_map(|step| step.get("uses")))
     });
     detections.extend(uses.filter_map(third_party_action));
-    detections.extend(workflow.texts().iter().flat_map(secrets));
+    detections.extend(expressions(source.text).iter().flat_map(secrets));
     detections.extend(
         jobs.iter()
             .filter_map(|job| job.value.get("secrets"))
@@ -122,6 +128,23 @@ fn third_party_action(uses: &Node) -> Option<Detection> {
     let action = reference.split('@').next().unwrap_or(reference);
     let power = Power::new(Capability::ThirdPartyAction).with_detail(action);
     Some(detection(power, uses.line))
+}
+
+fn expressions(text: &str) -> Vec<Located<'_>> {
+    let mut found = Vec::new();
+    let mut offset = 0;
+    while let Some(start) = text[offset..].find(EXPRESSION_START) {
+        let body_start = offset + start + EXPRESSION_START.len();
+        let Some(length) = text[body_start..].find(EXPRESSION_END) else {
+            break;
+        };
+        found.push(Located {
+            text: &text[body_start..body_start + length],
+            line: text[..body_start].matches('\n').count() + 1,
+        });
+        offset = body_start + length + EXPRESSION_END.len();
+    }
+    found
 }
 
 fn secrets(located: &Located) -> Vec<Detection> {

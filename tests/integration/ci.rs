@@ -96,3 +96,17 @@ fn github_expressions_inside_flow_lists_do_not_stop_the_scan() {
         expected(&[&format!("ci {file} secret:DEPLOY_KEY {file}:9")])
     );
 }
+
+#[test]
+fn a_secret_is_read_only_from_an_expression_and_on_its_own_line() {
+    let file = ".github/workflows/deploy.yml";
+    let map = scan_files(&[(
+        file,
+        "on: push\njobs:\n  deploy:\n    steps:\n      - run: |\n          kubectl apply -f deploy/secrets.yaml\n          echo \"${{ secrets.DEPLOY_TOKEN }}\" | docker login\n",
+    )]);
+
+    assert_eq!(
+        sightings(&map),
+        expected(&[&format!("ci {file} secret:DEPLOY_TOKEN {file}:7")])
+    );
+}

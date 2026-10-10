@@ -24,11 +24,15 @@ impl<'a> Surfaces<'a> {
 
     pub fn detect(&self, file: SourceFile) -> Result<Vec<Detection>, Error> {
         if ci::is_workflow(file.path) {
-            let text = ci::without_expression_braces(file.text);
-            return Ok(ci::detect(&parse(SourceFile {
+            let readable = ci::without_expression_braces(file.text);
+            let document = parse(SourceFile {
                 path: file.path,
-                text: &text,
-            })?));
+                text: &readable,
+            })?;
+            return Ok(ci::detect(ci::Workflow {
+                document: &document,
+                text: file.text,
+            }));
         }
         if agent::handles(file.path) {
             return agent::detect(file);

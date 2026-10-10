@@ -72,32 +72,6 @@ impl Node {
             _ => None,
         }
     }
-
-    pub fn texts(&self) -> Vec<Located<'_>> {
-        let mut found = Vec::new();
-        self.collect_texts(&mut found);
-        found
-    }
-
-    fn collect_texts<'a>(&'a self, found: &mut Vec<Located<'a>>) {
-        match &self.value {
-            Value::Empty => {}
-            Value::Text(text) => found.push(Located {
-                text,
-                line: self.line,
-            }),
-            Value::List(items) => items.iter().for_each(|item| item.collect_texts(found)),
-            Value::Map(entries) => {
-                for entry in entries {
-                    found.push(Located {
-                        text: &entry.key,
-                        line: entry.line,
-                    });
-                    entry.value.collect_texts(found);
-                }
-            }
-        }
-    }
 }
 
 fn convert(node: &MarkedYaml) -> Node {
