@@ -4,16 +4,11 @@ message: Imports a module that runs other programs
 metadata:
   capability: exec
 rule:
+  kind: dotted_name
+  regex: ^(subprocess|pty)(\.|$)
   any:
-    - kind: import_statement
-      has:
-        kind: dotted_name
-        regex: ^(subprocess|pty)(\.|$)
-        stopBy: end
-    - kind: import_from_statement
-      has:
-        field: module_name
-        regex: ^(subprocess|pty)(\.|$)
+    - inside: { kind: import_statement, stopBy: end }
+    - inside: { kind: import_from_statement, field: module_name }
 ---
 id: python-exec-call
 language: python
@@ -32,16 +27,11 @@ message: Imports a network module
 metadata:
   capability: network
 rule:
+  kind: dotted_name
+  regex: ^(socket|requests|httpx|aiohttp|urllib3|urllib\.request|http\.client|websockets?|paramiko|grpc|ftplib|smtplib)(\.|$)
   any:
-    - kind: import_statement
-      has:
-        kind: dotted_name
-        regex: ^(socket|requests|httpx|aiohttp|urllib3|urllib\.request|http\.client|websockets?|paramiko|grpc|ftplib|smtplib)(\.|$)
-        stopBy: end
-    - kind: import_from_statement
-      has:
-        field: module_name
-        regex: ^(socket|requests|httpx|aiohttp|urllib3|urllib\.request|http\.client|websockets?|paramiko|grpc|ftplib|smtplib)(\.|$)
+    - inside: { kind: import_statement, stopBy: end }
+    - inside: { kind: import_from_statement, field: module_name }
 ---
 id: python-native-import
 language: python
@@ -49,16 +39,11 @@ message: Imports a module that calls native code
 metadata:
   capability: native
 rule:
+  kind: dotted_name
+  regex: ^(ctypes|cffi)(\.|$)
   any:
-    - kind: import_statement
-      has:
-        kind: dotted_name
-        regex: ^(ctypes|cffi)(\.|$)
-        stopBy: end
-    - kind: import_from_statement
-      has:
-        field: module_name
-        regex: ^(ctypes|cffi)(\.|$)
+    - inside: { kind: import_statement, stopBy: end }
+    - inside: { kind: import_from_statement, field: module_name }
 ---
 id: python-dynamic-code-call
 language: python
@@ -98,15 +83,11 @@ rule:
       has:
         field: function
         regex: ^(open|io\.open|os\.(remove|unlink|rename|renames|replace|mkdir|makedirs|rmdir|removedirs|chmod|chown|lchown|link|symlink|listdir|scandir|walk|truncate|mkfifo|fdopen)|glob\.i?glob)$
-    - kind: import_statement
-      has:
-        kind: dotted_name
-        regex: ^(shutil|tempfile)(\.|$)
-        stopBy: end
-    - kind: import_from_statement
-      has:
-        field: module_name
-        regex: ^(shutil|tempfile)(\.|$)
+    - kind: dotted_name
+      regex: ^(shutil|tempfile)(\.|$)
+      any:
+        - inside: { kind: import_statement, stopBy: end }
+        - inside: { kind: import_from_statement, field: module_name }
 ---
 id: python-system-info
 language: python
