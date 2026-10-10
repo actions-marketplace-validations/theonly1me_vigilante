@@ -98,6 +98,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     });
                 }
             }
+            "type" => continue,
             "identifier" if is_reference(node) => {
                 index.definitions[definition].uses.push(Use {
                     line: line_of(node),
@@ -106,7 +107,11 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
             }
             _ => {}
         }
-        let children: Vec<SyntaxNode> = node.children().collect();
+        let is_except_clause = node.kind() == "except_clause";
+        let children: Vec<SyntaxNode> = node
+            .children()
+            .filter(|child| !is_except_clause || child.kind() == "block")
+            .collect();
         for child in children.into_iter().rev() {
             if skipped == Some(child.node_id()) {
                 continue;

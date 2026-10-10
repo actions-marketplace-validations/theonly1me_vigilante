@@ -50,6 +50,22 @@ fn only_the_module_that_a_pack_rule_names_is_privileged() {
 }
 
 #[test]
+fn type_annotations_and_caught_exception_types_are_not_findings() {
+    let report = diff(Change {
+        base: &[],
+        head: &[(
+            "app.py",
+            "import ctypes\nimport subprocess\nfrom typing import Optional\nfrom requests.exceptions import RequestException\n\n\nclass Guard:\n    process: Optional[subprocess.Popen] = None\n\n    def watch(self, current: subprocess.Popen) -> subprocess.Popen:\n        try:\n            return current.wait()\n        except (RequestException, ValueError) as error:\n            ctypes.CDLL(\"libc.so.6\")\n            raise error\n",
+        )],
+    });
+
+    assert_eq!(
+        summaries(&report["findings"]),
+        vec![". native own app.py:14 app.Guard.watch > ctypes.CDLL"]
+    );
+}
+
+#[test]
 fn a_call_through_a_dotted_module_name_reaches_its_sink() {
     let report = diff(Change {
         base: &[],
