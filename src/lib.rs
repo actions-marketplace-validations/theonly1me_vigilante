@@ -2,6 +2,7 @@ mod code;
 mod config;
 mod document;
 mod error;
+mod go;
 mod lock;
 mod model;
 mod report;

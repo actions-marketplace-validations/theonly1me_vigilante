@@ -4,7 +4,7 @@ use std::path::Path;
 use super::{Finding, LockEntry, Review, ReviewMode};
 use crate::config::Config;
 use crate::lock::{Granted, Lock};
-use crate::scan::{Scanner, ScannerInput, Selection};
+use crate::scan::{Changes, Location, Scanner, ScannerInput, Selection};
 use crate::tree::{CommitPair, Git};
 use crate::{Error, PowerMap, Sighting, Source};
 
@@ -37,10 +37,18 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     let base_scanner = Scanner::new(ScannerInput {
         tree: &base_tree,
         config: &config,
+        location: Location::Commit {
+            repository: request.repository,
+            commit: &base,
+        },
     })?;
     let head_scanner = Scanner::new(ScannerInput {
         tree: &head_tree,
         config: &config,
+        location: Location::Commit {
+            repository: request.repository,
+            commit: &head,
+        },
     })?;
     let changed = git.changed_paths(CommitPair {
         base: &base,
@@ -55,7 +63,10 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
             ]
         })
         .collect();
-    let selection = Selection::CodeScopes(affected_scopes);
+    let selection = Selection::Changes(Changes {
+        code_scopes: affected_scopes,
+        paths: changed,
+    });
     let base_powers = base_scanner.scan(&selection)?.powers();
     let head_map = head_scanner.scan(&selection)?;
     let judge = Judge {
@@ -80,12 +91,14 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
 }
 
 pub fn check(request: CheckRequest) -> Result<Review, Error> {
-    let tree = request.head.open(request.repository)?;
-    let config = Config::load(tree.as_ref())?;
-    let lock = Lock::load(tree.as_ref())?;
+    let located = request.head.locate(request.repository)?;
+    let tree = located.tree.as_ref();
+    let config = Config::load(tree)?;
+    let lock = Lock::load(tree)?;
     let map = Scanner::new(ScannerInput {
-        tree: tree.as_ref(),
+        tree,
         config: &config,
+        location: located.location(),
     })?
     .scan(&Selection::Everything)?;
     let judge = Judge {

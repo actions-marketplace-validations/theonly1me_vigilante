@@ -14,6 +14,7 @@ pub struct ConfigFile {
     pub severity: BTreeMap<Capability, Severity>,
     pub rules: RulesSection,
     pub ci: CiSection,
+    pub engines: EnginesSection,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -75,6 +76,20 @@ pub struct RulesSection {
 #[serde(default, deny_unknown_fields)]
 pub struct CiSection {
     pub trusted_owners: Vec<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct EnginesSection {
+    pub go: GoEngine,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GoEngine {
+    #[default]
+    Capslock,
+    Patterns,
 }
 
 fn every_scope() -> String {

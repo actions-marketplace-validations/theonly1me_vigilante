@@ -1,12 +1,18 @@
+mod rule_files;
+mod source;
+
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::code::Rules;
-use crate::config::Config;
+use crate::config::{Config, GoEngine};
+use crate::go::{DiscoverInput, GoModules, GoRequest};
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::{self, Placement, Surfaces};
-use crate::tree::{DirectoryTree, Git, Tree};
+use crate::tree::Tree;
 use crate::{Error, Evidence, PowerMap, Scope, Sighting, SourceFile, Surface};
+use rule_files::{RuleSources, rules_of};
+pub use source::{Location, Source};
 
 #[derive(Clone, Debug)]
 pub struct ScanRequest {
@@ -14,65 +20,66 @@ pub struct ScanRequest {
     pub source: Source,
 }
 
-#[derive(Clone, Debug)]
-pub enum Source {
-    WorkingDirectory,
-    Commit(String),
-}
-
 pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
-    let tree = request.source.open(&request.repository)?;
-    let config = Config::load(tree.as_ref())?;
+    let located = request.source.locate(&request.repository)?;
+    let config = Config::load(located.tree.as_ref())?;
     Scanner::new(ScannerInput {
-        tree: tree.as_ref(),
+        tree: located.tree.as_ref(),
         config: &config,
+        location: located.location(),
     })?
     .scan(&Selection::Everything)
 }
 
 pub enum Selection {
     Everything,
-    CodeScopes(BTreeSet<String>),
+    Changes(Changes),
 }
 
-impl Source {
-    pub(crate) fn open(&self, repository: &Path) -> Result<Box<dyn Tree>, Error> {
-        match self {
-            Self::WorkingDirectory => Ok(Box::new(DirectoryTree::new(repository)?)),
-            Self::Commit(reference) => {
-                let git = Git::open(repository)?;
-                let commit = git.resolve(reference)?;
-                Ok(Box::new(git.tree(&commit)?))
-            }
-        }
-    }
+pub struct Changes {
+    pub code_scopes: BTreeSet<String>,
+    pub paths: BTreeSet<String>,
 }
 
 pub struct ScannerInput<'a> {
     pub tree: &'a dyn Tree,
     pub config: &'a Config,
+    pub location: Location<'a>,
 }
 
 pub struct Scanner<'a> {
     tree: &'a dyn Tree,
     config: &'a Config,
+    location: Location<'a>,
     scopes: Scopes<'a>,
     surfaces: Surfaces<'a>,
     rules: Rules,
+    go: Option<GoModules>,
 }
 
 impl<'a> Scanner<'a> {
     pub fn new(input: ScannerInput<'a>) -> Result<Self, Error> {
-        let scopes = Scopes::new(ScopesInput {
-            paths: input.tree.paths(),
-            config: input.config,
-        });
+        let go = match input.config.go_engine {
+            GoEngine::Capslock => Some(GoModules::discover(DiscoverInput {
+                tree: input.tree,
+                config: input.config,
+            })?),
+            GoEngine::Patterns => None,
+        };
         Ok(Self {
             tree: input.tree,
             config: input.config,
-            scopes,
+            location: input.location,
+            scopes: Scopes::new(ScopesInput {
+                paths: input.tree.paths(),
+                config: input.config,
+            }),
             surfaces: Surfaces::new(input.tree.paths()),
-            rules: rules_of(input)?,
+            rules: rules_of(RuleSources {
+                tree: input.tree,
+                config: input.config,
+            })?,
+            go,
         })
     }
 
@@ -83,7 +90,7 @@ impl<'a> Scanner<'a> {
     pub fn scan(&self, selection: &Selection) -> Result<PowerMap, Error> {
         let is_selected_code = |path: &str| match selection {
             Selection::Everything => true,
-            Selection::CodeScopes(scopes) => scopes.contains(&self.code_scope_of(path)),
+            Selection::Changes(changes) => changes.code_scopes.contains(&self.code_scope_of(path)),
         };
         let wanted: Vec<&str> = self
             .tree
@@ -92,7 +99,7 @@ impl<'a> Scanner<'a> {
             .map(String::as_str)
             .filter(|path| {
                 let is_wanted = self.surfaces.handles(path)
-                    || (self.rules.handles(path) && is_selected_code(path));
+                    || (self.rules.handles(path) && is_selected_code(path) && !self.go_owns(path));
                 is_wanted && !self.config.is_excluded(path)
             })
             .collect();
@@ -127,39 +134,28 @@ impl<'a> Scanner<'a> {
                         path: file.path.clone(),
                         line: detection.line,
                         rule: detection.rule,
+                        call_path: Vec::new(),
                     },
                 });
             }
         }
+        if let Some(go) = &self.go {
+            let changed = match selection {
+                Selection::Everything => None,
+                Selection::Changes(changes) => Some(&changes.paths),
+            };
+            for sighting in go.analyze(GoRequest {
+                changed,
+                location: self.location,
+                config: self.config,
+            })? {
+                map.insert(sighting);
+            }
+        }
         Ok(map)
     }
-}
 
-fn rules_of(input: ScannerInput) -> Result<Rules, Error> {
-    let mut rules = Rules::built_in()?;
-    let folders: Vec<String> = input
-        .config
-        .rule_paths
-        .iter()
-        .map(|folder| format!("{}/", folder.trim_end_matches('/')))
-        .collect();
-    let rule_files: Vec<&str> = input
-        .tree
-        .paths()
-        .iter()
-        .map(String::as_str)
-        .filter(|path| {
-            folders
-                .iter()
-                .any(|folder| path.starts_with(folder.as_str()))
-                && (path.ends_with(".yml") || path.ends_with(".yaml"))
-        })
-        .collect();
-    for file in input.tree.read(&rule_files)? {
-        rules.add(SourceFile {
-            path: &file.path,
-            text: &file.text,
-        })?;
+    fn go_owns(&self, path: &str) -> bool {
+        self.go.as_ref().is_some_and(|go| go.owns(path))
     }
-    Ok(rules)
 }

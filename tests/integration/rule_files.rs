@@ -15,6 +15,7 @@ rule:
 #[test]
 fn generated_protobuf_go_code_does_not_report_native() {
     let map = scan_files(&[
+        ("vigilante.toml", "[engines]\ngo = \"patterns\"\n"),
         ("go.mod", "module example.com/app\n"),
         ("api/client.pb.go", UNSAFE_IMPORT),
         ("api/pool.go", UNSAFE_IMPORT),

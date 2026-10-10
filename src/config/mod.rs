@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use globset::{Glob, GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder};
 
-pub use file::Mode;
+pub use file::{GoEngine, Mode};
 
 use crate::tree::Tree;
 use crate::{Capability, Error, Power, Scope, Severity};
@@ -15,6 +15,7 @@ use file::ConfigFile;
 pub struct Config {
     pub mode: Mode,
     pub rule_paths: Vec<String>,
+    pub go_engine: GoEngine,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
     denied: Vec<(GlobMatcher, Capability)>,
@@ -58,6 +59,7 @@ impl Config {
         Ok(Self {
             mode: file.policy.mode,
             rule_paths: file.rules.paths,
+            go_engine: file.engines.go,
             excluded: excluded
                 .build()
                 .map_err(|error| Error::new(format!("invalid exclude pattern: {error}")))?,
