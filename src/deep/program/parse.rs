@@ -4,10 +4,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
 use ast_grep_core::tree_sitter::LanguageExt;
-use ast_grep_language::SupportLang;
 
-use super::program::{Privilege, SiteSink};
-use super::syntax::{self, FileIndex};
+use super::{FileIndex, Language, Privilege, SiteSink};
 use crate::Error;
 use crate::code::{MatchRequest, Rules, SyntaxNode};
 
@@ -25,12 +23,17 @@ pub struct Parsed {
 }
 
 pub struct ParseInput<'a> {
+    pub language: &'a dyn Language,
     pub rules: &'a Rules,
     pub sources: &'a [Source],
 }
 
 pub fn parse_all(input: ParseInput) -> Result<Vec<Parsed>, Error> {
-    let ParseInput { rules, sources } = input;
+    let ParseInput {
+        language,
+        rules,
+        sources,
+    } = input;
     let next = AtomicUsize::new(0);
     let workers = thread::available_parallelism()
         .map_or(1, NonZero::get)
@@ -46,7 +49,14 @@ pub fn parse_all(input: ParseInput) -> Result<Vec<Parsed>, Error> {
                         let Some(source) = sources.get(position) else {
                             return done;
                         };
-                        done.push((position, source.parse(rules)));
+                        done.push((
+                            position,
+                            parse(SourceRules {
+                                language,
+                                source,
+                                rules,
+                            }),
+                        ));
                     }
                 })
             })
@@ -56,7 +66,7 @@ pub fn parse_all(input: ParseInput) -> Result<Vec<Parsed>, Error> {
             .map(|handle| {
                 handle
                     .join()
-                    .map_err(|_| Error::new("a JavaScript parser thread stopped"))
+                    .map_err(|_| Error::new("a parser thread stopped"))
             })
             .collect::<Result<Vec<_>, Error>>()
             .map(|parts| parts.into_iter().flatten().collect())
@@ -65,43 +75,38 @@ pub fn parse_all(input: ParseInput) -> Result<Vec<Parsed>, Error> {
     Ok(finished.into_iter().map(|(_, parsed)| parsed).collect())
 }
 
-impl Source {
-    fn parse(&self, rules: &Rules) -> Parsed {
-        parse(SourceRules {
-            source: self,
-            rules,
-        })
-    }
-}
-
 struct SourceRules<'a> {
+    language: &'a dyn Language,
     source: &'a Source,
     rules: &'a Rules,
 }
 
 fn parse(input: SourceRules) -> Parsed {
-    let SourceRules { source, rules } = input;
-    let document = SupportLang::Tsx.ast_grep(&source.text);
+    let SourceRules {
+        language,
+        source,
+        rules,
+    } = input;
+    let document = language.grammar().ast_grep(&source.text);
     let root = document.root();
-    let index = syntax::index(&root);
+    let index = language.index(&root);
     let mut privileged: HashMap<String, Vec<Privilege>> = HashMap::new();
     let mut sites = Vec::new();
     for found in rules.matches(MatchRequest {
         path: &source.display,
-        language: SupportLang::Tsx,
+        language: language.grammar(),
         root: &root,
     }) {
         let privilege = Privilege {
             capability: found.capability,
             rule: found.rule,
         };
-        if found.node.kind() == "string" {
-            let specifier = found.node.text().trim_matches(['"', '\'', '`']).to_string();
+        if let Some(specifier) = language.privileged_module(&found.node) {
             privileged.entry(specifier).or_default().push(privilege);
         } else {
             sites.push(SiteSink {
                 definition: index.innermost(found.node.range().start),
-                line: syntax::line_of(&found.node),
+                line: found.node.start_pos().line() + 1,
                 name: sink_name(&found.node),
                 privilege,
             });
@@ -116,7 +121,7 @@ fn parse(input: SourceRules) -> Parsed {
 
 fn sink_name(node: &SyntaxNode) -> String {
     let callee = match node.kind().as_ref() {
-        "call_expression" => node.field("function"),
+        "call_expression" | "call" => node.field("function"),
         "new_expression" => node.field("constructor"),
         "assignment_expression" => node.field("left"),
         _ => None,

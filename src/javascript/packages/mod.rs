@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use super::manifest::Manifest;
 use super::projects::Projects;
 use crate::deep::Skip;
+use crate::deep::program::PackageFile;
 use crate::registry::{Registry, Sources};
 
 pub struct Installed {
@@ -30,11 +31,6 @@ pub struct Locate<'a> {
     pub name: &'a str,
     pub is_from_repository: bool,
     pub declared: Option<&'a str>,
-}
-
-pub struct PackageFile<'a> {
-    pub package: usize,
-    pub path: &'a str,
 }
 
 pub struct PackagesInput<'a> {
@@ -66,13 +62,6 @@ impl<'a> Packages<'a> {
 
     pub fn installed(&self, index: usize) -> &Installed {
         &self.installed[index]
-    }
-
-    pub fn names(&self) -> Vec<String> {
-        self.installed
-            .iter()
-            .map(|installed| installed.name.clone())
-            .collect()
     }
 
     pub fn skip(&mut self, skip: Skip) {

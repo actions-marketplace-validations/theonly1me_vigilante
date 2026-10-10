@@ -1,7 +1,7 @@
 use super::bindings::{BindingUse, PrivilegedUse};
 use super::{FileUse, InFile, Linker, specifier_module, unit_of};
 use crate::deep::graph::Target;
-use crate::javascript::syntax::UseTarget;
+use crate::deep::program::UseTarget;
 
 impl Linker<'_> {
     pub(super) fn targets(&mut self, item: FileUse) -> Vec<Target> {

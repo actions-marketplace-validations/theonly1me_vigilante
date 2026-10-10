@@ -1,59 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
-use super::packages::{PackageFile, Packages};
-use super::parse::{ParseInput, Source, parse_all};
-use super::resolve::ParsedFile;
-use super::syntax::FileIndex;
-use crate::code::Rules;
+use super::parse::{ParseInput, Parsed, Source, parse_all};
+use super::{
+    FileKey, Import, Language, LoadedFile, PackageFile, Program, ProgramInput, Resolver, Root,
+};
+use crate::Error;
 use crate::deep::graph::Owner;
-use crate::tree::Tree;
-use crate::{Capability, Error};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Root {
-    Repository,
-    Package(usize),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct FileKey {
-    pub root: Root,
-    pub path: String,
-}
-
-pub struct Privilege {
-    pub capability: Capability,
-    pub rule: String,
-}
-
-pub struct SiteSink {
-    pub definition: usize,
-    pub line: usize,
-    pub name: String,
-    pub privilege: Privilege,
-}
-
-pub struct LoadedFile {
-    pub key: FileKey,
-    pub display: String,
-    pub owner: Owner,
-    pub index: FileIndex,
-    pub privileged: HashMap<String, Vec<Privilege>>,
-    pub sites: Vec<SiteSink>,
-    pub resolved: HashMap<String, FileKey>,
-}
-
-pub struct ProgramInput<'a> {
-    pub tree: &'a dyn Tree,
-    pub rules: &'a Rules,
-    pub scope_of: &'a dyn Fn(&str) -> String,
-    pub packages: Packages<'a>,
-}
-
-pub struct Program<'a> {
-    pub(super) input: ProgramInput<'a>,
-    pub files: Vec<LoadedFile>,
-    pub ids: HashMap<FileKey, usize>,
+struct ParsedFile<'a> {
+    from: &'a FileKey,
+    parsed: &'a mut Parsed,
 }
 
 impl<'a> Program<'a> {
@@ -65,12 +21,12 @@ impl<'a> Program<'a> {
         }
     }
 
-    pub fn packages(&self) -> &Packages<'a> {
-        &self.input.packages
+    pub fn language(&self) -> &dyn Language {
+        self.input.language
     }
 
-    pub fn into_packages(self) -> Packages<'a> {
-        self.input.packages
+    pub fn resolver(&self) -> &dyn Resolver {
+        &*self.input.resolver
     }
 
     pub fn load(&mut self, roots: &[String]) -> Result<(), Error> {
@@ -102,7 +58,7 @@ impl<'a> Program<'a> {
             for key in frontier {
                 let text = match key.root {
                     Root::Repository => texts.remove(&key.path),
-                    Root::Package(package) => self.input.packages.read(PackageFile {
+                    Root::Package(package) => self.input.resolver.read(PackageFile {
                         package,
                         path: &key.path,
                     }),
@@ -114,6 +70,7 @@ impl<'a> Program<'a> {
                 }
             }
             let parsed = parse_all(ParseInput {
+                language: self.input.language,
                 rules: self.input.rules,
                 sources: &sources,
             })?;
@@ -149,15 +106,57 @@ impl<'a> Program<'a> {
                     scope: (self.input.scope_of)(&key.path),
                 },
             ),
-            Root::Package(index) => {
-                let name = &self.input.packages.installed(*index).name;
+            Root::Package(package) => {
+                let name = self.input.resolver.package_name(*package);
                 (
                     format!("{name}/{}", key.path),
-                    Owner::Dependency {
-                        package: name.clone(),
-                    },
+                    Owner::Dependency { package: name },
                 )
             }
         }
+    }
+
+    fn prefetch<'p>(
+        &mut self,
+        files: impl Iterator<Item = (&'p FileKey, &'p Parsed)>,
+    ) -> Result<(), Error> {
+        let mut imports = Vec::new();
+        for (from, parsed) in files {
+            for load in &parsed.index.loads {
+                if !parsed.privileged.contains_key(&load.specifier) {
+                    imports.push(Import {
+                        from,
+                        specifier: &load.specifier,
+                    });
+                }
+            }
+        }
+        self.input.resolver.prefetch(&imports)
+    }
+
+    fn resolve_all(&mut self, file: ParsedFile) -> Result<HashMap<String, FileKey>, Error> {
+        let ParsedFile { from, parsed } = file;
+        let specifiers: BTreeSet<String> = parsed
+            .index
+            .loads
+            .iter()
+            .map(|load| load.specifier.clone())
+            .collect();
+        let mut resolved = HashMap::new();
+        for specifier in specifiers {
+            let is_privileged = parsed.privileged.contains_key(&specifier);
+            if is_privileged && !self.input.resolver.is_relative(&specifier) {
+                continue;
+            }
+            let target = self.input.resolver.resolve(Import {
+                from,
+                specifier: &specifier,
+            })?;
+            if let Some(target) = target {
+                parsed.privileged.remove(&specifier);
+                resolved.insert(specifier, target);
+            }
+        }
+        Ok(resolved)
     }
 }

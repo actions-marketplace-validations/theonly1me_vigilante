@@ -1,7 +1,7 @@
 use super::{InFile, Linker, Unit, specifier_module, unit_of};
 use crate::Power;
 use crate::deep::graph::{Sink, Target};
-use crate::javascript::syntax::{Export, Imported};
+use crate::deep::program::{Export, Imported};
 
 const MAXIMUM_FORWARDS: usize = 8;
 const DEFAULT_EXPORT: &str = "default";

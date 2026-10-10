@@ -4,9 +4,7 @@ mod targets;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use super::paths::stem;
-use super::program::{LoadedFile, Program, Root};
-use super::syntax::UseTarget;
+use super::{FileKey, Language, LoadedFile, Program, Resolver, Root, UseTarget};
 use crate::Power;
 use crate::deep::ScopeRoots;
 use crate::deep::graph::{Call, Function, FunctionId, Graph, Owner, Sink, Target};
@@ -29,9 +27,9 @@ struct FileUse<'a> {
     target: &'a UseTarget,
 }
 
-pub struct LinkInput<'a> {
-    pub program: &'a Program<'a>,
-    pub roots: &'a BTreeSet<String>,
+pub struct LinkInput<'p, 'a> {
+    pub program: &'p Program<'a>,
+    pub roots: &'p BTreeSet<String>,
 }
 
 pub struct Linked {
@@ -41,8 +39,9 @@ pub struct Linked {
 
 struct Linker<'p> {
     files: &'p [LoadedFile],
-    ids: &'p HashMap<super::program::FileKey, usize>,
-    package_names: Vec<String>,
+    ids: &'p HashMap<FileKey, usize>,
+    language: &'p dyn Language,
+    resolver: &'p dyn Resolver,
     graph: Graph,
     functions: Vec<Vec<FunctionId>>,
     by_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
@@ -55,7 +54,8 @@ pub fn link(input: LinkInput) -> Linked {
     let mut linker = Linker {
         files: &program.files,
         ids: &program.ids,
-        package_names: program.packages().names(),
+        language: program.language(),
+        resolver: program.resolver(),
         graph: Graph::default(),
         functions: Vec::new(),
         by_name: HashMap::new(),
@@ -93,7 +93,7 @@ impl Linker<'_> {
             let mut ids = Vec::new();
             for definition in &file.index.definitions {
                 let id = self.graph.add_function(Function {
-                    name: format!("{}.{}", stem(&file.display), definition.name),
+                    name: format!("{}.{}", self.language.stem(&file.display), definition.name),
                     owner: file.owner.clone(),
                     path: file.display.clone(),
                 });

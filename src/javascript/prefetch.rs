@@ -1,9 +1,9 @@
 use super::packages::Locate;
-use super::parse::Parsed;
 use super::paths::{is_built_in, is_relative, package_specifier};
-use super::program::{FileKey, Program, Root};
 use super::projects::Dependency;
+use super::resolver::JavaScriptResolver;
 use crate::Error;
+use crate::deep::program::{Import, Root};
 
 struct Wanted {
     project: usize,
@@ -13,19 +13,13 @@ struct Wanted {
     declared: Option<String>,
 }
 
-impl Program<'_> {
-    pub(super) fn prefetch<'p>(
-        &mut self,
-        files: impl Iterator<Item = (&'p FileKey, &'p Parsed)>,
-    ) -> Result<(), Error> {
+impl JavaScriptResolver<'_> {
+    pub(super) fn prefetch_imports(&mut self, imports: &[Import]) -> Result<(), Error> {
         let mut wanted = Vec::new();
-        for (from, parsed) in files {
-            for load in &parsed.index.loads {
-                let specifier = &load.specifier;
-                if parsed.privileged.contains_key(specifier)
-                    || is_built_in(specifier)
-                    || is_relative(specifier)
-                {
+        for import in imports {
+            let (from, specifier) = (import.from, import.specifier);
+            {
+                if is_built_in(specifier) || is_relative(specifier) {
                     continue;
                 }
                 let Some(package) = package_specifier(specifier) else {
@@ -34,7 +28,7 @@ impl Program<'_> {
                 if let Some((project, folder)) = self.place_of(from)? {
                     let is_from_repository = from.root == Root::Repository;
                     let declared = if is_from_repository {
-                        self.input.packages.projects.declared(Dependency {
+                        self.packages.projects.declared(Dependency {
                             path: &from.path,
                             name: package.name,
                         })?
@@ -61,7 +55,7 @@ impl Program<'_> {
                 declared: item.declared.as_deref(),
             })
             .collect();
-        self.input.packages.prefetch(&requests);
+        self.packages.prefetch(&requests);
         Ok(())
     }
 }

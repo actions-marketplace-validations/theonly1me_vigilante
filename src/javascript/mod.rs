@@ -1,13 +1,11 @@
 mod files;
-mod link;
+mod language;
 mod manifest;
 mod packages;
-mod parse;
 mod paths;
 mod prefetch;
-mod program;
 mod projects;
-mod resolve;
+mod resolver;
 mod syntax;
 
 use std::collections::{BTreeSet, HashSet};
@@ -18,14 +16,16 @@ use crate::Error;
 use crate::code::{Rules, language_of};
 use crate::config::Config;
 use crate::deep::Analysis;
+use crate::deep::program::{LinkInput, Program, ProgramInput, link};
 use crate::lockfiles::JAVASCRIPT_LOCKFILES;
 use crate::registry::Registry;
 use crate::scan::Selection;
 use crate::tree::Tree;
+use language::JavaScript;
 use packages::{Packages, PackagesInput};
 use paths::{is_code_file, parent_folder};
-use program::{Program, ProgramInput};
 use projects::Projects;
+use resolver::JavaScriptResolver;
 
 pub struct JavaScriptRequest<'a> {
     pub tree: &'a dyn Tree,
@@ -72,23 +72,29 @@ pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
         return Ok(Analysis::default());
     }
     let registry = Registry::new(Registry::default_cache_root());
-    let mut program = Program::new(ProgramInput {
-        tree: request.tree,
-        rules: request.rules,
-        scope_of: request.scope_of,
+    let mut resolver = JavaScriptResolver {
         packages: Packages::new(PackagesInput {
             projects: Projects::new(request.tree),
             registry: &registry,
             sources: request.config.registry_sources(),
         }),
+        scope_of: request.scope_of,
+    };
+    let mut program = Program::new(ProgramInput {
+        tree: request.tree,
+        rules: request.rules,
+        scope_of: request.scope_of,
+        language: &JavaScript,
+        resolver: &mut resolver,
     });
     let root_paths: Vec<String> = roots.iter().cloned().collect();
     program.load(&root_paths)?;
-    let linked = link::link(link::LinkInput {
+    let linked = link(LinkInput {
         program: &program,
         roots: &roots,
     });
+    drop(program);
     let mut analysis = linked.graph.analyze(&linked.scopes);
-    analysis.skipped = program.into_packages().into_skipped();
+    analysis.skipped = resolver.packages.into_skipped();
     Ok(analysis)
 }

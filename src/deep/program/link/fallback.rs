@@ -6,7 +6,7 @@ impl Linker<'_> {
         if let Some(id) = self.fallbacks.get(&package) {
             return *id;
         }
-        let name = self.package_names[package].clone();
+        let name = self.resolver.package_name(package);
         let id = self.graph.add_function(Function {
             name: format!("{name}.*"),
             owner: Owner::Dependency {
