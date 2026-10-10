@@ -20,7 +20,7 @@ metadata:
 rule:
   any:
     - kind: import_declaration
-      regex: ^import\s+(static\s+)?(java\.net\.(Socket|ServerSocket|DatagramSocket|HttpURLConnection|URLConnection|http)\b|java\.net\.\*|okhttp3?\.|retrofit2?\.|org\.apache\.(http|hc)\.|org\.springframework\.web\.(client|reactive\.function\.client)\.|feign\.|io\.grpc\.|io\.netty\.)
+      regex: ^import\s+(static\s+)?(java\.net\.(Socket|ServerSocket|DatagramSocket|HttpURLConnection|URLConnection|http)\b|java\.net\.\*|okhttp3?\.(OkHttpClient|Call|WebSocket)\b|okhttp3?\.\*|retrofit2?\.|org\.apache\.(http|hc)\.|org\.springframework\.web\.(client|reactive\.function\.client)\.|feign\.|io\.grpc\.|io\.netty\.)
     - kind: object_creation_expression
       has: { field: type, regex: ^(Socket|ServerSocket|DatagramSocket)$ }
 ---

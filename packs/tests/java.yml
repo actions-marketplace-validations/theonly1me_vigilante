@@ -9,9 +9,13 @@ id: java-network
 valid:
   - "import java.net.URI;"
   - "import java.util.List;"
+  - "import okhttp3.MediaType;"
+  - "import okhttp3.RequestBody;"
 invalid:
   - "import java.net.http.HttpClient;"
   - "import okhttp3.OkHttpClient;"
+  - "import okhttp3.Call;"
+  - "import okhttp3.*;"
   - "import org.springframework.web.client.RestTemplate;"
   - "class A { void f() throws Exception { new Socket(host, 80); } }"
 ---
