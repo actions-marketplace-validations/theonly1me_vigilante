@@ -59,11 +59,22 @@ pub fn folder_of(package: &str, modules: &[Module]) -> Option<String> {
         .map(|(module, rest)| joined(&module.folder, rest))
 }
 
-pub fn evidence_of(info: &CapabilityInfo, folder: &str) -> Evidence {
+pub struct EvidenceStart<'a> {
+    pub info: &'a CapabilityInfo,
+    pub package: &'a str,
+    pub folder: &'a str,
+}
+
+pub fn evidence_of(start: EvidenceStart) -> Evidence {
+    let EvidenceStart {
+        info,
+        package,
+        folder,
+    } = start;
     let site = info
         .path
         .iter()
-        .position(|function| function.package == info.package_dir)
+        .position(|function| function.package == package)
         .and_then(|index| info.path.get(index + 1))
         .and_then(|function| function.site.as_ref());
     let (path, line) = match site {

@@ -8,9 +8,9 @@ use std::path::Path;
 use crate::config::Config;
 use crate::scan::Location;
 use crate::tree::Tree;
-use crate::{Error, Scope, Sighting, Surface};
+use crate::{Error, Evidence, Power, Scope, Sighting, Surface};
 use checkout::{Checkout, CheckoutRequest};
-use mapping::Module;
+use mapping::{EvidenceStart, Module};
 
 const MODULE_FILE: &str = "go.mod";
 
@@ -21,6 +21,19 @@ pub struct GoModules {
 pub struct DiscoverInput<'a> {
     pub tree: &'a dyn Tree,
     pub config: &'a Config,
+}
+
+#[derive(Default)]
+pub struct GoAnalysis {
+    pub sightings: Vec<Sighting>,
+    pub reaches: Vec<Reach>,
+}
+
+pub struct Reach {
+    pub through: String,
+    pub power: Power,
+    pub scope: Scope,
+    pub evidence: Evidence,
 }
 
 pub struct GoRequest<'a> {
@@ -62,7 +75,7 @@ impl GoModules {
         path.ends_with(".go") && self.containing(path).is_some()
     }
 
-    pub fn analyze(&self, request: GoRequest) -> Result<Vec<Sighting>, Error> {
+    pub fn analyze(&self, request: GoRequest) -> Result<GoAnalysis, Error> {
         let selected: Vec<&Module> = match request.changed {
             None => self.modules.iter().collect(),
             Some(changed) => self
@@ -77,7 +90,7 @@ impl GoModules {
                 .collect(),
         };
         if selected.is_empty() {
-            return Ok(Vec::new());
+            return Ok(GoAnalysis::default());
         }
         capslock::ensure_tools()?;
         let checkout;
@@ -88,38 +101,56 @@ impl GoModules {
                 checkout.root()
             }
         };
-        let mut sightings = Vec::new();
+        let mut analysis = GoAnalysis::default();
         for module in selected {
             for info in capslock::analyze(&root.join(&module.folder))? {
                 let power = mapping::power_of(&info.capability_name)?;
-                let Some(folder) = mapping::folder_of(&info.package_dir, &self.modules) else {
-                    continue;
+                let owned_folder = mapping::folder_of(&info.package_dir, &self.modules)
+                    .filter(|folder| self.is_owned_by(OwnedFolder { folder, module }));
+                let (package, folder) = match owned_folder {
+                    Some(folder) => (info.package_dir.as_str(), folder),
+                    None => {
+                        let Some(root) = info.path.first() else {
+                            continue;
+                        };
+                        let Some(folder) = mapping::folder_of(&root.package, &self.modules) else {
+                            continue;
+                        };
+                        (root.package.as_str(), folder)
+                    }
                 };
-                if !self.is_owned_by(OwnedFolder {
+                let evidence = mapping::evidence_of(EvidenceStart {
+                    info: &info,
+                    package,
                     folder: &folder,
-                    module,
-                }) {
-                    continue;
-                }
-                let evidence = mapping::evidence_of(&info, &folder);
+                });
                 if request.config.is_excluded(&evidence.path) {
                     continue;
                 }
-                let path = request
-                    .config
-                    .named_scope_of(&evidence.path)
-                    .map_or(folder, str::to_string);
-                sightings.push(Sighting {
-                    scope: Scope {
-                        surface: Surface::Code,
-                        path,
-                    },
-                    power,
-                    evidence,
-                });
+                let scope = Scope {
+                    surface: Surface::Code,
+                    path: request
+                        .config
+                        .named_scope_of(&evidence.path)
+                        .map_or(folder, str::to_string),
+                };
+                if package == info.package_dir {
+                    analysis.sightings.push(Sighting {
+                        scope,
+                        power,
+                        evidence,
+                    });
+                } else {
+                    analysis.reaches.push(Reach {
+                        through: info.package_dir.clone(),
+                        power,
+                        scope,
+                        evidence,
+                    });
+                }
             }
         }
-        Ok(sightings)
+        Ok(analysis)
     }
 
     fn is_owned_by(&self, owned: OwnedFolder) -> bool {

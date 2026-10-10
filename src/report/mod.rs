@@ -1,5 +1,6 @@
 mod json;
 mod markdown;
+mod notes;
 mod sarif;
 mod text;
 

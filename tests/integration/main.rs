@@ -4,6 +4,8 @@ mod ci;
 mod cli;
 mod go_capslock;
 mod go_engine;
+mod go_fixtures;
+mod go_notes;
 mod go_support;
 mod go_tools;
 mod install_hooks;

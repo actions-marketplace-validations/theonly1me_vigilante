@@ -1,3 +1,4 @@
+mod notes;
 mod run;
 
 use std::path::PathBuf;
@@ -19,6 +20,7 @@ pub struct Review {
     pub mode: ReviewMode,
     pub policy: Mode,
     pub findings: Vec<Finding>,
+    pub notes: Vec<Note>,
     pub stale: Vec<LockEntry>,
 }
 
@@ -37,6 +39,15 @@ pub struct Finding {
     pub severity: Severity,
     pub locked: bool,
     pub denied: bool,
+    pub hidden: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Note {
+    pub scope: Scope,
+    pub power: Power,
+    pub through: String,
+    pub evidence: Evidence,
     pub hidden: bool,
 }
 

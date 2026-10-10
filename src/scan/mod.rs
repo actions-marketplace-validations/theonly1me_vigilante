@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use crate::code::Rules;
 use crate::config::{Config, GoEngine};
-use crate::go::{DiscoverInput, GoModules, GoRequest};
+use crate::go::{DiscoverInput, GoModules, GoRequest, Reach};
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::{self, Placement, Surfaces};
 use crate::tree::Tree;
@@ -29,6 +29,12 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
         location: located.location(),
     })?
     .scan(&Selection::Everything)
+    .map(|scanned| scanned.map)
+}
+
+pub struct Scanned {
+    pub map: PowerMap,
+    pub reaches: Vec<Reach>,
 }
 
 pub enum Selection {
@@ -87,7 +93,7 @@ impl<'a> Scanner<'a> {
         self.scopes.code_scope_of(path)
     }
 
-    pub fn scan(&self, selection: &Selection) -> Result<PowerMap, Error> {
+    pub fn scan(&self, selection: &Selection) -> Result<Scanned, Error> {
         let is_selected_code = |path: &str| match selection {
             Selection::Everything => true,
             Selection::Changes(changes) => changes.code_scopes.contains(&self.code_scope_of(path)),
@@ -139,20 +145,23 @@ impl<'a> Scanner<'a> {
                 });
             }
         }
+        let mut reaches = Vec::new();
         if let Some(go) = &self.go {
             let changed = match selection {
                 Selection::Everything => None,
                 Selection::Changes(changes) => Some(&changes.paths),
             };
-            for sighting in go.analyze(GoRequest {
+            let analysis = go.analyze(GoRequest {
                 changed,
                 location: self.location,
                 config: self.config,
-            })? {
+            })?;
+            for sighting in analysis.sightings {
                 map.insert(sighting);
             }
+            reaches = analysis.reaches;
         }
-        Ok(map)
+        Ok(Scanned { map, reaches })
     }
 
     fn go_owns(&self, path: &str) -> bool {

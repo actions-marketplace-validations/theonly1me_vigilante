@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use super::notes::{evidence_text, markdown_section};
 use super::summary;
 use crate::{Finding, Lock, Review, ReviewMode};
 
@@ -30,6 +31,7 @@ pub fn render(review: &Review) -> String {
         ));
         lines.push(String::new());
     }
+    lines.extend(markdown_section(review));
     if !review.stale.is_empty() {
         lines.push(format!("Stale entries in {}:", Lock::FILE));
         lines.extend(review.stale.iter().map(|entry| {
@@ -78,10 +80,7 @@ fn row(row: Row) -> String {
         finding.scope.surface.name(),
         code(&finding.power.to_string()),
         summary(finding.power.capability),
-        code(&format!(
-            "{}:{}",
-            finding.evidence.path, finding.evidence.line
-        )),
+        code(&evidence_text(&finding.evidence)),
     )
 }
 
@@ -150,7 +149,7 @@ fn plural(word: Plural) -> &'static str {
     if word.count == 1 { word.one } else { word.many }
 }
 
-fn code(text: &str) -> String {
+pub(super) fn code(text: &str) -> String {
     let single_line: String = text
         .chars()
         .map(|character| {

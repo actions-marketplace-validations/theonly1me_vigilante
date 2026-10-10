@@ -1,9 +1,7 @@
 use std::collections::BTreeSet;
 
-use crate::go_support::{
-    APP_MODULE, APP_MODULE_FILE, Call, FETCH_SOURCE, FakeTools, GoRun, Reach, Tools,
-    capslock_output, report_of, run_vigilante,
-};
+use crate::go_fixtures::{APP_MODULE, APP_MODULE_FILE, Call, FETCH_SOURCE, Reach, capslock_output};
+use crate::go_support::{FakeTools, GoRun, Tools, report_of, run_vigilante};
 use crate::support::{TestRepository, expected};
 
 const PAGE: Call = Call {

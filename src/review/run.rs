@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use super::notes::{NotesInput, new_notes};
 use super::{Finding, LockEntry, Review, ReviewMode};
 use crate::config::Config;
 use crate::lock::{Granted, Lock};
@@ -67,14 +68,15 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
         code_scopes: affected_scopes,
         paths: changed,
     });
-    let base_powers = base_scanner.scan(&selection)?.powers();
-    let head_map = head_scanner.scan(&selection)?;
+    let base_scan = base_scanner.scan(&selection)?;
+    let base_powers = base_scan.map.powers();
+    let head_scan = head_scanner.scan(&selection)?;
     let judge = Judge {
         config: &config,
         lock: &lock,
     };
     let findings = judge.findings(
-        sightings(&head_map)
+        sightings(&head_scan.map)
             .filter(|sighting| {
                 !base_powers
                     .get(&sighting.scope)
@@ -82,10 +84,16 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
             })
             .collect(),
     );
+    let notes = new_notes(NotesInput {
+        base: &base_scan.reaches,
+        head: head_scan.reaches,
+        config: &config,
+    });
     Ok(Review {
         mode: ReviewMode::Diff { base, head },
         policy: config.mode,
         findings,
+        notes,
         stale: Vec::new(),
     })
 }
@@ -100,7 +108,8 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         config: &config,
         location: located.location(),
     })?
-    .scan(&Selection::Everything)?;
+    .scan(&Selection::Everything)?
+    .map;
     let judge = Judge {
         config: &config,
         lock: &lock,
@@ -129,6 +138,7 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         mode: ReviewMode::Check,
         policy: config.mode,
         findings,
+        notes: Vec::new(),
         stale,
     })
 }

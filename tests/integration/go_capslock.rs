@@ -50,5 +50,25 @@ fn real_capslock_finds_exec_that_a_package_reaches_through_a_dependency() {
         "{call_path}"
     );
     assert!(call_path.contains("os/exec."), "{call_path}");
+    let notes: Vec<String> = report["notes"]
+        .as_array()
+        .expect("notes")
+        .iter()
+        .map(|note| {
+            format!(
+                "{} {} via {}",
+                note["scope"]["path"].as_str().unwrap_or_default(),
+                note["power"].as_str().unwrap_or_default(),
+                note["through"].as_str().unwrap_or_default()
+            )
+        })
+        .collect();
+    assert_eq!(
+        notes,
+        [
+            "app/fetch exec via example.com/dep/run",
+            "app/fetch exec via os/exec"
+        ]
+    );
     assert_eq!(run.code, 1);
 }

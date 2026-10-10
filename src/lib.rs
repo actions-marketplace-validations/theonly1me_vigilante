@@ -20,5 +20,5 @@ pub use model::{
     SourceFile, Surface,
 };
 pub use report::{Format, power_map_json, power_map_text, summary};
-pub use review::{Finding, LockEntry, Review, ReviewMode, ReviewRequest, review};
+pub use review::{Finding, LockEntry, Note, Review, ReviewMode, ReviewRequest, review};
 pub use scan::{ScanRequest, Source, scan};

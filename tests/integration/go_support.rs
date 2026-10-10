@@ -3,15 +3,12 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 
-use serde_json::{Value, json};
+use serde_json::Value;
 use tempfile::TempDir;
 
 use crate::support::{Run, TestRepository};
 
 pub const SYSTEM_PATH: &str = "/usr/bin:/bin";
-pub const APP_MODULE: &str = "app/go.mod";
-pub const APP_MODULE_FILE: &str = "module example.com/app\n\ngo 1.22\n";
-pub const FETCH_SOURCE: &str = "package fetch\n\nfunc Page(url string) error { return nil }\n";
 
 const FAKE_GO: &str = "#!/bin/sh\necho \"go version go1.26.0 test/arch\"\n";
 const FAKE_CAPSLOCK: &str = "#!/bin/sh
@@ -79,46 +76,6 @@ pub fn run_vigilante(run: GoRun) -> Run {
         stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
         stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
     }
-}
-
-pub struct Call<'a> {
-    pub function: &'a str,
-    pub package: &'a str,
-    pub site: Option<(&'a str, u32)>,
-}
-
-pub struct Reach<'a> {
-    pub package: &'a str,
-    pub capability: &'a str,
-    pub calls: &'a [Call<'a>],
-}
-
-pub fn capslock_output(reaches: &[Reach]) -> String {
-    let infos: Vec<Value> = reaches
-        .iter()
-        .map(|reach| {
-            let path: Vec<Value> = reach
-                .calls
-                .iter()
-                .map(|call| {
-                    let mut function = json!({ "name": call.function, "package": call.package });
-                    if let Some((file, line)) = call.site {
-                        function["site"] =
-                            json!({ "filename": file, "line": line.to_string(), "column": "2" });
-                    }
-                    function
-                })
-                .collect();
-            json!({
-                "packageName": reach.package.rsplit('/').next(),
-                "capabilityName": reach.capability,
-                "capability": format!("CAPABILITY_{}", reach.capability.split('/').next().unwrap_or_default()),
-                "path": path,
-                "packageDir": reach.package,
-            })
-        })
-        .collect();
-    json!({ "capabilityInfo": infos, "moduleInfo": [], "packageInfo": [] }).to_string()
 }
 
 pub fn report_of(run: &Run) -> Value {

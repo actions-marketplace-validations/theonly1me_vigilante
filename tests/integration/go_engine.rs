@@ -1,83 +1,8 @@
-use crate::go_support::{
-    APP_MODULE, APP_MODULE_FILE, Call, FETCH_SOURCE, FakeTools, GoRun, Reach, Tools,
-    capslock_output, report_of, run_vigilante,
+use crate::go_fixtures::{
+    DIFF, Reach, capslock_output, exec_reaches, finding_summaries, module_repository,
+    network_reaches,
 };
-use crate::support::TestRepository;
-
-const FETCH_PACKAGE: &str = "example.com/app/fetch";
-const PAGE: Call = Call {
-    function: "example.com/app/fetch.Page",
-    package: FETCH_PACKAGE,
-    site: None,
-};
-const HTTP_GET: Call = Call {
-    function: "net/http.Get",
-    package: "net/http",
-    site: Some(("fetch.go", 9)),
-};
-const RUN_TOOL: Call = Call {
-    function: "example.com/dep/run.Tool",
-    package: "example.com/dep/run",
-    site: Some(("fetch.go", 6)),
-};
-const EXEC_COMMAND: Call = Call {
-    function: "os/exec.Command",
-    package: "os/exec",
-    site: Some(("run.go", 5)),
-};
-const DIFF: &[&str] = &[
-    "diff", "--base", "main", "--head", "feature", "--format", "json",
-];
-
-fn network_reaches() -> Vec<Reach<'static>> {
-    ["example.com/app/fetch", "net/http"]
-        .into_iter()
-        .map(|package| Reach {
-            package,
-            capability: "NETWORK",
-            calls: &[PAGE, HTTP_GET],
-        })
-        .collect()
-}
-
-fn exec_reaches() -> Vec<Reach<'static>> {
-    ["example.com/app/fetch", "example.com/dep/run", "os/exec"]
-        .into_iter()
-        .map(|package| Reach {
-            package,
-            capability: "EXEC",
-            calls: &[PAGE, RUN_TOOL, EXEC_COMMAND],
-        })
-        .collect()
-}
-
-fn module_repository(reaches: &[Reach]) -> TestRepository {
-    let repository = TestRepository::new();
-    repository.write(&[
-        (APP_MODULE, APP_MODULE_FILE),
-        ("app/fetch/fetch.go", FETCH_SOURCE),
-        ("app/capslock.json", &capslock_output(reaches)),
-    ]);
-    repository
-}
-
-fn finding_summaries(report: &serde_json::Value) -> Vec<String> {
-    report["findings"]
-        .as_array()
-        .expect("findings")
-        .iter()
-        .map(|finding| {
-            format!(
-                "{} {} {}:{}",
-                finding["scope"]["path"].as_str().unwrap_or_default(),
-                finding["power"].as_str().unwrap_or_default(),
-                finding["evidence"]["path"].as_str().unwrap_or_default(),
-                finding["evidence"]["line"]
-            )
-        })
-        .collect()
-}
-
+use crate::go_support::{FakeTools, GoRun, Tools, report_of, run_vigilante};
 #[test]
 fn diff_reports_a_capability_that_a_go_package_gains_at_the_head() {
     let tools = FakeTools::new();
