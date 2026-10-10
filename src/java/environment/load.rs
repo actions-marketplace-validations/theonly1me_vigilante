@@ -14,6 +14,7 @@ const CENTRAL: &str = "https://repo1.maven.org/maven2";
 const GOOGLE: &str = "https://dl.google.com/dl/android/maven2";
 const MAVEN_BUILD: &str = "pom.xml";
 const GRADLE_LOCKFILE: &str = "gradle.lockfile";
+const INVALID_POM: &str = "This pom.xml is not a valid Maven project file, so Vigilante read only the code in the repository.";
 const NO_GRADLE_LOCKFILE: &str = "No gradle.lockfile covers this code. Vigilante does not run Gradle, so it read only the code in the repository.";
 
 impl JavaEnvironment<'_> {
@@ -86,10 +87,11 @@ impl JavaEnvironment<'_> {
             }
         }
         let Some(root) = parse_pom(maven.text) else {
-            return Err(Error::new(format!(
-                "{} is not a Maven project file",
-                maven.build
-            )));
+            self.skip(Skip {
+                source: maven.build.to_string(),
+                reason: INVALID_POM.to_string(),
+            });
+            return Ok((Vec::new(), Vec::new()));
         };
         let mut repositories = Vec::new();
         for repository in &root.repositories {

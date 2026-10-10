@@ -53,3 +53,17 @@ fn a_gradle_build_without_a_lockfile_is_listed() {
         ]
     );
 }
+
+#[test]
+fn a_pom_that_is_not_valid_is_listed() {
+    let pom = "<project><groupId>com.acme</groupId><artifactId>app</artifactId><version>1</version></project>\n\n<dependency><groupId>com.acme</groupId></dependency>\n</dependencies>\n</project>\n";
+
+    let reasons = reasons_after(("app/pom.xml", pom));
+
+    assert_eq!(
+        reasons,
+        vec![
+            "This pom.xml is not a valid Maven project file, so Vigilante read only the code in the repository."
+        ]
+    );
+}
