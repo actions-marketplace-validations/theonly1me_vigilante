@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 use crate::scope::{Scopes, ScopesInput};
-use crate::surfaces;
+use crate::surfaces::Surfaces;
 use crate::tree::{DirectoryTree, Git, Tree};
 use crate::{Error, Evidence, PowerMap, Scope, Sighting, SourceFile, Surface};
 
@@ -50,6 +50,7 @@ pub struct Scanner<'a> {
     tree: &'a dyn Tree,
     config: &'a Config,
     scopes: Scopes<'a>,
+    surfaces: Surfaces<'a>,
 }
 
 impl<'a> Scanner<'a> {
@@ -62,6 +63,7 @@ impl<'a> Scanner<'a> {
             tree: input.tree,
             config: input.config,
             scopes,
+            surfaces: Surfaces::new(input.tree.paths()),
         }
     }
 
@@ -71,7 +73,7 @@ impl<'a> Scanner<'a> {
             .paths()
             .iter()
             .map(String::as_str)
-            .filter(|path| surfaces::handles(path) && !self.config.is_excluded(path))
+            .filter(|path| self.surfaces.handles(path) && !self.config.is_excluded(path))
             .collect();
         let mut map = PowerMap::default();
         for file in self.tree.read(&wanted)? {
@@ -79,7 +81,7 @@ impl<'a> Scanner<'a> {
                 path: &file.path,
                 text: &file.text,
             };
-            for detection in surfaces::detect(source)? {
+            for detection in self.surfaces.detect(source)? {
                 let surface = detection.power.capability.surface();
                 let scope_path = match surface {
                     Surface::Code => self.scopes.code_scope_of(&file.path),
