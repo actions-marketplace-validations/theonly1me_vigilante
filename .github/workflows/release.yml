@@ -69,11 +69,14 @@ jobs:
           path: dist/vigilante-${{ matrix.target }}.tar.gz
           if-no-files-found: error
       - run: python3 -m venv "$RUNNER_TEMP/maturin" && "$RUNNER_TEMP/maturin/bin/pip" install maturin==1.15.0
-      - run: >-
+      - if: runner.os == 'Linux'
+        run: >-
           "$RUNNER_TEMP/maturin/bin/maturin" build --release --locked
           --target "$TARGET"
           --compatibility manylinux2014 musllinux_1_2
           --out wheels
+      - if: runner.os == 'macOS'
+        run: '"$RUNNER_TEMP/maturin/bin/maturin" build --release --locked --target "$TARGET" --out wheels'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wheel-${{ matrix.target }}
