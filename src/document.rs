@@ -41,6 +41,10 @@ impl Node {
         ))
     }
 
+    pub fn parse_json(text: &str) -> Result<Self, Error> {
+        Self::parse(&without_json_comments(text))
+    }
+
     pub fn get(&self, key: &str) -> Option<&Node> {
         self.entries()
             .iter()
@@ -128,4 +132,46 @@ fn scalar_text(scalar: &Scalar) -> String {
         Scalar::FloatingPoint(value) => value.to_string(),
         Scalar::String(value) => value.to_string(),
     }
+}
+
+fn without_json_comments(text: &str) -> String {
+    let mut output = String::with_capacity(text.len());
+    let mut characters = text.chars().peekable();
+    let mut in_string = false;
+    while let Some(character) = characters.next() {
+        if in_string {
+            output.push(character);
+            if character == '\\' {
+                output.extend(characters.next());
+            } else if character == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match (character, characters.peek()) {
+            ('"', _) => {
+                in_string = true;
+                output.push(character);
+            }
+            ('/', Some('/')) => {
+                while characters.next_if(|next| *next != '\n').is_some() {
+                    output.push(' ');
+                }
+                output.push(' ');
+            }
+            ('/', Some('*')) => {
+                characters.next();
+                output.push_str("  ");
+                while let Some(inner) = characters.next() {
+                    if inner == '*' && characters.next_if_eq(&'/').is_some() {
+                        output.push_str("  ");
+                        break;
+                    }
+                    output.push(if inner == '\n' { '\n' } else { ' ' });
+                }
+            }
+            _ => output.push(character),
+        }
+    }
+    output
 }
