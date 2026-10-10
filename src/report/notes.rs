@@ -4,6 +4,7 @@ use super::markdown::code;
 use crate::{Evidence, Note, Review};
 
 const CALL_SEPARATOR: &str = " → ";
+const MAXIMUM_SKIPPED_LINES: usize = 10;
 
 pub fn evidence_text(evidence: &Evidence) -> String {
     let location = format!("{}:{}", evidence.path, evidence.line);
@@ -89,8 +90,13 @@ pub fn skipped_section(review: &Review) -> Vec<String> {
         review
             .skipped
             .iter()
+            .take(MAXIMUM_SKIPPED_LINES)
             .map(|skip| format!("- {}: {}", code(&skip.source), skip.reason)),
     );
+    let more = review.skipped.len().saturating_sub(MAXIMUM_SKIPPED_LINES);
+    if more > 0 {
+        lines.push(format!("- {more} more lines are in the JSON report."));
+    }
     lines.push(String::new());
     lines
 }

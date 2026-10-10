@@ -1,5 +1,5 @@
 use serde_json::Value;
-use vigilante::{Format, Lock, Review, ScanRequest, Source};
+use vigilante::{Format, Lock, PolicyMode, Review, ReviewMode, ScanRequest, Skip, Source};
 
 use crate::support::{Branches, TestRepository};
 
@@ -145,4 +145,33 @@ fn a_hidden_power_is_shown_and_fails_until_the_lock_has_it() {
         "{markdown}"
     );
     assert!(locked.passed());
+}
+
+#[test]
+fn markdown_shows_the_first_ten_lines_that_were_not_analyzed_and_counts_the_rest() {
+    let review = Review {
+        mode: ReviewMode::Check,
+        policy: PolicyMode::Lock,
+        findings: Vec::new(),
+        notes: Vec::new(),
+        stale: Vec::new(),
+        skipped: (0..12)
+            .map(|index| Skip {
+                source: format!("examples/{index:02}/requirements.txt"),
+                reason: "1 package has no exact version.".to_string(),
+            })
+            .collect(),
+    };
+
+    let markdown = review.render(Format::Markdown);
+
+    assert_eq!(
+        markdown.matches("1 package has no exact version.").count(),
+        10,
+        "{markdown}"
+    );
+    assert!(
+        markdown.contains("2 more lines are in the JSON report."),
+        "{markdown}"
+    );
 }
