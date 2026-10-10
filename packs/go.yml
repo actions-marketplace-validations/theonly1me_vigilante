@@ -32,6 +32,8 @@ language: go
 message: Imports cgo or unsafe
 metadata:
   capability: native
+ignores:
+  - "**/*.pb.go"
 rule:
   kind: import_spec
   has: { field: path, regex: ^"(C|unsafe)"$ }

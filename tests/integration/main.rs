@@ -7,4 +7,5 @@ mod lock;
 mod packs;
 mod report;
 mod review;
+mod rule_files;
 mod support;

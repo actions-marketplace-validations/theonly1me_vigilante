@@ -1,3 +1,4 @@
+mod file_filter;
 mod language;
 
 use std::collections::BTreeSet;
@@ -7,6 +8,7 @@ use ast_grep_core::tree_sitter::LanguageExt;
 use ast_grep_language::SupportLang;
 
 use crate::{Capability, Detection, Error, Power, SourceFile, Surface};
+use file_filter::{FileFilter, RuleGlobs};
 use language::{SUPPORTED_LANGUAGES, language_of};
 
 const BUILT_IN_PACKS: &[(&str, &str)] = &[
@@ -31,6 +33,7 @@ struct Rule {
     id: String,
     capability: Capability,
     language: SupportLang,
+    files: FileFilter,
     config: RuleConfig<SupportLang>,
 }
 
@@ -59,6 +62,11 @@ impl Rules {
             let capability =
                 capability_of(&serializable).map_err(|error| invalid(error.to_string()))?;
             let id = serializable.id.clone();
+            let files = FileFilter::new(RuleGlobs {
+                files: &serializable.files,
+                ignores: &serializable.ignores,
+            })
+            .map_err(|error| invalid(format!("{id}: {error}")))?;
             if !self.ids.insert(id.clone()) {
                 return Err(invalid(format!("rule id `{id}` is used twice")));
             }
@@ -68,6 +76,7 @@ impl Rules {
                 id,
                 capability,
                 language,
+                files,
                 config,
             });
         }
@@ -85,7 +94,7 @@ impl Rules {
         let rules: Vec<&Rule> = self
             .rules
             .iter()
-            .filter(|rule| rule.language == language)
+            .filter(|rule| rule.language == language && rule.files.allows(file.path))
             .collect();
         if rules.is_empty() {
             return Vec::new();
