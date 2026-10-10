@@ -4,8 +4,6 @@ version = 1
 powers = [
     "exec",
     "network",
-    "read_system_state",
-    "files",
 ]
 
 [code."npm/vigilante"]
