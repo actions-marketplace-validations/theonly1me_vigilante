@@ -34,6 +34,10 @@ Change a severity with `[severity]` in `vigilante.toml`. See [configuration.md](
 
 The rules for code are in [packs/](../packs), one file for each language: Rust, JavaScript and TypeScript, Python, Ruby, C#, Java, and Go. Each rule has test cases in `packs/tests/`.
 
+## Calls through packages
+
+For JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby, Vigilante builds its own call graph. It follows calls from your code into the locked packages, and each result has a call path. The rule for findings and notes is the same as for Go: `exec`, `network`, and `native` that your own code reaches are findings, and everything else is a note. See [dependencies.md](dependencies.md).
+
 ## Go: Capslock
 
 For Go modules, Vigilante runs [Capslock](https://github.com/google/capslock) v0.3.3 or later, Google's capability analysis for Go. Capslock type-checks the code, builds a call graph, and follows each call through every dependency down to the standard library. So Vigilante sees a power that a new dependency brings, with the call path that reaches it.
@@ -119,7 +123,7 @@ The Go `native` rule skips generated protobuf files (`*.pb.go`), which import `u
 
 ## Known limits
 
-- For Go, Vigilante follows calls into dependencies with Capslock. For the other languages, it sees direct use in your code, not what a dependency does inside.
+- For the languages other than Go, calls resolve by name and import, not by type. See [dependencies.md](dependencies.md#known-limits).
 - Capslock does not resolve every call. It reports what it cannot follow as `unanalyzed`. See its [caveats](https://github.com/google/capslock/blob/main/docs/caveats.md).
 - A rule for a prefix such as `Bash(git rebase:*)` is not a power, but some programs can run code through options (`git rebase --exec`).
 - A change to a script that an existing hook calls does not change the power, so it is not reported.

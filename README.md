@@ -14,7 +14,7 @@
 
 Vigilante reads a pull request and lists the new powers that it adds. A power is something like the first `subprocess` call in a package, a CI token that can push, a new MCP server that your agents connect to, or a new install script. You approve powers in a `vigilante.lock` file that your security team owns. If a pull request adds a power that is not in the lock, the check fails.
 
-Vigilante never runs code from the repository that it checks. It reads files, and for Go it type-checks the code with [Capslock](https://github.com/google/capslock).
+Vigilante never runs code from the repository that it checks. It reads files, and for Go it type-checks the code with [Capslock](https://github.com/google/capslock). For the other languages, it downloads the locked packages from their public registries and reads them.
 
 ## Why
 
@@ -28,7 +28,7 @@ An agent opens a pull request that exports invoices. Vigilante reports this:
 >
 > | Severity | Scope | Power | What it means | Evidence | Status |
 > | --- | --- | --- | --- | --- | --- |
-> | HIGH | `services/billing` (code) | `exec` | Can run other programs | `services/billing/billing/export.py:1` | **not in lock** |
+> | HIGH | `services/billing` (code) | `exec` | Can run other programs | `services/billing/billing/export.py:5 via export.export → subprocess.run` | **not in lock** |
 > | HIGH | `.mcp.json` (agent) | `mcp_server:fs-tools: npx -y fs-tools-mcp` | The agent connects to an MCP server | `.mcp.json:3` | **not in lock** |
 > | MEDIUM | `.github/workflows` (ci) | `third_party_action:acme-tools/publish-action` | The workflow runs a third-party action | `.github/workflows/release.yml:12` | **not in lock** |
 > | MEDIUM | `.github/workflows/release.yml` (ci) | `token_write:contents` | The CI token can write to the repository | `.github/workflows/release.yml:6` | **not in lock** |
@@ -44,14 +44,14 @@ The same pull request also added a second network call to `services/billing`, th
 | Surface | Files | Powers |
 | --- | --- | --- |
 | Code | Rust, JavaScript, TypeScript, Python, Ruby, C#, Java, and Go | `exec`, `network`, `files`, `native`, `dynamic_code`, `read_system_state`, `modify_system_state`, `system_calls` |
-| Go, through dependencies | Every Go module, with [Capslock](https://github.com/google/capslock) | All 13 Capslock capabilities, with the call path, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
+| Code, through dependencies | Go with [Capslock](https://github.com/google/capslock). JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby with Vigilante's own call graph over the locked packages | Every code power, with the call path. For Go, all 13 Capslock capabilities, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
 | CI | `.github/workflows/*.yml` | `token_write`, `oidc`, `untrusted_trigger`, `third_party_action`, `secret` |
 | AI agents | `.claude/settings.json`, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
 | Build | `package.json` install scripts, `build.rs`, `setup.py`, `.husky/`, `.pre-commit-config.yaml` | `install_hook`, `git_hook` |
 
 Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root, and for Go it is the Go package. Tests, fixtures, and vendored code are skipped. [docs/powers.md](docs/powers.md) explains each power and the rules that keep the report short.
 
-For Go, a finding is `exec`, `network`, or `native` that your package reaches through its own code. Every other Go power, a power that comes only through a dependency, and a new package on a call path to a power, are notes, as in `capslock-git-diff`. A new dependency that reaches the network shows up there. Notes do not fail the check.
+In every language, a finding is `exec`, `network`, or `native` that your package reaches through its own code. Every other power, a power that comes only through a dependency, and a new package on a call path to a power, are notes, as in `capslock-git-diff`. A new dependency that reaches the network shows up there. Notes do not fail the check. [docs/dependencies.md](docs/dependencies.md) explains how Vigilante reads packages.
 
 ## Install
 
@@ -151,8 +151,8 @@ In a pull request, Vigilante reads `vigilante.toml` from the merge base, so a pu
 ## What Vigilante is not
 
 - It is not a malware detector. It shows what changed, and a person decides if the change is acceptable.
-- For Go, it follows calls into every dependency. For the other languages, it sees direct use in your code, not what a dependency does inside.
-- It uses no AI to find or rank powers. The same input gives the same output, offline, in seconds.
+- It does not follow calls that are built at run time, such as reflection, `eval`, or metaprogramming.
+- It uses no AI to find or rank powers. The same input gives the same output. It downloads packages only from public registries and from the registries that you allow, and it caches them.
 
 ## License
 
