@@ -39,6 +39,7 @@ const RISKY_COMMANDS: &[(&str, &str)] = &[
     ("yarn", "add"),
     ("yarn", "dlx"),
 ];
+const COMMAND_WRAPPERS: &[&str] = &["command", "env", "nice", "nohup", "sudo", "time"];
 
 pub fn grants_power(rule: &str) -> bool {
     let (tool, argument) = match rule.split_once('(') {
@@ -69,19 +70,25 @@ fn command_grants_power(command: &str) -> bool {
     let last = segments.len().saturating_sub(1);
     segments.iter().enumerate().any(|(index, segment)| {
         let is_open = has_wildcard && index == last;
-        match segment.words.as_slice() {
+        match without_wrappers(&segment.words) {
             [] => is_open,
             [program] => (is_open || segment.is_piped) && runs_code(program),
-            [program, action, rest @ ..] => {
-                RISKY_COMMANDS.contains(&(program, action))
+            [program, rest @ ..] => {
+                rest.iter()
+                    .any(|word| RISKY_COMMANDS.contains(&(program, word)))
                     || (segment.is_piped && runs_code(program))
-                    || (is_open
-                        && rest.is_empty()
-                        && is_package_manager(program)
-                        && *action == "run")
+                    || (is_open && is_package_manager(program) && rest == ["run"])
             }
         }
     })
+}
+
+fn without_wrappers<'words, 'a>(words: &'words [&'a str]) -> &'words [&'a str] {
+    let start = words
+        .iter()
+        .position(|word| !COMMAND_WRAPPERS.contains(word) && !word.contains('='))
+        .unwrap_or(words.len());
+    &words[start..]
 }
 
 fn segments_of(command: &str) -> Vec<Segment<'_>> {

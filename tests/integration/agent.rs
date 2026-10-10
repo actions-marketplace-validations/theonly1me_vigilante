@@ -95,7 +95,9 @@ const ALLOW_RULES: &str = r#"{
       "WebFetch(domain:docs.example.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebSearch",
-      "mcp__github__create_pull_request"
+      "mcp__github__create_pull_request",
+      "Bash(git -C ../other push:*)",
+      "Bash(env NODE_ENV=test node:*)"
     ]
   }
 }
@@ -120,6 +122,8 @@ fn only_allow_rules_that_run_any_code_or_read_open_content_are_powers() {
             ),
             &format!("agent {file} tool_allow:WebSearch {file}:16"),
             &format!("agent {file} tool_allow:mcp__github__create_pull_request {file}:17"),
+            &format!("agent {file} tool_allow:Bash(git -C ../other push:*) {file}:18"),
+            &format!("agent {file} tool_allow:Bash(env NODE_ENV=test node:*) {file}:19"),
         ])
     );
 }
