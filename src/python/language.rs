@@ -2,7 +2,7 @@ use ast_grep_language::SupportLang;
 
 use super::syntax;
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language};
+use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
 
 pub struct Python;
 
@@ -15,14 +15,17 @@ impl Language for Python {
         syntax::index(root)
     }
 
-    fn privileged_module(&self, node: &SyntaxNode) -> Option<String> {
+    fn privileged_modules(&self, query: PrivilegedQuery) -> Vec<String> {
+        let node = query.node;
         match node.kind().as_ref() {
-            "dotted_name" => Some(node.text().to_string()),
+            "dotted_name" => vec![node.text().to_string()],
             "import_statement" | "import_from_statement" => node
                 .field("module_name")
                 .or_else(|| node.field("name"))
-                .map(|name| name.field("name").unwrap_or(name).text().to_string()),
-            _ => None,
+                .map(|name| name.field("name").unwrap_or(name).text().to_string())
+                .into_iter()
+                .collect(),
+            _ => Vec::new(),
         }
     }
 

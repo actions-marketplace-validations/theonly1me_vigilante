@@ -2,7 +2,7 @@ use ast_grep_language::SupportLang;
 
 use super::syntax::{self, import_of};
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language};
+use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
 
 pub struct Java;
 
@@ -15,11 +15,13 @@ impl Language for Java {
         syntax::index(root)
     }
 
-    fn privileged_module(&self, node: &SyntaxNode) -> Option<String> {
-        (node.kind() == "import_declaration")
-            .then(|| import_of(node))
+    fn privileged_modules(&self, query: PrivilegedQuery) -> Vec<String> {
+        (query.node.kind() == "import_declaration")
+            .then(|| import_of(query.node))
             .flatten()
             .map(|import| import.specifier)
+            .into_iter()
+            .collect()
     }
 
     fn stem<'p>(&self, path: &'p str) -> &'p str {

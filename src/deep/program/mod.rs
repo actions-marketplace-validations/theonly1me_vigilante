@@ -29,6 +29,7 @@ pub struct FileKey {
     pub path: String,
 }
 
+#[derive(Clone)]
 pub struct Privilege {
     pub capability: Capability,
     pub rule: String,
@@ -62,12 +63,17 @@ pub struct PackageFile<'a> {
     pub path: &'a str,
 }
 
+pub struct PrivilegedQuery<'a, 'r> {
+    pub node: &'a SyntaxNode<'r>,
+    pub is_privileged: &'a dyn Fn(&str) -> bool,
+}
+
 pub trait Language: Sync {
     fn grammar(&self) -> SupportLang;
 
     fn index(&self, root: &SyntaxNode) -> FileIndex;
 
-    fn privileged_module(&self, node: &SyntaxNode) -> Option<String>;
+    fn privileged_modules(&self, query: PrivilegedQuery) -> Vec<String>;
 
     fn stem<'p>(&self, path: &'p str) -> &'p str;
 

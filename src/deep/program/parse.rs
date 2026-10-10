@@ -5,7 +5,7 @@ use std::thread;
 
 use ast_grep_core::tree_sitter::LanguageExt;
 
-use super::{FileIndex, Language, Privilege, SiteSink};
+use super::{FileIndex, Language, Privilege, PrivilegedQuery, SiteSink};
 use crate::Error;
 use crate::code::{MatchRequest, Rules, SyntaxNode};
 
@@ -101,19 +101,39 @@ fn parse(input: SourceRules) -> Parsed {
         if index.ignored.iter().any(|range| range.contains(&start)) {
             continue;
         }
+        let is_privileged = |text: &str| {
+            let snippet = language.grammar().ast_grep(text);
+            rules
+                .matches(MatchRequest {
+                    path: &source.display,
+                    language: language.grammar(),
+                    root: &snippet.root(),
+                })
+                .iter()
+                .any(|other| other.rule == found.rule)
+        };
+        let specifiers = language.privileged_modules(PrivilegedQuery {
+            node: &found.node,
+            is_privileged: &is_privileged,
+        });
         let privilege = Privilege {
             capability: found.capability,
-            rule: found.rule,
+            rule: found.rule.clone(),
         };
-        if let Some(specifier) = language.privileged_module(&found.node) {
-            privileged.entry(specifier).or_default().push(privilege);
-        } else {
+        if specifiers.is_empty() {
             sites.push(SiteSink {
                 definition: index.innermost(found.node.range().start),
                 line: found.node.start_pos().line() + 1,
                 name: sink_name(&found.node),
                 privilege,
             });
+        } else {
+            for specifier in specifiers {
+                privileged
+                    .entry(specifier)
+                    .or_default()
+                    .push(privilege.clone());
+            }
         }
     }
     Parsed {

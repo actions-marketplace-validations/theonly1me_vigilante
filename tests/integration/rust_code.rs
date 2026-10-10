@@ -94,6 +94,29 @@ fn module_files_that_only_tests_declare_are_not_findings() {
 }
 
 #[test]
+fn an_import_that_is_never_used_is_not_a_power() {
+    let findings = findings_after(&[("src/lib.rs", "use reqwest::Client;\n\npub fn build() {}\n")]);
+
+    assert_eq!(findings, Vec::<String>::new());
+}
+
+#[test]
+fn only_the_names_that_a_rule_matches_in_a_use_tree_are_sinks() {
+    let findings = findings_after(&[(
+        "src/lib.rs",
+        "use std::{net::TcpStream, process::Command, time::Duration};\n\npub fn wait() {\n    std::thread::sleep(Duration::from_secs(1));\n}\n\npub fn run() {\n    Command::new(\"ls\");\n}\n\npub fn connect() {\n    TcpStream::connect(\"example.com:80\");\n}\n",
+    )]);
+
+    assert_eq!(
+        findings,
+        vec![
+            ". exec own src/lib.rs:8 src/lib.run > std::process.Command",
+            ". network own src/lib.rs:12 src/lib.connect > std::net.TcpStream"
+        ]
+    );
+}
+
+#[test]
 fn unsafe_code_outside_tests_is_a_native_finding() {
     let findings = findings_after(&[(
         "src/lib.rs",

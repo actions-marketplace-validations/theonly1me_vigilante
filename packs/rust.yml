@@ -9,6 +9,7 @@ rule:
       regex: use\s+(::)?(std::(process::|\{[^;]*\bprocess::)(\{[^}]*\b(Command|Child)\b|(Command|Child)\b)|tokio::process\b|async_process\b|duct\b)
     - kind: scoped_identifier
       regex: ^((std::)?process::Command|tokio::process::Command|duct::cmd)$
+      not: { inside: { kind: use_declaration, stopBy: end } }
 ---
 id: rust-network
 language: rust
@@ -21,6 +22,7 @@ rule:
       regex: use\s+(::)?(std::(net::|\{[^;]*\bnet::)(\{[^}]*\b(TcpStream|TcpListener|UdpSocket)\b|(TcpStream|TcpListener|UdpSocket)\b)|tokio::net\b|(reqwest|hyper|ureq|surf|isahc|tonic|attohttpc)\b)
     - kind: scoped_identifier
       regex: ^((reqwest|ureq|surf|isahc|attohttpc)::\w+|(std::net::)?(TcpStream|TcpListener|UdpSocket)::(connect|bind))$
+      not: { inside: { kind: use_declaration, stopBy: end } }
 ---
 id: rust-native
 language: rust

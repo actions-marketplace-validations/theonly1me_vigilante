@@ -70,7 +70,10 @@ fn lock_writes_the_same_bytes_every_time() {
             "services/run.py",
             "import socket, subprocess; subprocess.run(['true']); socket.socket()\n",
         ),
-        ("crates/core/src/lib.rs", "use std::process::Command;\n"),
+        (
+            "crates/core/src/lib.rs",
+            "use std::process::Command;\n\npub fn run() {\n    Command::new(\"true\");\n}\n",
+        ),
         (".mcp.json", MCP_SERVER),
     ]);
 

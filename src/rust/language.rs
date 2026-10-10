@@ -1,8 +1,8 @@
 use ast_grep_language::SupportLang;
 
-use super::syntax::{self, leaves};
+use super::syntax::{self, Leaf, SEPARATOR, leaves};
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language};
+use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
 
 pub struct Rust;
 
@@ -15,14 +15,15 @@ impl Language for Rust {
         syntax::index(root)
     }
 
-    fn privileged_module(&self, node: &SyntaxNode) -> Option<String> {
-        if node.kind() != "use_declaration" {
-            return None;
+    fn privileged_modules(&self, query: PrivilegedQuery) -> Vec<String> {
+        if query.node.kind() != "use_declaration" {
+            return Vec::new();
         }
-        leaves(node)
+        leaves(query.node)
             .iter()
-            .map(|leaf| leaf.specifier())
-            .max_by_key(String::len)
+            .filter(|leaf| (query.is_privileged)(&format!("use {};", leaf.path.join(SEPARATOR))))
+            .map(Leaf::specifier)
+            .collect()
     }
 
     fn stem<'p>(&self, path: &'p str) -> &'p str {

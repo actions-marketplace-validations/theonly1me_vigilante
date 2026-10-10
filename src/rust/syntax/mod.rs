@@ -8,7 +8,7 @@ mod uses;
 use std::collections::HashSet;
 
 pub use test_items::test_module_names;
-pub use uses::leaves;
+pub use uses::{Leaf, SEPARATOR, leaves};
 
 use crate::code::SyntaxNode;
 use crate::deep::program::{Binding, Definition, Export, FileIndex, INIT, Imported, Load, Use};

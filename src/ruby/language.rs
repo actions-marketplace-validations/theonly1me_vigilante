@@ -2,7 +2,7 @@ use ast_grep_language::SupportLang;
 
 use super::syntax::{self, loaded};
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language};
+use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
 
 pub struct Ruby;
 
@@ -15,8 +15,8 @@ impl Language for Ruby {
         syntax::index(root)
     }
 
-    fn privileged_module(&self, node: &SyntaxNode) -> Option<String> {
-        loaded(node)
+    fn privileged_modules(&self, query: PrivilegedQuery) -> Vec<String> {
+        loaded(query.node).into_iter().collect()
     }
 
     fn stem<'p>(&self, path: &'p str) -> &'p str {
