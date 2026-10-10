@@ -1,3 +1,5 @@
+mod flow_lines;
+
 use saphyr::{LoadableYamlNode, MarkedYaml, Scalar, YamlData};
 
 use crate::Error;
@@ -30,6 +32,14 @@ pub struct Located<'a> {
 
 impl Node {
     pub fn parse(text: &str) -> Result<Self, Error> {
+        Self::parse_strictly(text).or_else(|error| {
+            flow_lines::indent_flow_lines(text)
+                .and_then(|indented| Self::parse_strictly(&indented).ok())
+                .ok_or(error)
+        })
+    }
+
+    fn parse_strictly(text: &str) -> Result<Self, Error> {
         let documents =
             MarkedYaml::load_from_str(text).map_err(|error| Error::new(error.to_string()))?;
         Ok(documents.first().map_or(

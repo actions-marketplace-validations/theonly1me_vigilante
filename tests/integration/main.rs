@@ -15,3 +15,4 @@ mod report;
 mod review;
 mod rule_files;
 mod support;
+mod yaml;
