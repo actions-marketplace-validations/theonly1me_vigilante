@@ -113,8 +113,7 @@ ruby = "patterns"
 - Without type data, a call on an object of unknown type, or through an interface or a trait, goes to every function with that name in the packages that the file imports. This can add packages to the notes, like Capslock's interface calls.
 - Calls that are built at run time are not followed: reflection, `eval`, dynamic imports, and Ruby metaprogramming such as `send` and `define_method`.
 - Rust: calls inside macro arguments are not read.
-- Java: a call on an interface or a base class also goes to the methods that override it in the classes that Vigilante loaded. A method that a class only inherits is not looked up in its superclass.
-- C#: inherited methods are not followed.
+- Java and C#: a call on an interface or a base class also goes to the methods that override it in the classes that Vigilante loaded. A method that a class only inherits is not looked up in its base class.
 - Kotlin, F#, and Visual Basic code is not read.
 - Ruby: constants resolve by the Zeitwerk file convention (`Acme::Tools::Shell` is in `acme/tools/shell.rb`).
 - Private registries and feeds that need credentials are skipped.

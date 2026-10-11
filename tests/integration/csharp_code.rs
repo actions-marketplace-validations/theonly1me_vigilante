@@ -127,3 +127,35 @@ fn a_test_project_folder_is_skipped_like_a_test_folder() {
 
     assert_eq!(findings, Vec::<String>::new());
 }
+
+#[test]
+fn a_call_on_a_base_class_reaches_the_subclass_that_overrides_it() {
+    let (_, notes) = reported_after(Change {
+        base: &[
+            ("App.csproj", APP_PROJECT),
+            ("packages.lock.json", LOCKFILE),
+            ("Tools/Tools.csproj", APP_PROJECT),
+            ("Tools/packages.lock.json", LOCKFILE),
+            (
+                "Tools/Base.cs",
+                "namespace Acme.Tools;\n\npublic class Base\n{\n    public virtual void Run()\n    {\n    }\n\n    public static Base Make()\n    {\n        return new Shell();\n    }\n}\n",
+            ),
+            (
+                "Tools/Shell.cs",
+                "using System.Diagnostics;\n\nnamespace Acme.Tools;\n\npublic class Shell : Base\n{\n    public override void Run()\n    {\n        Process.Start(\"make\");\n    }\n}\n",
+            ),
+        ],
+        head: &[(
+            "Program.cs",
+            "using Acme.Tools;\n\nnamespace App;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Base tool = Base.Make();\n        tool.Run();\n    }\n}\n",
+        )],
+    });
+
+    assert!(
+        notes.contains(
+            &". exec Tools Program.cs:10 Program.Program.Main > Tools/Shell.Shell.Run > Process.Start"
+                .to_string()
+        ),
+        "{notes:#?}"
+    );
+}

@@ -134,6 +134,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
             });
         }
     }
+    index.supertypes.clone_from(&found.supertypes);
     bind_types(BindingInput {
         index: &mut index,
         declarations: &found,

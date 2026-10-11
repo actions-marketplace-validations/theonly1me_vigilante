@@ -14,6 +14,12 @@ pub fn skeleton(definition: &TypeDefinition) -> String {
         .iter()
         .flat_map(|method| &method.calls)
         .map(|call| call.namespace.as_str())
+        .chain(
+            definition
+                .supertypes
+                .iter()
+                .map(|(namespace, _)| namespace.as_str()),
+        )
         .filter(|namespace| !namespace.is_empty() && *namespace != definition.namespace)
         .collect();
     let mut text = String::new();
@@ -23,7 +29,16 @@ pub fn skeleton(definition: &TypeDefinition) -> String {
     if !definition.namespace.is_empty() {
         let _ = writeln!(text, "namespace {}\n{{", definition.namespace);
     }
-    let _ = writeln!(text, "class {class}\n{{");
+    let bases: Vec<String> = definition
+        .supertypes
+        .iter()
+        .map(|(_, name)| identifier(name))
+        .collect();
+    if bases.is_empty() {
+        let _ = writeln!(text, "class {class}\n{{");
+    } else {
+        let _ = writeln!(text, "class {class} : {}\n{{", bases.join(", "));
+    }
     for method in &definition.methods {
         text.push_str(&method_text(MethodText {
             method,

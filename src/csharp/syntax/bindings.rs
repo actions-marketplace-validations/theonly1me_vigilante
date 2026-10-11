@@ -26,6 +26,12 @@ pub fn bind_types(input: BindingInput) {
             UseTarget::Member { object, .. } => Some(object.clone()),
             _ => None,
         })
+        .chain(
+            declarations
+                .supertypes
+                .iter()
+                .flat_map(|supertypes| supertypes.names.iter().cloned()),
+        )
         .collect();
     let chain: Vec<String> = namespaces
         .first()

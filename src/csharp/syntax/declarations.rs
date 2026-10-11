@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::code::SyntaxNode;
+use crate::deep::program::Supertypes;
 
 const TYPE_KINDS: &[&str] = &[
     "class_declaration",
@@ -17,6 +18,7 @@ const VARIABLE_HOLDERS: &[&str] = &[
 
 #[derive(Default)]
 pub struct Declarations {
+    pub supertypes: Vec<Supertypes>,
     pub usings: Vec<String>,
     pub aliases: BTreeMap<String, String>,
     pub local_types: HashSet<String>,
@@ -35,6 +37,13 @@ pub fn declarations(root: &SyntaxNode) -> Declarations {
             kind if TYPE_KINDS.contains(&kind) => {
                 if let Some(name) = node.field("name") {
                     found.local_types.insert(name.text().to_string());
+                    let names = base_names(&node);
+                    if !names.is_empty() {
+                        found.supertypes.push(Supertypes {
+                            class: name.text().to_string(),
+                            names,
+                        });
+                    }
                 }
             }
             "parameter" => {
@@ -129,4 +138,24 @@ pub fn type_name(text: &str) -> String {
         .collect::<String>()
         .trim_start_matches("global::")
         .to_string()
+}
+
+fn base_names(declaration: &SyntaxNode) -> Vec<String> {
+    declaration
+        .children()
+        .filter(|child| child.kind() == "base_list")
+        .flat_map(|list| {
+            list.children()
+                .filter(SyntaxNode::is_named)
+                .collect::<Vec<_>>()
+        })
+        .filter_map(|base| match base.kind().as_ref() {
+            "identifier" | "qualified_name" => Some(base.text().to_string()),
+            "generic_name" => base
+                .children()
+                .find(|child| child.kind() == "identifier")
+                .map(|name| name.text().to_string()),
+            _ => None,
+        })
+        .collect()
 }

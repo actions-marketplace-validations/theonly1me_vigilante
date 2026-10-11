@@ -13,14 +13,23 @@ mod tests;
 
 pub use skeleton::skeleton;
 
+use std::collections::HashMap;
+
 use il::CodeLocation;
 use names::Names;
 use pe::Image;
-use schema::{METHOD_DEFINITION, Row, TYPE_DEFINITION};
+use schema::{
+    CodedIndex, INTERFACE_IMPLEMENTATION, METHOD_DEFINITION, Row, TYPE_DEFINITION,
+    TYPE_DEFINITION_OR_REFERENCE, coded_target,
+};
 use tables::{Cell, Heaps, Tables};
 use targets::{METHOD_LIST, METHOD_NAME, Target, native_libraries, target};
 
 const METHOD_ADDRESS: usize = 0;
+const EXTENDS: usize = 3;
+const IMPLEMENTER: usize = 0;
+const INTERFACE: usize = 1;
+const OBJECT: (&str, &str) = ("System", "Object");
 
 pub struct Assembly {
     pub types: Vec<TypeDefinition>,
@@ -30,6 +39,7 @@ pub struct TypeDefinition {
     pub namespace: String,
     pub name: String,
     pub enclosing: Option<String>,
+    pub supertypes: Vec<(String, String)>,
     pub methods: Vec<MethodDefinition>,
 }
 
@@ -84,6 +94,37 @@ pub fn read(bytes: &[u8]) -> Option<Assembly> {
             })
             .map_or(method_count + 1, |start| start as usize)
     };
+    let base_name = |table: usize, row: usize, column: usize| {
+        let value = tables.value(Cell { table, row, column })?;
+        let base = names.of(coded_target(CodedIndex {
+            tables: TYPE_DEFINITION_OR_REFERENCE,
+            value,
+        })?)?;
+        Some((base.namespace, base.name))
+            .filter(|pair| (pair.0.as_str(), pair.1.as_str()) != OBJECT)
+    };
+    let mut supertypes: HashMap<usize, Vec<(String, String)>> = HashMap::new();
+    for row in 1..=type_count {
+        if let Some(base) = base_name(TYPE_DEFINITION, row, EXTENDS) {
+            supertypes.entry(row).or_default().push(base);
+        }
+    }
+    for row in 1..=tables.rows(INTERFACE_IMPLEMENTATION) {
+        let implementer = tables.value(Cell {
+            table: INTERFACE_IMPLEMENTATION,
+            row,
+            column: IMPLEMENTER,
+        });
+        if let (Some(implementer), Some(interface)) = (
+            implementer,
+            base_name(INTERFACE_IMPLEMENTATION, row, INTERFACE),
+        ) {
+            supertypes
+                .entry(implementer as usize)
+                .or_default()
+                .push(interface);
+        }
+    }
     let mut types = Vec::with_capacity(type_count);
     for row in 1..=type_count {
         let name = names.of(Row {
@@ -129,6 +170,7 @@ pub fn read(bytes: &[u8]) -> Option<Assembly> {
             namespace: name.namespace,
             name: name.name,
             enclosing: name.enclosing,
+            supertypes: supertypes.remove(&row).unwrap_or_default(),
             methods,
         });
     }
