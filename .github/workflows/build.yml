@@ -104,6 +104,9 @@ jobs:
           path: archives
           merge-multiple: true
       - run: node npm/pack.mjs archives npm-packages
+      - run: packaging/publish-npm.sh npm-packages
+        env:
+          DRY_RUN: "true"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-packages
