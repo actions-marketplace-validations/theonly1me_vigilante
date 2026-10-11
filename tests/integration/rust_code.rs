@@ -14,7 +14,7 @@ fn findings_after(head: &[(&str, &str)]) -> Vec<String> {
 }
 
 #[test]
-fn own_code_that_reaches_exec_through_another_crate_and_module_paths_is_a_finding() {
+fn own_code_that_reaches_exec_through_another_crate_and_module_paths_is_a_note() {
     let run = diff(Change {
         base: &[
             (
@@ -47,9 +47,9 @@ fn own_code_that_reaches_exec_through_another_crate_and_module_paths_is_a_findin
     });
 
     assert_eq!(
-        summaries(&report_of(&run)["findings"]),
+        summaries(&report_of(&run)["notes"]),
         vec![
-            ". exec own src/lib.rs:2 src/lib.build > tools/src/shell.run > tools/src/quote.spawn > std::process.Command"
+            ". exec tools src/lib.rs:2 src/lib.build > tools/src/shell.run > tools/src/quote.spawn > std::process.Command"
         ],
         "{}",
         run.stderr
@@ -170,10 +170,10 @@ fn crates_that_a_workspace_renames_are_found_by_their_library_names() {
     });
 
     assert_eq!(
-        summaries(&report_of(&run)["findings"]),
+        summaries(&report_of(&run)["notes"]),
         vec![
-            "app exec own app/src/lib.rs:2 app/src/lib.build > tool/src/lib.run > std::process::Command",
-            "app network own app/src/lib.rs:3 app/src/lib.build > helper/src/lib.fetch > std::net::TcpStream::connect",
+            "app exec tool app/src/lib.rs:2 app/src/lib.build > tool/src/lib.run > std::process::Command",
+            "app network helper app/src/lib.rs:3 app/src/lib.build > helper/src/lib.fetch > std::net::TcpStream::connect",
         ],
         "{}",
         run.stderr

@@ -16,10 +16,11 @@ fn importing_a_module_runs_its_top_level_code() {
 
     assert_eq!(
         entries(&report["findings"]),
-        vec![
-            ". exec src/index.js:1 src/index.init > tools/boot.init > child_process.execSync",
-            "tools exec tools/boot.js:3 tools/boot.init > child_process.execSync",
-        ]
+        vec!["tools exec tools/boot.js:3 tools/boot.init > child_process.execSync"]
+    );
+    assert_eq!(
+        entries(&report["notes"]),
+        vec![". exec src/index.js:1 src/index.init > tools/boot.init > child_process.execSync"]
     );
 }
 

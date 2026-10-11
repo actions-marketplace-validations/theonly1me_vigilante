@@ -40,7 +40,7 @@ fn main_with(body: &str) -> String {
 }
 
 #[test]
-fn own_code_that_reaches_exec_through_another_module_is_a_finding() {
+fn own_code_that_reaches_exec_through_another_module_is_a_note() {
     let report = diff(Change {
         base: &[],
         head: &[
@@ -61,11 +61,11 @@ fn own_code_that_reaches_exec_through_another_module_is_a_finding() {
         ],
     });
 
-    let findings = summaries(&report["findings"]);
+    let notes = summaries(&report["notes"]);
 
     assert!(
-        findings.contains(&"app exec own app/src/main/java/com/acme/app/Main.java:8 app/src/main/java/com/acme/app/Main.Main.go > tools/src/main/java/com/acme/tools/Shell.Shell.run > new ProcessBuilder".to_string()),
-        "{findings:#?}"
+        notes.contains(&"app exec tools app/src/main/java/com/acme/app/Main.java:8 app/src/main/java/com/acme/app/Main.Main.go > tools/src/main/java/com/acme/tools/Shell.Shell.run > new ProcessBuilder".to_string()),
+        "{notes:#?}"
     );
 }
 

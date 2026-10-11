@@ -122,13 +122,13 @@ fn a_workspace_package_is_own_code() {
 
     let report = report_of(&run);
     assert_eq!(
-        powers(&report["findings"]),
-        vec!["apps/web exec own code"],
+        powers(&report["notes"]),
+        vec!["apps/web exec packages/tools"],
         "{}",
         run.stderr
     );
     assert_eq!(
-        report["findings"][0]["evidence"]["call_path"],
+        report["notes"][0]["evidence"]["call_path"],
         json!([
             "apps/web/src/index.main",
             "packages/tools/lib/main.build",

@@ -52,7 +52,7 @@ pub fn entries(list: &Value) -> Vec<String> {
 }
 
 #[test]
-fn own_code_that_reaches_exec_through_another_package_folder_is_a_finding() {
+fn own_code_that_reaches_exec_through_another_package_folder_is_a_note() {
     let report = diff_after(&[
         (
             "src/index.js",
@@ -68,11 +68,11 @@ fn own_code_that_reaches_exec_through_another_package_folder_is_a_finding() {
     let findings = entries(&report["findings"]);
 
     assert!(
-        findings.contains(
+        entries(&report["notes"]).contains(
             &". exec src/index.js:4 src/index.main > tools/build.build > tools/build.compile > child_process.execSync"
                 .to_string()
         ),
-        "{findings:#?}"
+        "{report:#?}"
     );
     assert!(
         findings.contains(

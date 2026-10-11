@@ -10,9 +10,14 @@ fn findings_after(change: Change) -> Vec<String> {
     summaries(&report_of(&run)["findings"])
 }
 
+fn reported_after(change: Change) -> (Vec<String>, Vec<String>) {
+    let report = report_of(&diff(change));
+    (summaries(&report["findings"]), summaries(&report["notes"]))
+}
+
 #[test]
-fn own_code_that_reaches_exec_in_another_project_is_a_finding() {
-    let findings = findings_after(Change {
+fn own_code_that_reaches_exec_only_through_another_project_is_a_note() {
+    let reported = reported_after(Change {
         base: &[
             ("App.csproj", APP_PROJECT),
             ("packages.lock.json", LOCKFILE),
@@ -34,16 +39,20 @@ fn own_code_that_reaches_exec_in_another_project_is_a_finding() {
     });
 
     assert_eq!(
-        findings,
-        vec![
-            ". exec own Program.cs:9 Program.Program.Main > Tools/Shell.Shell.Run > Process.Start"
-        ]
+        reported,
+        (
+            Vec::new(),
+            vec![
+                ". exec Tools Program.cs:9 Program.Program.Main > Tools/Shell.Shell.Run > Process.Start"
+                    .to_string()
+            ]
+        )
     );
 }
 
 #[test]
 fn a_method_reaches_the_network_through_a_field_initializer() {
-    let findings = findings_after(Change {
+    let reported = reported_after(Change {
         base: &[
             ("App.csproj", APP_PROJECT),
             ("packages.lock.json", LOCKFILE),
@@ -61,10 +70,14 @@ fn a_method_reaches_the_network_through_a_field_initializer() {
     });
 
     assert_eq!(
-        findings,
-        vec![
-            ". network own Program.cs:10 Program.Program.Main > Web/Fetcher.Fetcher.Get > Web/Fetcher.init > HttpClient"
-        ]
+        reported,
+        (
+            Vec::new(),
+            vec![
+                ". network Web Program.cs:10 Program.Program.Main > Web/Fetcher.Fetcher.Get > Web/Fetcher.init > HttpClient"
+                    .to_string()
+            ]
+        )
     );
 }
 

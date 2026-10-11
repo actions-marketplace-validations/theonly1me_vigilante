@@ -57,10 +57,11 @@ fn analyze(input: Analyzed) -> Analysis {
             scope: code_scope(&scope.scope),
             evidence: graph.evidence_of(reached.route),
         };
+        let in_scope = |function: &Function| scope_of(function) == Some(scope.scope.as_str());
         let own = explore(Search {
             graph,
             roots: &scope.roots,
-            allowed: &is_repository,
+            allowed: &in_scope,
         });
         for (power, route) in &own.routes {
             let kind = note_kind_for_own_package(OwnPackagePath {
@@ -94,8 +95,9 @@ fn analyze(input: Analyzed) -> Analysis {
             let through = route
                 .hops
                 .iter()
-                .find_map(|hop| dependency_of(graph.function(hop.function)))
-                .unwrap_or(&scope.scope)
+                .map(|hop| graph.function(hop.function))
+                .find(|function| !in_scope(function))
+                .map_or(scope.scope.as_str(), unit_of)
                 .to_string();
             analysis.reaches.push(reach_of(Reached {
                 package: scope.scope.clone(),
@@ -148,8 +150,18 @@ struct Reached<'a> {
     route: &'a Route,
 }
 
-fn is_repository(function: &Function) -> bool {
-    matches!(function.owner, Owner::Repository { .. })
+fn scope_of(function: &Function) -> Option<&str> {
+    match &function.owner {
+        Owner::Repository { scope } => Some(scope),
+        Owner::Dependency { .. } => None,
+    }
+}
+
+fn unit_of(function: &Function) -> &str {
+    match &function.owner {
+        Owner::Repository { scope } => scope,
+        Owner::Dependency { package } => package,
+    }
 }
 
 fn dependency_of(function: &Function) -> Option<&str> {

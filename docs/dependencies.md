@@ -8,10 +8,10 @@ Vigilante never runs code from the repository or from a package. It does not ins
 
 The rule is the same for every language:
 
-1. `exec`, `network`, or `native` that your own code reaches is a finding. The call path stays in your repository until the privileged call. A finding must be in `vigilante.lock`.
+1. `exec`, `network`, or `native` that your own code reaches is a finding. The call path stays in the scope until the privileged call. A finding must be in `vigilante.lock`.
 2. Everything else is a note:
    - any other power that your own code reaches, for example `dynamic_code` or `modify_system_state`;
-   - a power that your code reaches only through a package;
+   - a power that your code reaches only through a package, or through another scope of the repository (that scope shows its own finding);
    - a package that is new on a call path to a power.
 3. Notes appear in the section "New packages on call paths". They do not fail the check and do not go in the lock. The Markdown report only counts the notes for the powers in `report.hide` (for example `files`), and the JSON report has all of them.
 
