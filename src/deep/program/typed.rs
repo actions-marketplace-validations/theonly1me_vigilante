@@ -62,6 +62,17 @@ impl TypedCalls {
             .get(&(site.file.clone(), site.line, site.callee.to_string()))
     }
 
+    pub fn extend(&mut self, other: TypedCalls) {
+        for ((file, line, callee), typed) in other.calls {
+            self.add(TypedCall {
+                file,
+                line,
+                callee,
+                typed,
+            });
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.calls.is_empty()
     }

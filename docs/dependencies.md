@@ -85,6 +85,7 @@ The Markdown report shows 10 lines and a count. The JSON report has all of them.
 Vigilante resolves calls by type with two tools. It downloads each one from npm, checks it against a pinned checksum, and runs it with Node.js. Neither tool runs code from the repository or its packages.
 
 - JavaScript and TypeScript: the TypeScript 6.0.3 type checker. It resolves the calls in your code. It reads package files only as far as your code imports them, and calls inside package code use the name-based rules.
+- Rust, when `[engines] rust = "typed"`: rust-analyzer in a Docker container (`rust:1.99-slim`, pinned by digest). Vigilante copies the workspace into the container. First, with network, it installs rust-analyzer and runs `cargo fetch`, which runs no project code. Then it disconnects the network and runs `rust-analyzer scip`, which runs `build.rs` and proc macros. The source is read-only, and only the index folder is writable.
 - Python: Pyright, through `@sourcegraph/scip-python` 0.6.6. Vigilante copies the code and the locked packages that it read into temporary folders, and runs the tool without the machine's Python, so packages installed on the machine do not change the result. Pyright resolves the calls in your code, including calls into packages. Calls inside package code use the name-based rules.
 
 1. A call that the checker resolves goes only to the function that the types name, not to every function with that name.
@@ -92,7 +93,7 @@ Vigilante resolves calls by type with two tools. It downloads each one from npm,
 3. A call that the checker cannot resolve uses the name-based rules.
 4. Findings are the union of the typed and the name-based results, so type data never removes a finding.
 
-If Node.js is not on `PATH`, or the download fails, Vigilante resolves calls by name and lists the scope under "Not analyzed".
+If Node.js or Docker is not available, or a download or build fails, Vigilante resolves calls by name and lists the scope under "Not analyzed".
 
 ## Choose an engine
 
@@ -105,7 +106,7 @@ ruby = "patterns"
 ```
 
 - `"typed"` resolves calls by type, then by name. It is the default for `javascript` and `python`.
-- `"deep"` resolves calls by name and import. It is the default for `java`, `rust`, `csharp`, and `ruby`.
+- `"deep"` resolves calls by name and import. It is the default for `java`, `rust`, `csharp`, and `ruby`. `rust = "typed"` is opt-in, because it runs build code; it needs Docker on a Linux runner.
 - `"patterns"` uses only the direct-use rules in `packs/`.
 
 ## Known limits

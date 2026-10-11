@@ -12,7 +12,7 @@ use crate::registry::Registry;
 use crate::scip::read_index;
 use crate::tree::Tree;
 use project::{CONFIG, ENVIRONMENT, INDEX, ProjectInput, write_project};
-use symbols::{Indexed, typed_calls};
+use symbols::{Indexed, python_calls};
 
 const NO_NODE: &str = "Node.js is not on PATH, so Vigilante resolved Python calls by name only.";
 const NO_TOOL: &str =
@@ -63,7 +63,7 @@ pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
             "scip-python stopped ({reason}), so Vigilante resolved Python calls by name only."
         )));
     };
-    Ok(TypeCheck::Checked(typed_calls(Indexed {
+    Ok(TypeCheck::Checked(python_calls(Indexed {
         index: &index,
         project: &project,
         program: request.program,

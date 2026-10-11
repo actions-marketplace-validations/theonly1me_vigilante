@@ -1,12 +1,7 @@
-use std::collections::HashMap;
-
 use super::project::{PACKAGE_PREFIX, Project};
-use crate::deep::program::{Program, Typed, TypedCall, TypedCalls, TypedTarget};
-use crate::scip::Index;
+use crate::deep::program::{Program, TypedCalls, TypedTarget};
+use crate::scip::{CallsInput, Index, typed_calls, without_call_suffix};
 
-const CALL_SUFFIX: &str = "().";
-const LOCAL: &str = "local ";
-const DESCRIPTOR_ENDS: &[char] = &['#', '/', '.'];
 const SYMBOL_PARTS: usize = 5;
 
 pub struct Indexed<'a, 'p> {
@@ -15,66 +10,23 @@ pub struct Indexed<'a, 'p> {
     pub program: &'a Program<'p>,
 }
 
-pub fn typed_calls(indexed: Indexed) -> TypedCalls {
+pub fn python_calls(indexed: Indexed) -> TypedCalls {
     let Indexed {
         index,
         project,
         program,
     } = indexed;
-    let mut definitions: HashMap<&str, TypedTarget> = HashMap::new();
-    for document in &index.documents {
-        let Some(file) = project.keys.get(&document.path) else {
-            continue;
-        };
-        for occurrence in document
-            .occurrences
-            .iter()
-            .filter(|item| item.is_definition)
-        {
-            if let Some(name) = called_name(&occurrence.symbol) {
-                definitions.insert(
-                    &occurrence.symbol,
-                    TypedTarget {
-                        file: file.clone(),
-                        name: name.to_string(),
-                        line: occurrence.line + 1,
-                    },
-                );
-            }
-        }
-    }
-    let mut calls = TypedCalls::default();
-    for document in &index.documents {
-        let Some(file) = project.keys.get(&document.path) else {
-            continue;
-        };
-        for occurrence in document
-            .occurrences
-            .iter()
-            .filter(|item| !item.is_definition)
-        {
-            let target = definitions
-                .get(occurrence.symbol.as_str())
-                .cloned()
-                .or_else(|| {
-                    package_target(PackageSymbol {
-                        symbol: &occurrence.symbol,
-                        project,
-                        program,
-                    })
-                });
-            let Some(target) = target else {
-                continue;
-            };
-            calls.add(TypedCall {
-                file: file.clone(),
-                line: occurrence.line + 1,
-                callee: target.name.clone(),
-                typed: Typed::Targets(vec![target]),
-            });
-        }
-    }
-    calls
+    typed_calls(CallsInput {
+        index,
+        keys: &project.keys,
+        external: &|symbol| {
+            package_target(PackageSymbol {
+                symbol,
+                project,
+                program,
+            })
+        },
+    })
 }
 
 struct PackageSymbol<'a, 'p> {
@@ -96,7 +48,7 @@ fn package_target(wanted: PackageSymbol) -> Option<TypedTarget> {
     let package: usize = package.strip_prefix(PACKAGE_PREFIX)?.parse().ok()?;
     let (module, member) = descriptors.split_once('/')?;
     let module = module.trim_matches('`').replace('.', "/");
-    let qualified = member.strip_suffix(CALL_SUFFIX)?.replace('#', ".");
+    let qualified = without_call_suffix(member)?.replace('#', ".");
     if !qualified
         .chars()
         .all(|character| character.is_alphanumeric() || character == '_' || character == '.')
@@ -118,13 +70,4 @@ fn package_target(wanted: PackageSymbol) -> Option<TypedTarget> {
         name: definition.simple.clone(),
         line: loaded.line_of(definition.range.start),
     })
-}
-
-fn called_name(symbol: &str) -> Option<&str> {
-    if symbol.starts_with(LOCAL) {
-        return None;
-    }
-    let path = symbol.strip_suffix(CALL_SUFFIX)?;
-    let name = path.rsplit(DESCRIPTOR_ENDS).next()?.trim_matches('`');
-    (!name.is_empty()).then_some(name)
 }

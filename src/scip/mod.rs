@@ -1,5 +1,8 @@
+mod calls;
 #[cfg(test)]
 mod tests;
+
+pub use calls::{CallsInput, typed_calls, without_call_suffix};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Index {

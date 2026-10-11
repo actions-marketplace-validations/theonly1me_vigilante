@@ -45,6 +45,7 @@ mod rust_code;
 mod rust_fixtures;
 mod rust_packages;
 mod rust_skips;
+mod rust_types;
 mod support;
 mod typescript_types;
 mod yaml;
