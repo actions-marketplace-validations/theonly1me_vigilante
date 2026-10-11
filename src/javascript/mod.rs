@@ -73,6 +73,7 @@ pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
             program: &program,
             tree: request.tree,
             registry: &registry,
+            limit: request.config.type_check_limit,
         })?)
     } else {
         None

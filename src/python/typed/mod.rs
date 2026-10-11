@@ -4,10 +4,12 @@ mod tool;
 
 use std::fs;
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use crate::Error;
 use crate::deep::program::{Program, TypeCheck};
 use crate::node::node_program;
+use crate::process::{Finished, LimitedRun, run_limited};
 use crate::registry::Registry;
 use crate::scip::read_index;
 use crate::tree::Tree;
@@ -22,6 +24,7 @@ pub struct TypeCheckRequest<'a, 'p> {
     pub program: &'a Program<'p>,
     pub tree: &'a dyn Tree,
     pub registry: &'a Registry,
+    pub limit: Duration,
 }
 
 pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
@@ -36,19 +39,28 @@ pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
         tree: request.tree,
     })?;
     let root = project.root.as_path();
-    let output = Command::new(&node)
-        .arg(&tool)
-        .args(["index", "--quiet", "--project-name", "repository"])
-        .args(["--project-version", "1", "--cwd"])
-        .arg(root)
-        .arg("--environment")
-        .arg(root.join(ENVIRONMENT))
-        .arg("--output")
-        .arg(root.join(INDEX))
-        .env_clear()
-        .env("PATH", node.parent().unwrap_or(root))
-        .output()
-        .map_err(|error| Error::new(format!("could not start node: {error}")))?;
+    let finished = run_limited(LimitedRun {
+        command: Command::new(&node)
+            .arg(&tool)
+            .args(["index", "--quiet", "--project-name", "repository"])
+            .args(["--project-version", "1", "--cwd"])
+            .arg(root)
+            .arg("--environment")
+            .arg(root.join(ENVIRONMENT))
+            .arg("--output")
+            .arg(root.join(INDEX))
+            .env_clear()
+            .env("PATH", node.parent().unwrap_or(root)),
+        input: Vec::new(),
+        deadline: Instant::now() + request.limit,
+    })
+    .map_err(|error| Error::new(format!("could not run node: {error}")))?;
+    let Finished::Exited(output) = finished else {
+        return Ok(TypeCheck::NotChecked(format!(
+            "scip-python reached the time limit of type_check_seconds = {}, so Vigilante resolved Python calls by name only.",
+            request.limit.as_secs()
+        )));
+    };
     let index = fs::read(root.join(INDEX))
         .ok()
         .filter(|_| output.status.success())

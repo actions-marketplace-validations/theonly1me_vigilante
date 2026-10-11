@@ -47,5 +47,6 @@ mod rust_packages;
 mod rust_skips;
 mod rust_types;
 mod support;
+mod type_check_limits;
 mod typescript_types;
 mod yaml;

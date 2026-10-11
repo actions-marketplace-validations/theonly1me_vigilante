@@ -12,6 +12,7 @@ mod lock;
 mod lockfiles;
 mod model;
 mod node;
+mod process;
 mod python;
 mod registry;
 mod report;

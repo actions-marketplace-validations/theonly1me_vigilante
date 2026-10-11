@@ -56,6 +56,7 @@ allow = ["https://npm.example.com/"]
 | `engines.javascript`, `engines.python` | `"typed"` | `"typed"` resolves calls by type (the TypeScript checker, or Pyright), then by name, and needs Node.js. `"deep"` resolves calls by name and import. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md#calls-resolved-by-type). |
 | `engines.rust` | `"deep"` | `"typed"` resolves calls with rust-analyzer in a Docker build with no network, then by name. `"deep"` and `"patterns"` as above. See [dependencies.md](dependencies.md#calls-resolved-by-type). |
 | `engines.java`, `engines.csharp`, `engines.ruby` | `"deep"` | `"deep"` follows calls into the locked packages of that language. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md). |
+| `engines.type_check_seconds` | `300` | The time limit for each type check or typed build, in seconds. If a check reaches it, Vigilante stops the check, resolves calls by name, and lists the scope under "Not analyzed". |
 | `registries.allow` | `[]` | More registries that Vigilante can download packages from. Use it only for registries that need no credentials. See [dependencies.md](dependencies.md#registries-that-are-not-public). |
 
 Globs use `/` between folders. `*` matches inside one folder, and `**` matches any number of folders. `services/**` matches the scopes `services/billing` and `services/billing/api`, but not the scope `services` itself.

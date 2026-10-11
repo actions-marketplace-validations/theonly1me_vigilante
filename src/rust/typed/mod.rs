@@ -18,15 +18,19 @@ const PREPARE: &str =
     "rustup component add rust-analyzer rust-src > /dev/null 2>&1 && cargo fetch --locked";
 const INDEX: &str = "index.scip";
 const LOCKFILE: &str = "Cargo.lock";
-const TIMEOUT: Duration = Duration::from_secs(900);
 
 pub struct TypeCheckRequest<'a, 'p> {
     pub program: &'a Program<'p>,
     pub tree: &'a dyn Tree,
+    pub limit: Duration,
 }
 
 pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
-    let TypeCheckRequest { program, tree } = request;
+    let TypeCheckRequest {
+        program,
+        tree,
+        limit,
+    } = request;
     let mut workspaces: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for file in &program.files {
         if file.key.root != Root::Repository {
@@ -48,6 +52,7 @@ pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
             tree,
             folder: &workspace,
             own: &own,
+            limit,
         })? {
             TypeCheck::Checked(found) => calls.extend(found),
             not_checked => return Ok(not_checked),
@@ -82,12 +87,18 @@ struct Workspace<'a> {
     tree: &'a dyn Tree,
     folder: &'a str,
     own: &'a [String],
+    limit: Duration,
 }
 
 fn built_calls(workspace: Workspace) -> Result<TypeCheck, Error> {
-    let Workspace { tree, folder, own } = workspace;
-    let source = temporary()?;
-    let output = temporary()?;
+    let Workspace {
+        tree,
+        folder,
+        own,
+        limit,
+    } = workspace;
+    let source = TempDir::new().map_err(io)?;
+    let output = TempDir::new().map_err(io)?;
     let prefix = if folder.is_empty() {
         String::new()
     } else {
@@ -112,9 +123,17 @@ fn built_calls(workspace: Workspace) -> Result<TypeCheck, Error> {
         output: &fs::canonicalize(output.path()).map_err(io)?,
         prepare: PREPARE,
         build: &build,
-        timeout: TIMEOUT,
+        timeout: limit,
     })?;
-    if let ContainerRun::NotBuilt(reason) = run {
+    let reason = match run {
+        ContainerRun::Built => None,
+        ContainerRun::NotBuilt(reason) => Some(reason),
+        ContainerRun::OutOfTime => Some(format!(
+            "it reached the time limit of type_check_seconds = {}",
+            limit.as_secs()
+        )),
+    };
+    if let Some(reason) = reason {
         return Ok(TypeCheck::NotChecked(format!(
             "Vigilante did not build this Rust code ({reason}), so it resolved Rust calls by name only."
         )));
@@ -158,10 +177,6 @@ fn within(input: WithinFolder) -> String {
     } else {
         format!("{}/{}", input.folder, input.path)
     }
-}
-
-fn temporary() -> Result<TempDir, Error> {
-    TempDir::new().map_err(io)
 }
 
 fn io(error: std::io::Error) -> Error {

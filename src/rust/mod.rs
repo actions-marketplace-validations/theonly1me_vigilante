@@ -79,6 +79,7 @@ pub fn analyze(request: RustRequest) -> Result<Analysis, Error> {
         Some(type_check(TypeCheckRequest {
             program: &program,
             tree: request.tree,
+            limit: request.config.type_check_limit,
         })?)
     } else {
         None

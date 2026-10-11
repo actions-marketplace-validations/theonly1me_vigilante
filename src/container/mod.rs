@@ -1,10 +1,9 @@
-use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
-use std::process::{Command, Output, Stdio};
-use std::thread;
+use std::process::{Command, Output};
 use std::time::{Duration, Instant};
 
 use crate::Error;
+use crate::process::{Finished, LimitedRun, run_limited};
 
 #[cfg(test)]
 mod tests;
@@ -13,7 +12,6 @@ const DOCKER: &str = "docker";
 const NETWORK: &str = "bridge";
 const SOURCE: &str = "/source";
 pub const OUTPUT: &str = "/output";
-const POLL: Duration = Duration::from_millis(200);
 const NO_DOCKER: &str = "Docker is not available";
 
 pub struct ContainerRequest<'a> {
@@ -28,6 +26,7 @@ pub struct ContainerRequest<'a> {
 pub enum ContainerRun {
     Built,
     NotBuilt(String),
+    OutOfTime,
 }
 
 pub fn run_contained(request: ContainerRequest) -> Result<ContainerRun, Error> {
@@ -79,10 +78,13 @@ fn steps(input: Steps) -> Result<ContainerRun, Error> {
         deadline,
     } = input;
     let prepare = format!("cp -a {SOURCE} /work && cd /work && {}", request.prepare);
-    let prepared = exec(Exec {
+    let Some(prepared) = exec(Exec {
         arguments: &["exec", container, "sh", "-c", &prepare],
         deadline,
-    })?;
+    })?
+    else {
+        return Ok(ContainerRun::OutOfTime);
+    };
     if !prepared.status.success() {
         return Ok(ContainerRun::NotBuilt(last_line(&prepared.stderr)));
     }
@@ -91,10 +93,13 @@ fn steps(input: Steps) -> Result<ContainerRun, Error> {
         return Ok(ContainerRun::NotBuilt(last_line(&disconnected.stderr)));
     }
     let build = format!("cd /work && {}", request.build);
-    let built = exec(Exec {
+    let Some(built) = exec(Exec {
         arguments: &["exec", container, "sh", "-c", &build],
         deadline,
-    })?;
+    })?
+    else {
+        return Ok(ContainerRun::OutOfTime);
+    };
     Ok(if built.status.success() {
         ContainerRun::Built
     } else {
@@ -114,36 +119,16 @@ struct Exec<'a> {
     deadline: Instant,
 }
 
-fn exec(input: Exec) -> Result<Output, Error> {
-    let failed = |error: std::io::Error| Error::new(format!("docker did not finish: {error}"));
-    let mut stdout = tempfile::tempfile().map_err(failed)?;
-    let mut stderr = tempfile::tempfile().map_err(failed)?;
-    let mut child = Command::new(DOCKER)
-        .args(input.arguments)
-        .stdout(Stdio::from(stdout.try_clone().map_err(failed)?))
-        .stderr(Stdio::from(stderr.try_clone().map_err(failed)?))
-        .spawn()
-        .map_err(|error| Error::new(format!("{NO_DOCKER}: {error}")))?;
-    let status = loop {
-        if let Some(status) = child.try_wait().map_err(failed)? {
-            break status;
-        }
-        if Instant::now() >= input.deadline {
-            child.kill().ok();
-            break child.wait().map_err(failed)?;
-        }
-        thread::sleep(POLL);
-    };
-    let read = |file: &mut std::fs::File| -> Result<Vec<u8>, Error> {
-        let mut bytes = Vec::new();
-        file.seek(SeekFrom::Start(0)).map_err(failed)?;
-        file.read_to_end(&mut bytes).map_err(failed)?;
-        Ok(bytes)
-    };
-    Ok(Output {
-        status,
-        stdout: read(&mut stdout)?,
-        stderr: read(&mut stderr)?,
+fn exec(input: Exec) -> Result<Option<Output>, Error> {
+    let finished = run_limited(LimitedRun {
+        command: Command::new(DOCKER).args(input.arguments),
+        input: Vec::new(),
+        deadline: input.deadline,
+    })
+    .map_err(|error| Error::new(format!("{NO_DOCKER}: {error}")))?;
+    Ok(match finished {
+        Finished::Exited(output) => Some(output),
+        Finished::OutOfTime => None,
     })
 }
 

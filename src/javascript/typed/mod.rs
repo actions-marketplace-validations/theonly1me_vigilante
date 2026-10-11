@@ -3,14 +3,14 @@ mod input;
 #[cfg(test)]
 mod tests;
 
-use std::io::Write;
-use std::process::{Command, Stdio};
-use std::thread;
+use std::process::Command;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 
 use crate::Error;
 use crate::deep::program::{Program, TypeCheck, Typed, TypedCall, TypedCalls, TypedTarget};
+use crate::process::{Finished, LimitedRun, run_limited};
 use crate::registry::Registry;
 use crate::tree::Tree;
 use input::{CheckerInput, VirtualFiles, checker_input};
@@ -25,6 +25,7 @@ pub struct TypeCheckRequest<'a, 'p> {
     pub program: &'a Program<'p>,
     pub tree: &'a dyn Tree,
     pub registry: &'a Registry,
+    pub limit: Duration,
 }
 
 #[derive(Deserialize)]
@@ -57,28 +58,19 @@ pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
         tree: request.tree,
         compiler: &compiler,
     })?;
-    let mut child = match Command::new("node")
-        .args(["--input-type=module", "--eval", SCRIPT])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(error) => return Err(Error::new(format!("could not start node: {error}"))),
+    let finished = run_limited(LimitedRun {
+        command: Command::new("node").args(["--input-type=module", "--eval", SCRIPT]),
+        input,
+        deadline: Instant::now() + request.limit,
+    })
+    .map_err(|error| Error::new(format!("could not run node: {error}")))?;
+    let Finished::Exited(output) = finished else {
+        return Ok(TypeCheck::NotChecked(format!(
+            "The TypeScript checker reached the time limit of type_check_seconds = {}, so Vigilante resolved calls by name only.",
+            request.limit.as_secs()
+        )));
     };
-    let mut stdin = child
-        .stdin
-        .take()
-        .ok_or_else(|| Error::new("could not write to node"))?;
-    let writer = thread::spawn(move || stdin.write_all(&input));
-    let output = child
-        .wait_with_output()
-        .map_err(|error| Error::new(format!("node did not finish: {error}")))?;
-    let written = writer
-        .join()
-        .map_err(|_| Error::new("the writer to node stopped"))?;
-    if !output.status.success() || written.is_err() {
+    if !output.status.success() {
         let reason = String::from_utf8_lossy(&output.stderr)
             .lines()
             .find(|line| !line.trim().is_empty())

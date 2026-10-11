@@ -93,7 +93,7 @@ Vigilante resolves calls by type with two tools. It downloads each one from npm,
 3. A call that the checker cannot resolve uses the name-based rules.
 4. Findings are the union of the typed and the name-based results, so type data never removes a finding.
 
-If Node.js or Docker is not available, or a download or build fails, Vigilante resolves calls by name and lists the scope under "Not analyzed".
+If Node.js or Docker is not available, a download or build fails, or a check reaches `[engines] type_check_seconds` (default 300), Vigilante resolves calls by name and lists the scope under "Not analyzed".
 
 ## Choose an engine
 

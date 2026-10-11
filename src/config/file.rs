@@ -89,6 +89,7 @@ pub struct EnginesSection {
     pub rust: LanguageEngine,
     pub csharp: LanguageEngine,
     pub ruby: LanguageEngine,
+    pub type_check_seconds: u64,
 }
 
 impl Default for EnginesSection {
@@ -101,6 +102,7 @@ impl Default for EnginesSection {
             rust: LanguageEngine::default(),
             csharp: LanguageEngine::default(),
             ruby: LanguageEngine::default(),
+            type_check_seconds: 300,
         }
     }
 }

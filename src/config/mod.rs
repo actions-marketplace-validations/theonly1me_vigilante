@@ -2,6 +2,7 @@ mod excludes;
 mod file;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Duration;
 
 use globset::{Glob, GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder};
 
@@ -23,6 +24,7 @@ pub struct Config {
     pub rust_engine: LanguageEngine,
     pub csharp_engine: LanguageEngine,
     pub ruby_engine: LanguageEngine,
+    pub type_check_limit: Duration,
     registry_sources: Sources,
     excluded: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
@@ -74,6 +76,7 @@ impl Config {
             rust_engine: file.engines.rust,
             csharp_engine: file.engines.csharp,
             ruby_engine: file.engines.ruby,
+            type_check_limit: Duration::from_secs(file.engines.type_check_seconds),
             registry_sources: Sources::new(&file.registries.allow)?,
             excluded: excluded
                 .build()
