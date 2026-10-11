@@ -53,8 +53,8 @@ allow = ["https://npm.example.com/"]
 | `rules.paths` | `[]` | Folders with your own code rules. See [Your own rules](#your-own-rules). |
 | `ci.trusted_owners` | `[]` | GitHub owners whose actions count as first party, like `actions/` and `github/`. The match ignores case. |
 | `engines.go` | `"capslock"` | `"capslock"` follows Go calls into dependencies with Capslock and needs `go` and `capslock`. `"patterns"` uses the direct-use rules in `packs/go.yml`. See [powers.md](powers.md#go-capslock). |
-| `engines.javascript` | `"typed"` | `"typed"` resolves calls with the TypeScript checker, then by name, and needs Node.js. `"deep"` resolves calls by name and import. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md#calls-resolved-by-type). |
-| `engines.python`, `engines.java`, `engines.rust`, `engines.csharp`, `engines.ruby` | `"deep"` | `"deep"` follows calls into the locked packages of that language. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md). |
+| `engines.javascript`, `engines.python` | `"typed"` | `"typed"` resolves calls by type (the TypeScript checker, or Pyright), then by name, and needs Node.js. `"deep"` resolves calls by name and import. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md#calls-resolved-by-type). |
+| `engines.java`, `engines.rust`, `engines.csharp`, `engines.ruby` | `"deep"` | `"deep"` follows calls into the locked packages of that language. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md). |
 | `registries.allow` | `[]` | More registries that Vigilante can download packages from. Use it only for registries that need no credentials. See [dependencies.md](dependencies.md#registries-that-are-not-public). |
 
 Globs use `/` between folders. `*` matches inside one folder, and `**` matches any number of folders. `services/**` matches the scopes `services/billing` and `services/billing/api`, but not the scope `services` itself.

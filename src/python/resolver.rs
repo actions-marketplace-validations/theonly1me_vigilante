@@ -103,6 +103,10 @@ impl Resolver for PythonResolver<'_> {
     fn package_name(&self, package: usize) -> String {
         self.environment.installed(package).name.clone()
     }
+
+    fn search_roots(&self, package: usize) -> Vec<String> {
+        self.environment.installed(package).module_roots.clone()
+    }
 }
 
 struct InPackage<'a> {

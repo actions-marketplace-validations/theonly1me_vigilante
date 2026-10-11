@@ -3,8 +3,8 @@ use std::fs;
 
 use crate::code::Rules;
 use crate::deep::program::{
-    AnalyzeInput, FileKey, Import, PackageFile, Program, ProgramInput, Resolver, Root, Typed,
-    TypedCall, TypedCalls, TypedTarget,
+    AnalyzeInput, FileKey, Import, PackageFile, Program, ProgramInput, Resolver, Root, TypeCheck,
+    Typed, TypedCall, TypedCalls, TypedTarget,
 };
 use crate::javascript::language::JavaScript;
 use crate::tree::DirectoryTree;
@@ -74,7 +74,7 @@ fn a_typed_target_that_hides_a_sink_call_does_not_hide_the_finding() {
 
     let analysis = program.analyze(AnalyzeInput {
         roots: &roots,
-        types: Some(&types),
+        check: Some(&TypeCheck::Checked(types)),
     });
 
     let powers: Vec<Capability> = analysis

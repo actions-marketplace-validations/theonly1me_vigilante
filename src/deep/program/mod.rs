@@ -13,7 +13,7 @@ use ast_grep_language::SupportLang;
 pub use analyze::AnalyzeInput;
 pub use index::{Binding, Definition, Export, FileIndex, INIT, Imported, Load, Use, UseTarget};
 pub use roots::{RootsInput, selected_roots};
-pub use typed::{Typed, TypedCall, TypedCalls, TypedTarget};
+pub use typed::{TypeCheck, Typed, TypedCall, TypedCalls, TypedTarget};
 
 use crate::code::{Rules, SyntaxNode};
 use crate::deep::graph::Owner;
@@ -102,6 +102,10 @@ pub trait Resolver {
     fn read(&self, file: PackageFile) -> Option<String>;
 
     fn package_name(&self, package: usize) -> String;
+
+    fn search_roots(&self, _package: usize) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 pub struct ProgramInput<'a> {

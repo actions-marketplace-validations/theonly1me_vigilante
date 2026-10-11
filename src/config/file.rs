@@ -96,7 +96,7 @@ impl Default for EnginesSection {
         Self {
             go: GoEngine::default(),
             javascript: LanguageEngine::Typed,
-            python: LanguageEngine::default(),
+            python: LanguageEngine::Typed,
             java: LanguageEngine::default(),
             rust: LanguageEngine::default(),
             csharp: LanguageEngine::default(),

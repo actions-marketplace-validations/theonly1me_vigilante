@@ -82,7 +82,10 @@ The Markdown report shows 10 lines and a count. The JSON report has all of them.
 
 ## Calls resolved by type
 
-For JavaScript and TypeScript, Vigilante resolves calls with the TypeScript 6.0.3 type checker. It downloads `typescript` 6.0.3 from npm, checks it against a pinned checksum, and runs it with Node.js. The checker reads the files and runs no code from the repository or its packages.
+Vigilante resolves calls by type with two tools. It downloads each one from npm, checks it against a pinned checksum, and runs it with Node.js. Neither tool runs code from the repository or its packages.
+
+- JavaScript and TypeScript: the TypeScript 6.0.3 type checker.
+- Python: Pyright, through `@sourcegraph/scip-python` 0.6.6. Vigilante copies the code and the locked packages that it read into a temporary folder, and runs the tool without the machine's Python, so packages installed on the machine do not change the result.
 
 1. A call that the checker resolves goes only to the function that the types name, not to every function with that name.
 2. A call through a function value, such as a callback, is an `unanalyzed` note, as in Capslock.
@@ -101,8 +104,8 @@ javascript = "deep"
 ruby = "patterns"
 ```
 
-- `"typed"` resolves calls by type, then by name. It is the default for `javascript`.
-- `"deep"` resolves calls by name and import. It is the default for `python`, `java`, `rust`, `csharp`, and `ruby`.
+- `"typed"` resolves calls by type, then by name. It is the default for `javascript` and `python`.
+- `"deep"` resolves calls by name and import. It is the default for `java`, `rust`, `csharp`, and `ruby`.
 - `"patterns"` uses only the direct-use rules in `packs/`.
 
 ## Known limits

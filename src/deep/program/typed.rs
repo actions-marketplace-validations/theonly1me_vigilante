@@ -15,6 +15,11 @@ pub enum Typed {
     Unanalyzed,
 }
 
+pub enum TypeCheck {
+    Checked(TypedCalls),
+    NotChecked(String),
+}
+
 pub struct TypedCall {
     pub file: FileKey,
     pub line: usize,

@@ -2,12 +2,12 @@ use std::collections::{BTreeSet, HashSet};
 
 use super::Program;
 use super::link::{LinkInput, link};
-use super::typed::TypedCalls;
-use crate::deep::Analysis;
+use super::typed::TypeCheck;
+use crate::deep::{Analysis, Skip};
 
 pub struct AnalyzeInput<'p> {
     pub roots: &'p BTreeSet<String>,
-    pub types: Option<&'p TypedCalls>,
+    pub check: Option<&'p TypeCheck>,
 }
 
 impl Program<'_> {
@@ -17,8 +17,24 @@ impl Program<'_> {
             roots: input.roots,
             types: None,
         });
-        let Some(types) = input.types.filter(|types| !types.is_empty()) else {
-            return by_name;
+        let types = match input.check {
+            Some(TypeCheck::Checked(types)) if !types.is_empty() => types,
+            Some(TypeCheck::NotChecked(reason)) => {
+                let mut analysis = by_name;
+                let scopes: BTreeSet<String> = input
+                    .roots
+                    .iter()
+                    .map(|root| (self.input.scope_of)(root))
+                    .collect();
+                analysis
+                    .skipped
+                    .extend(scopes.into_iter().map(|source| Skip {
+                        source,
+                        reason: reason.clone(),
+                    }));
+                return analysis;
+            }
+            _ => return by_name,
         };
         let mut typed = analyzed(LinkInput {
             program: self,

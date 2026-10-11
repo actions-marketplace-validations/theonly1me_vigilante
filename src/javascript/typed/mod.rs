@@ -10,7 +10,7 @@ use std::thread;
 use serde::Deserialize;
 
 use crate::Error;
-use crate::deep::program::{Program, Typed, TypedCall, TypedCalls, TypedTarget};
+use crate::deep::program::{Program, TypeCheck, Typed, TypedCall, TypedCalls, TypedTarget};
 use crate::registry::Registry;
 use crate::tree::Tree;
 use input::{CheckerInput, VirtualFiles, checker_input};
@@ -25,11 +25,6 @@ pub struct TypeCheckRequest<'a, 'p> {
     pub program: &'a Program<'p>,
     pub tree: &'a dyn Tree,
     pub registry: &'a Registry,
-}
-
-pub enum TypeCheck {
-    Checked(TypedCalls),
-    NotChecked(String),
 }
 
 #[derive(Deserialize)]

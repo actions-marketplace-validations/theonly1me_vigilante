@@ -75,9 +75,9 @@ pub fn analyze(request: RustRequest) -> Result<Analysis, Error> {
     program.load(&root_paths)?;
     let mut analysis = program.analyze(AnalyzeInput {
         roots: &roots,
-        types: None,
+        check: None,
     });
     drop(program);
-    analysis.skipped = resolver.into_skipped();
+    analysis.skipped.extend(resolver.into_skipped());
     Ok(analysis)
 }

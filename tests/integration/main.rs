@@ -34,6 +34,7 @@ mod python_code;
 mod python_fixtures;
 mod python_index;
 mod python_skips;
+mod python_types;
 mod report;
 mod review;
 mod ruby_code;

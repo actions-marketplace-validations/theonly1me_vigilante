@@ -8,15 +8,13 @@ mod resolver;
 mod syntax;
 mod typed;
 
-use std::collections::BTreeSet;
-
 use ast_grep_language::SupportLang;
 
 use crate::Error;
 use crate::code::{Rules, language_of};
 use crate::config::{Config, LanguageEngine};
+use crate::deep::Analysis;
 use crate::deep::program::{AnalyzeInput, Program, ProgramInput, RootsInput, selected_roots};
-use crate::deep::{Analysis, Skip};
 use crate::lockfiles::JAVASCRIPT_LOCKFILES;
 use crate::registry::Registry;
 use crate::scan::Selection;
@@ -26,7 +24,7 @@ use packages::{Packages, PackagesInput};
 use paths::is_code_file;
 use projects::Projects;
 use resolver::JavaScriptResolver;
-use typed::{TypeCheck, TypeCheckRequest, type_check};
+use typed::{TypeCheckRequest, type_check};
 
 pub struct JavaScriptRequest<'a> {
     pub tree: &'a dyn Tree,
@@ -79,24 +77,11 @@ pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
     } else {
         None
     };
-    let types = match &check {
-        Some(TypeCheck::Checked(calls)) => Some(calls),
-        _ => None,
-    };
     let mut analysis = program.analyze(AnalyzeInput {
         roots: &roots,
-        types,
+        check: check.as_ref(),
     });
     drop(program);
-    analysis.skipped = resolver.packages.into_skipped();
-    if let Some(TypeCheck::NotChecked(reason)) = check {
-        let scopes: BTreeSet<String> = roots.iter().map(|root| (request.scope_of)(root)).collect();
-        analysis
-            .skipped
-            .extend(scopes.into_iter().map(|source| Skip {
-                source,
-                reason: reason.clone(),
-            }));
-    }
+    analysis.skipped.extend(resolver.packages.into_skipped());
     Ok(analysis)
 }
