@@ -15,7 +15,7 @@ expect_version() {
 }
 
 expect_version Cargo.toml "$crate_version"
-expect_version action.yml "$(sed -n 's/^    default: "\(.*\)"$/\1/p' action.yml)"
+expect_version action.yml "$(sed -n 's/^    default: "\([^"]*\)".*$/\1/p' action.yml)"
 
 npm_manifest=npm/vigilante/package.json
 expect_version "$npm_manifest" "$(node -p "require('./$npm_manifest').version")"
