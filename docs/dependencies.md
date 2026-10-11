@@ -88,6 +88,8 @@ Vigilante resolves calls by type with two tools. It downloads each one from npm,
 - Rust, when `[engines] rust = "typed"`: rust-analyzer in a Docker container (`rust:1.99-slim`, pinned by digest). Vigilante copies the workspace into the container. First, with network, it installs rust-analyzer and runs `cargo fetch`, which runs no project code. Then it disconnects the network and runs `rust-analyzer scip`, which runs `build.rs` and proc macros. The source is read-only, and only the index folder is writable.
 - Python: Pyright, through `@sourcegraph/scip-python` 0.6.6. Vigilante copies the code and the locked packages that it read into temporary folders, and runs the tool without the machine's Python, so packages installed on the machine do not change the result. Pyright resolves the calls in your code, including calls into packages. Calls inside package code use the name-based rules.
 
+Java and C# need no build. Vigilante reads the base class and the interfaces of each class, from source and from the class files and assemblies of the packages. A call on a base class or an interface also goes to the methods that override it in the loaded classes.
+
 1. A call that the checker resolves goes only to the function that the types name, not to every function with that name.
 2. A call through a function value, such as a callback, is an `unanalyzed` note, as in Capslock.
 3. A call that the checker cannot resolve uses the name-based rules.

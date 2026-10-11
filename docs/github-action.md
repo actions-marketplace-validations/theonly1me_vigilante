@@ -45,6 +45,7 @@ jobs:
 - A Linux or macOS runner. The action stops with exit code 2 on Windows.
 - `gh` on the runner. GitHub-hosted runners have it.
 - Network access to the public package registries (npm, PyPI, Maven Central, Google Maven, crates.io, nuget.org, rubygems.org, and GitHub). Vigilante downloads the locked packages to follow calls into them. See [dependencies.md](dependencies.md#network-use-and-the-cache).
+- Node.js for the typed engines of JavaScript, TypeScript, and Python, and Docker for `[engines] rust = "typed"`. GitHub-hosted Linux runners have both. Without them, Vigilante resolves calls by name and lists the scope under "Not analyzed".
 - For Go: code that compiles, because Capslock type-checks it. Private Go modules need `GOPRIVATE` and git credentials in the job, as for `go build`. Without them, Vigilante stops with exit code 2.
 
 ### Permissions and forks

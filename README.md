@@ -14,7 +14,7 @@
 
 Vigilante reads a pull request and lists the new powers that it adds. A power is something like the first `subprocess` call in a package, a CI token that can push, a new MCP server that your agents connect to, or a new install script. You approve powers in a `vigilante.lock` file that your security team owns. If a pull request adds a power that is not in the lock, the check fails.
 
-Vigilante never runs code from the repository that it checks. It reads files, and for Go it type-checks the code with [Capslock](https://github.com/google/capslock). For the other languages, it downloads the locked packages from their public registries and reads them.
+By default, Vigilante never runs code from the repository that it checks. It reads files and resolves calls by type: with [Capslock](https://github.com/google/capslock) for Go, the TypeScript type checker for JavaScript and TypeScript, and Pyright for Python. These tools read code and do not run it. Vigilante also downloads the locked packages from their public registries and reads them. If you set `[engines] rust = "typed"`, Vigilante builds the Rust code in a Docker container with no network ([docs/dependencies.md](docs/dependencies.md#calls-resolved-by-type)).
 
 ## Why
 
@@ -44,7 +44,7 @@ The same pull request also added a second network call to `services/billing`, th
 | Surface | Files | Powers |
 | --- | --- | --- |
 | Code | Rust, JavaScript, TypeScript, Python, Ruby, C#, Java, and Go | `exec`, `network`, `files`, `native`, `dynamic_code`, `read_system_state`, `modify_system_state`, `system_calls` |
-| Code, through dependencies | Go with [Capslock](https://github.com/google/capslock). JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby with Vigilante's own call graph over the locked packages | Every code power, with the call path. For Go, all 13 Capslock capabilities, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
+| Code, through dependencies | Go with [Capslock](https://github.com/google/capslock). JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby with Vigilante's own call graph over the locked packages. Calls resolve by type in JavaScript, TypeScript, and Python, and through the class hierarchy in Java and C# | Every code power, with the call path. For Go, all 13 Capslock capabilities, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
 | CI | `.github/workflows/*.yml` | `token_write`, `oidc`, `untrusted_trigger`, `third_party_action`, `secret` |
 | AI agents | `.claude/settings.json`, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
 | Build | `package.json` install scripts, `build.rs`, `setup.py`, `.husky/`, `.pre-commit-config.yaml` | `install_hook`, `git_hook` |

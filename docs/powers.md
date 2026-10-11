@@ -121,6 +121,8 @@ Actions from `actions/`, `github/`, and local actions (`./`) are not powers. Add
 
 The Go `native` rule skips generated protobuf files (`*.pb.go`), which import `unsafe`.
 
+The Rust `native` rule skips `unsafe impl Send` and `unsafe impl Sync`, which only mark a type as safe to share between threads. It also skips `extern` blocks with `#[wasm_bindgen]`, which import JavaScript functions in WebAssembly and do not call native code.
+
 ## Known limits
 
 - For the languages other than Go, calls resolve by name and import, not by type. See [dependencies.md](dependencies.md#known-limits).
