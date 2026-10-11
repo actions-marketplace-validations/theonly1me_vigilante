@@ -69,6 +69,10 @@ echo "$*" >> "$FAKE_GH_LOG"
 if [ "$1 $2" = "attestation verify" ]; then
   exit "$FAKE_ATTESTATION_STATUS"
 fi
+if [ "$1 $2" = "api repos/theonly1me/vigilante/commits/v0.1.0" ]; then
+  echo 0123456789abcdef0123456789abcdef01234567
+  exit 0
+fi
 while [ $# -gt 0 ]; do
   case "$1" in
     --pattern) pattern="$2" ;;
@@ -111,8 +115,8 @@ check "Windows is an error" test "$install_status" -eq 2
 install Linux X64 1
 check "a failed attestation stops the install" test "$install_status" -ne 0
 check "a failed attestation adds nothing to PATH" test ! -s "$github_path"
-check "the attestation check pins the release workflow and tag" \
-  grep -q -- "--signer-workflow theonly1me/vigilante/.github/workflows/release.yml --source-ref refs/tags/v0.1.0" "$gh_log"
+check "the attestation check pins the release workflow and the commit of the tag" \
+  grep -q -- "--signer-workflow theonly1me/vigilante/.github/workflows/release.yml --source-ref refs/heads/main --source-digest 0123456789abcdef0123456789abcdef01234567" "$gh_log"
 
 detect_go() {
   github_output="$(mktemp)"
