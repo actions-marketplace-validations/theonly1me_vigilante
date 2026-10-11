@@ -1,26 +1,22 @@
 mod project;
+mod symbols;
 mod tool;
 
-use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
 
 use crate::Error;
-use crate::deep::program::{
-    FileKey, Program, TypeCheck, Typed, TypedCall, TypedCalls, TypedTarget,
-};
+use crate::deep::program::{Program, TypeCheck};
 use crate::node::node_program;
 use crate::registry::Registry;
-use crate::scip::{Index, read_index};
+use crate::scip::read_index;
 use crate::tree::Tree;
 use project::{CONFIG, ENVIRONMENT, INDEX, ProjectInput, write_project};
+use symbols::{Indexed, typed_calls};
 
 const NO_NODE: &str = "Node.js is not on PATH, so Vigilante resolved Python calls by name only.";
 const NO_TOOL: &str =
     "Vigilante could not download scip-python 0.6.6, so it resolved Python calls by name only.";
-const CALL_SUFFIX: &str = "().";
-const LOCAL: &str = "local ";
-const DESCRIPTOR_ENDS: &[char] = &['#', '/', '.'];
 
 pub struct TypeCheckRequest<'a, 'p> {
     pub program: &'a Program<'p>,
@@ -69,68 +65,7 @@ pub fn type_check(request: TypeCheckRequest) -> Result<TypeCheck, Error> {
     };
     Ok(TypeCheck::Checked(typed_calls(Indexed {
         index: &index,
-        keys: &project.keys,
+        project: &project,
+        program: request.program,
     })))
-}
-
-struct Indexed<'a> {
-    index: &'a Index,
-    keys: &'a HashMap<String, FileKey>,
-}
-
-fn typed_calls(indexed: Indexed) -> TypedCalls {
-    let Indexed { index, keys } = indexed;
-    let mut definitions: HashMap<&str, TypedTarget> = HashMap::new();
-    for document in &index.documents {
-        let Some(file) = keys.get(&document.path) else {
-            continue;
-        };
-        for occurrence in document
-            .occurrences
-            .iter()
-            .filter(|item| item.is_definition)
-        {
-            if let Some(name) = called_name(&occurrence.symbol) {
-                definitions.insert(
-                    &occurrence.symbol,
-                    TypedTarget {
-                        file: file.clone(),
-                        name: name.to_string(),
-                        line: occurrence.line + 1,
-                    },
-                );
-            }
-        }
-    }
-    let mut calls = TypedCalls::default();
-    for document in &index.documents {
-        let Some(file) = keys.get(&document.path) else {
-            continue;
-        };
-        for occurrence in document
-            .occurrences
-            .iter()
-            .filter(|item| !item.is_definition)
-        {
-            let Some(target) = definitions.get(occurrence.symbol.as_str()) else {
-                continue;
-            };
-            calls.add(TypedCall {
-                file: file.clone(),
-                line: occurrence.line + 1,
-                callee: target.name.clone(),
-                typed: Typed::Targets(vec![target.clone()]),
-            });
-        }
-    }
-    calls
-}
-
-fn called_name(symbol: &str) -> Option<&str> {
-    if symbol.starts_with(LOCAL) {
-        return None;
-    }
-    let path = symbol.strip_suffix(CALL_SUFFIX)?;
-    let name = path.rsplit(DESCRIPTOR_ENDS).next()?.trim_matches('`');
-    (!name.is_empty()).then_some(name)
 }

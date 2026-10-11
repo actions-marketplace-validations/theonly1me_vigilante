@@ -16,16 +16,19 @@ const TOOLS: FakeWheel = FakeWheel {
     version: "1.0.0",
     files: &[(
         "tools/__init__.py",
-        "import subprocess\n\n\nclass Runner:\n    def run(self, command):\n        return subprocess.run(command)\n",
+        "import subprocess\n\n\nclass Runner:\n    def run(self, command):\n        return subprocess.run(command)\n\n\nclass Quiet:\n    def run(self, message):\n        return message\n",
     )],
 };
 const LOGGER: &str = "from tools import Runner\n\n\nclass Logger:\n    def run(self, message):\n        return message\n\n\ndef main(logger: Logger):\n    return logger.run('hi')\n";
 const NAME_COLLISION: &str =
     ". exec tools app.py:10 app.main > tools/tools/__init__.Runner.run > subprocess.run";
+const QUIET: &str =
+    "from tools import Quiet\n\n\ndef main(quiet: Quiet):\n    return quiet.run('hi')\n";
 const NO_NODE: &str = "Node.js is not on PATH, so Vigilante resolved Python calls by name only.";
 
 struct Invocation<'a> {
     engine: &'a str,
+    head: &'a str,
     path: Option<&'a str>,
 }
 
@@ -50,7 +53,7 @@ fn run(invocation: Invocation) -> Run {
     ]);
     repository.commit("base");
     repository.git(&["checkout", "--quiet", "-b", "feature"]);
-    repository.write(&[("app.py", LOGGER)]);
+    repository.write(&[("app.py", invocation.head)]);
     repository.commit("change");
     let cache = TempDir::new().expect("cache");
     let mut command = Command::new(env!("CARGO_BIN_EXE_vigilante"));
@@ -84,6 +87,7 @@ fn reasons(report: &Value) -> Vec<String> {
 fn a_python_call_that_types_resolve_to_own_code_does_not_reach_a_package_method() {
     let report = report_of(&run(Invocation {
         engine: "typed",
+        head: LOGGER,
         path: None,
     }));
 
@@ -99,6 +103,7 @@ fn a_python_call_that_types_resolve_to_own_code_does_not_reach_a_package_method(
 fn the_python_name_based_engine_follows_every_method_of_the_same_name() {
     let report = report_of(&run(Invocation {
         engine: "deep",
+        head: LOGGER,
         path: None,
     }));
 
@@ -123,6 +128,7 @@ fn without_node_python_calls_resolve_by_name_and_the_scope_is_listed() {
     .expect("git link");
     let report = report_of(&run(Invocation {
         engine: "typed",
+        head: LOGGER,
         path: Some(&tools.path().to_string_lossy()),
     }));
 
@@ -131,4 +137,21 @@ fn without_node_python_calls_resolve_by_name_and_the_scope_is_listed() {
         vec![NAME_COLLISION, NAME_COLLISION]
     );
     assert_eq!(reasons(&report), vec![NO_NODE]);
+}
+
+#[test]
+#[ignore = "needs node and network"]
+fn a_typed_call_into_a_package_reaches_only_the_method_of_its_class() {
+    let report = report_of(&run(Invocation {
+        engine: "typed",
+        head: QUIET,
+        path: None,
+    }));
+
+    assert_eq!(reasons(&report), Vec::<String>::new());
+    assert_eq!(
+        summaries(&report["notes"]),
+        Vec::<String>::new(),
+        "{report}"
+    );
 }
