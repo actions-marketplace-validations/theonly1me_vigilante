@@ -84,7 +84,7 @@ The Markdown report shows 10 lines and a count. The JSON report has all of them.
 
 Vigilante resolves calls by type with two tools. It downloads each one from npm, checks it against a pinned checksum, and runs it with Node.js. Neither tool runs code from the repository or its packages.
 
-- JavaScript and TypeScript: the TypeScript 6.0.3 type checker.
+- JavaScript and TypeScript: the TypeScript 6.0.3 type checker. It resolves the calls in your code. It reads package files only as far as your code imports them, and calls inside package code use the name-based rules.
 - Python: Pyright, through `@sourcegraph/scip-python` 0.6.6. Vigilante copies the code and the locked packages that it read into temporary folders, and runs the tool without the machine's Python, so packages installed on the machine do not change the result. Pyright resolves the calls in your code, including calls into packages. Calls inside package code use the name-based rules.
 
 1. A call that the checker resolves goes only to the function that the types name, not to every function with that name.

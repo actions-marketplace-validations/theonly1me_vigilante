@@ -18,6 +18,7 @@ const options = {
   module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
   types: [],
+  maxNodeModuleJsDepth: 1,
 };
 
 const isLibrary = (fileName) => fileName.startsWith(libraryFolder + path.sep);
@@ -46,12 +47,14 @@ const host = {
       const target = imports[literal.text];
       return target === undefined
         ? { resolvedModule: undefined }
-        : { resolvedModule: { resolvedFileName: target, extension: ts.extensionFromPath(target), isExternalLibraryImport: false } };
+        : { resolvedModule: { resolvedFileName: target, extension: ts.extensionFromPath(target), isExternalLibraryImport: !files.get(target)?.own } };
     });
   },
 };
 
-const program = ts.createProgram([...files.keys()], options, host);
+const own = input.files.filter((file) => file.own).map((file) => file.name);
+const ownFiles = new Set(own);
+const program = ts.createProgram(own, options, host);
 const checker = program.getTypeChecker();
 const lineOf = (sourceFile, position) => sourceFile.getLineAndCharacterOfPosition(position).line + 1;
 const unquoted = (text) => text.replace(/^["'`#]|["'`]$/g, "");
@@ -94,7 +97,7 @@ function typedTarget(node) {
 
 const lines = [];
 for (const sourceFile of program.getSourceFiles()) {
-  if (!files.has(sourceFile.fileName)) continue;
+  if (!ownFiles.has(sourceFile.fileName)) continue;
   const visit = (node) => {
     if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
       const callee = calleeOf(node.expression);

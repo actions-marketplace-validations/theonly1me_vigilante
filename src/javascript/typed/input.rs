@@ -38,6 +38,7 @@ struct Input<'a> {
 struct InputFile {
     name: String,
     text: String,
+    own: bool,
     imports: BTreeMap<String, String>,
 }
 
@@ -80,6 +81,7 @@ pub fn checker_input(input: CheckerInput) -> Result<(Vec<u8>, VirtualFiles), Err
         entries.push(InputFile {
             name,
             text,
+            own: file.key.root == Root::Repository,
             imports: file
                 .resolved
                 .iter()
