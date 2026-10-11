@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "rust",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "refactor", "section": "Chores", "hidden": true },
+    { "type": "test", "section": "Chores", "hidden": true },
+    { "type": "build", "section": "Chores", "hidden": true },
+    { "type": "ci", "section": "Chores", "hidden": true },
+    { "type": "chore", "section": "Chores", "hidden": true }
+  ],
+  "packages": {
+    ".": {
+      "package-name": "vigilante",
+      "extra-files": [
+        { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-darwin-arm64']" },
+        { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-darwin-x64']" },
+        { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-linux-arm64']" },
+        { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-linux-x64']" },
+        { "type": "yaml", "path": "action.yml", "jsonpath": "$.inputs.version.default" }
+      ]
+    }
+  }
+}
