@@ -45,4 +45,5 @@ mod rust_fixtures;
 mod rust_packages;
 mod rust_skips;
 mod support;
+mod typescript_types;
 mod yaml;

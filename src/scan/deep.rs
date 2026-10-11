@@ -1,6 +1,5 @@
 use super::{Scanner, Selection};
 use crate::Error;
-use crate::config::LanguageEngine;
 use crate::csharp::{self, CSharpRequest};
 use crate::deep::Analysis;
 use crate::go::GoRequest;
@@ -24,7 +23,7 @@ impl Scanner<'_> {
                 config: self.config,
             })?;
         }
-        if self.config.javascript_engine == LanguageEngine::Deep {
+        if self.config.javascript_engine.follows_calls() {
             let found = javascript::analyze(JavaScriptRequest {
                 tree: self.tree,
                 config: self.config,
@@ -36,7 +35,7 @@ impl Scanner<'_> {
             analysis.reaches.extend(found.reaches);
             analysis.skipped.extend(found.skipped);
         }
-        if self.config.python_engine == LanguageEngine::Deep {
+        if self.config.python_engine.follows_calls() {
             let found = python::analyze(PythonRequest {
                 tree: self.tree,
                 config: self.config,
@@ -48,7 +47,7 @@ impl Scanner<'_> {
             analysis.reaches.extend(found.reaches);
             analysis.skipped.extend(found.skipped);
         }
-        if self.config.java_engine == LanguageEngine::Deep {
+        if self.config.java_engine.follows_calls() {
             let found = java::analyze(JavaRequest {
                 tree: self.tree,
                 config: self.config,
@@ -60,7 +59,7 @@ impl Scanner<'_> {
             analysis.reaches.extend(found.reaches);
             analysis.skipped.extend(found.skipped);
         }
-        if self.config.csharp_engine == LanguageEngine::Deep {
+        if self.config.csharp_engine.follows_calls() {
             let found = csharp::analyze(CSharpRequest {
                 tree: self.tree,
                 config: self.config,
@@ -72,7 +71,7 @@ impl Scanner<'_> {
             analysis.reaches.extend(found.reaches);
             analysis.skipped.extend(found.skipped);
         }
-        if self.config.ruby_engine == LanguageEngine::Deep {
+        if self.config.ruby_engine.follows_calls() {
             let found = ruby::analyze(RubyRequest {
                 tree: self.tree,
                 config: self.config,
@@ -84,7 +83,7 @@ impl Scanner<'_> {
             analysis.reaches.extend(found.reaches);
             analysis.skipped.extend(found.skipped);
         }
-        if self.config.rust_engine == LanguageEngine::Deep {
+        if self.config.rust_engine.follows_calls() {
             let found = rust::analyze(RustRequest {
                 tree: self.tree,
                 config: self.config,

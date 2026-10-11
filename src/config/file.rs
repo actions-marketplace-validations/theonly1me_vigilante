@@ -79,7 +79,7 @@ pub struct CiSection {
     pub trusted_owners: Vec<String>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct EnginesSection {
     pub go: GoEngine,
@@ -91,12 +91,33 @@ pub struct EnginesSection {
     pub ruby: LanguageEngine,
 }
 
+impl Default for EnginesSection {
+    fn default() -> Self {
+        Self {
+            go: GoEngine::default(),
+            javascript: LanguageEngine::Typed,
+            python: LanguageEngine::default(),
+            java: LanguageEngine::default(),
+            rust: LanguageEngine::default(),
+            csharp: LanguageEngine::default(),
+            ruby: LanguageEngine::default(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LanguageEngine {
+    Typed,
     #[default]
     Deep,
     Patterns,
+}
+
+impl LanguageEngine {
+    pub fn follows_calls(self) -> bool {
+        self != Self::Patterns
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]

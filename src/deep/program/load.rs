@@ -91,6 +91,7 @@ impl<'a> Program<'a> {
                     privileged: parsed.privileged,
                     sites: parsed.sites,
                     resolved,
+                    line_starts: line_starts(&source.text),
                 });
             }
             frontier = next;
@@ -161,4 +162,10 @@ impl<'a> Program<'a> {
         }
         Ok(resolved)
     }
+}
+
+fn line_starts(text: &str) -> Vec<usize> {
+    std::iter::once(0)
+        .chain(text.match_indices('\n').map(|(offset, _)| offset + 1))
+        .collect()
 }

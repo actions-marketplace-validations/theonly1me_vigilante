@@ -1,16 +1,19 @@
+mod analyze;
 mod index;
 mod link;
 mod load;
 mod parse;
 mod roots;
+mod typed;
 
 use std::collections::HashMap;
 
 use ast_grep_language::SupportLang;
 
+pub use analyze::AnalyzeInput;
 pub use index::{Binding, Definition, Export, FileIndex, INIT, Imported, Load, Use, UseTarget};
-pub use link::{LinkInput, link};
 pub use roots::{RootsInput, selected_roots};
+pub use typed::{Typed, TypedCall, TypedCalls, TypedTarget};
 
 use crate::code::{Rules, SyntaxNode};
 use crate::deep::graph::Owner;
@@ -50,6 +53,13 @@ pub struct LoadedFile {
     pub privileged: HashMap<String, Vec<Privilege>>,
     pub sites: Vec<SiteSink>,
     pub resolved: HashMap<String, FileKey>,
+    pub line_starts: Vec<usize>,
+}
+
+impl LoadedFile {
+    pub fn line_of(&self, offset: usize) -> usize {
+        self.line_starts.partition_point(|start| *start <= offset)
+    }
 }
 
 #[derive(Clone, Copy)]

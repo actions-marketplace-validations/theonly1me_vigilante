@@ -80,20 +80,34 @@ The report lists the code and packages that Vigilante did not read, for example:
 
 The Markdown report shows 10 lines and a count. The JSON report has all of them.
 
-## Turn an engine off
+## Calls resolved by type
 
-Set the language to `"patterns"` in `vigilante.toml` to use only the direct-use rules in `packs/`:
+For JavaScript and TypeScript, Vigilante resolves calls with the TypeScript 6.0.3 type checker. It downloads `typescript` 6.0.3 from npm, checks it against a pinned checksum, and runs it with Node.js. The checker reads the files and runs no code from the repository or its packages.
+
+1. A call that the checker resolves goes only to the function that the types name, not to every function with that name.
+2. A call through a function value, such as a callback, is an `unanalyzed` note, as in Capslock.
+3. A call that the checker cannot resolve uses the name-based rules.
+4. Findings are the union of the typed and the name-based results, so type data never removes a finding.
+
+If Node.js is not on `PATH`, or the download fails, Vigilante resolves calls by name and lists the scope under "Not analyzed".
+
+## Choose an engine
+
+Set a language to an engine in `vigilante.toml`:
 
 ```toml
 [engines]
-javascript = "patterns"
+javascript = "deep"
+ruby = "patterns"
 ```
 
-The keys are `javascript`, `python`, `java`, `rust`, `csharp`, and `ruby`. Their default is `"deep"`.
+- `"typed"` resolves calls by type, then by name. It is the default for `javascript`.
+- `"deep"` resolves calls by name and import. It is the default for `python`, `java`, `rust`, `csharp`, and `ruby`.
+- `"patterns"` uses only the direct-use rules in `packs/`.
 
 ## Known limits
 
-- A call on an object of unknown type, or through an interface or a trait, goes to every function with that name in the packages that the file imports. This can add packages to the notes, like Capslock's interface calls.
+- Without type data, a call on an object of unknown type, or through an interface or a trait, goes to every function with that name in the packages that the file imports. This can add packages to the notes, like Capslock's interface calls.
 - Calls that are built at run time are not followed: reflection, `eval`, dynamic imports, and Ruby metaprogramming such as `send` and `define_method`.
 - Rust: calls inside macro arguments are not read.
 - Java and C#: inherited methods and Kotlin, F#, and Visual Basic code are not followed.

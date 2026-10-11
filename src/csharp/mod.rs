@@ -11,7 +11,7 @@ use crate::Error;
 use crate::code::{Rules, language_of};
 use crate::config::Config;
 use crate::deep::Analysis;
-use crate::deep::program::{LinkInput, Program, ProgramInput, RootsInput, link, selected_roots};
+use crate::deep::program::{AnalyzeInput, Program, ProgramInput, RootsInput, selected_roots};
 use crate::registry::Registry;
 use crate::scan::Selection;
 use crate::tree::Tree;
@@ -67,12 +67,11 @@ pub fn analyze(request: CSharpRequest) -> Result<Analysis, Error> {
     });
     let root_paths: Vec<String> = roots.iter().cloned().collect();
     program.load(&root_paths)?;
-    let linked = link(LinkInput {
-        program: &program,
+    let mut analysis = program.analyze(AnalyzeInput {
         roots: &roots,
+        types: None,
     });
     drop(program);
-    let mut analysis = linked.graph.analyze(&linked.scopes);
     analysis.skipped = resolver.into_skipped();
     Ok(analysis)
 }
