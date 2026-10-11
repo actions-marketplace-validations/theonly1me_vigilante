@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/theonly1me/vigilante"
 keywords = ["security", "capabilities", "ci", "agents", "supply-chain"]
 categories = ["command-line-utilities", "development-tools"]
-include = ["src/**/*.rs", "src/**/*.mjs", "src/**/*.txt", "packs/**/*.yml", "Cargo.toml", "README.md", "LICENSE-MIT", "LICENSE-APACHE"]
+include = ["src/**/*.rs", "src/**/*.mjs", "src/**/*.txt", "packs/**/*.yml", "/Cargo.toml", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
 
 [dependencies]
 ast-grep-config = { version = "0.45.3", default-features = false }
