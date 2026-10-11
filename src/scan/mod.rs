@@ -121,9 +121,14 @@ impl<'a> Scanner<'a> {
                 text: &file.text,
             };
             let detections = self.surfaces.detect(source)?;
+            let code = if self.deep_owns(&file.path) {
+                Vec::new()
+            } else {
+                self.rules.detect(source)
+            };
             for detection in detections
                 .into_iter()
-                .chain(self.rules.detect(source))
+                .chain(code)
                 .filter(|detection| !self.config.trusts(&detection.power))
             {
                 let surface = detection.power.capability.surface();
