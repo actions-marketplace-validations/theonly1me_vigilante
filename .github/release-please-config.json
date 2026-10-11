@@ -24,7 +24,9 @@
         { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-darwin-x64']" },
         { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-linux-arm64']" },
         { "type": "json", "path": "npm/vigilante/package.json", "jsonpath": "$.optionalDependencies['@theonly1me/vigilante-linux-x64']" },
-        { "type": "yaml", "path": "action.yml", "jsonpath": "$.inputs.version.default" }
+        { "type": "yaml", "path": "action.yml", "jsonpath": "$.inputs.version.default" },
+        { "type": "generic", "path": "README.md" },
+        { "type": "generic", "path": "docs/github-action.md" }
       ]
     }
   }
