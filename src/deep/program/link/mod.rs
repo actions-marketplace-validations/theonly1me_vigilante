@@ -1,5 +1,6 @@
 mod bindings;
 mod fallback;
+mod functions;
 mod targets;
 mod typed;
 
@@ -9,7 +10,7 @@ use super::typed::TypedCalls;
 use super::{FileKey, Language, LoadedFile, Program, Resolver, Root, UseTarget};
 use crate::Power;
 use crate::deep::ScopeRoots;
-use crate::deep::graph::{Call, Function, FunctionId, Graph, Owner, Sink, Target};
+use crate::deep::graph::{Call, FunctionId, Graph, Owner, Sink, Target};
 use typed::TypedUse;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -49,6 +50,7 @@ struct Linker<'p> {
     types: Option<&'p TypedCalls>,
     graph: Graph,
     functions: Vec<Vec<FunctionId>>,
+    in_file: Vec<HashMap<String, Vec<FunctionId>>>,
     by_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     by_full_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     in_unit: HashMap<Unit, Vec<FunctionId>>,
@@ -69,6 +71,7 @@ pub fn link(input: LinkInput) -> Linked {
         types,
         graph: Graph::default(),
         functions: Vec::new(),
+        in_file: Vec::new(),
         by_name: HashMap::new(),
         by_full_name: HashMap::new(),
         in_unit: HashMap::new(),
@@ -99,37 +102,6 @@ pub fn link(input: LinkInput) -> Linked {
 }
 
 impl Linker<'_> {
-    fn add_functions(&mut self) {
-        for file in self.files {
-            let unit = unit_of(file);
-            let mut ids = Vec::new();
-            for (position, definition) in file.index.definitions.iter().enumerate() {
-                let id = self.graph.add_function(Function {
-                    name: format!("{}.{}", self.language.stem(&file.display), definition.name),
-                    owner: file.owner.clone(),
-                    path: file.display.clone(),
-                });
-                if position > 0 {
-                    self.by_name
-                        .entry(unit.clone())
-                        .or_default()
-                        .entry(definition.simple.clone())
-                        .or_default()
-                        .push(id);
-                    self.by_full_name
-                        .entry(unit.clone())
-                        .or_default()
-                        .entry(definition.name.clone())
-                        .or_default()
-                        .push(id);
-                }
-                self.in_unit.entry(unit.clone()).or_default().push(id);
-                ids.push(id);
-            }
-            self.functions.push(ids);
-        }
-    }
-
     fn link_file(&mut self, file: usize) {
         let loaded = &self.files[file];
         for (definition, item) in loaded.index.definitions.iter().enumerate() {

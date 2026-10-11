@@ -68,20 +68,15 @@ impl Linker<'_> {
 
     pub(super) fn local(&self, wanted: InFile) -> Vec<Target> {
         let InFile { file, name } = wanted;
-        let constructors: Vec<String> = CONSTRUCTORS
-            .iter()
-            .map(|constructor| format!("{name}.{constructor}"))
-            .collect();
-        self.files[file]
-            .index
-            .definitions
-            .iter()
-            .enumerate()
-            .filter(|(_, definition)| {
-                definition.name == name || constructors.contains(&definition.name)
-            })
-            .map(|(position, _)| Target::Function(self.functions[file][position]))
-            .collect()
+        let in_file = &self.in_file[file];
+        let mut found: Vec<usize> = in_file.get(name).cloned().unwrap_or_default();
+        for constructor in CONSTRUCTORS {
+            if let Some(ids) = in_file.get(&format!("{name}.{constructor}")) {
+                found.extend(ids);
+            }
+        }
+        found.sort_unstable();
+        found.into_iter().map(Target::Function).collect()
     }
 
     fn method(&self, wanted: InFile) -> Vec<Target> {
