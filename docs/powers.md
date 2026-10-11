@@ -89,7 +89,7 @@ These rules keep the report short. Each rule leaves out a change that a reviewer
 
 ### Tests, fixtures, and vendored code
 
-Vigilante skips test folders and test files (`tests/`, `__tests__/`, `*_test.go`, `*.spec.ts`, `*Test.java`, `test_*.py`, and more), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. Add more globs with `[scan] exclude`.
+Vigilante skips test folders and test files (`tests/`, `__tests__/`, `*.Tests/`, `*_test.go`, `*.spec.ts`, `*Test.java`, `test_*.py`, and more), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. Add more globs with `[scan] exclude`.
 
 ### Low-signal powers
 

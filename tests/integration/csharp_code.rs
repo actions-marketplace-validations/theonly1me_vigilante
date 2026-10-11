@@ -94,3 +94,23 @@ fn transitive_packages_are_resolved_and_the_nearest_version_wins() {
     );
     assert_eq!(report["skipped"], serde_json::Value::Array(Vec::new()));
 }
+
+#[test]
+fn a_test_project_folder_is_skipped_like_a_test_folder() {
+    let findings = findings_after(Change {
+        base: &[
+            ("App.csproj", APP_PROJECT),
+            ("packages.lock.json", LOCKFILE),
+        ],
+        head: &[
+            ("App.Tests/App.Tests.csproj", APP_PROJECT),
+            ("App.Tests/packages.lock.json", LOCKFILE),
+            (
+                "App.Tests/Support/HttpHelper.cs",
+                "using System.Net.Http;\n\nnamespace App.Tests;\n\npublic class HttpHelper\n{\n    public string Get()\n    {\n        return new HttpClient().GetStringAsync(\"https://example.com\").Result;\n    }\n}\n",
+            ),
+        ],
+    });
+
+    assert_eq!(findings, Vec::<String>::new());
+}
