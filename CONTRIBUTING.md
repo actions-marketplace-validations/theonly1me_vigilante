@@ -75,10 +75,12 @@ Keep personal details, machine paths, and work notes out of the repository. The 
 Releases are automatic. A maintainer only merges the release pull request.
 
 1. On each push to `main`, Release Please updates a release pull request. The pull request sets the next version in `Cargo.toml`, `Cargo.lock`, `npm/vigilante/package.json`, `action.yml`, and the docs, and it updates `CHANGELOG.md`.
-2. The release workflow starts CI on the release pull request.
+2. CI runs on the release pull request. If GitHub asks a maintainer to approve the run for the Actions bot, approve it.
 3. When a maintainer merges the release pull request, Release Please makes the tag and the GitHub release.
 4. The release workflow builds the binaries for 4 targets, the npm packages, the wheels, and the Homebrew formula. It attests each file and adds it to the GitHub release.
-5. Then it publishes to crates.io, npm, PyPI, and the Homebrew tap. Each step skips a version that the registry already has, so you can run a failed job again.
+5. Then it publishes to crates.io, npm, PyPI, and the Homebrew tap. Each step skips a version that the registry already has.
+
+If a publish job fails, fix the cause on `main`. Then run the Release workflow by hand, with the tag of the release as the `tag` input. The workflow downloads the attested files of that release, verifies them, and publishes each missing version.
 
 The publish jobs use the `release` environment. Only `main` can use it.
 
