@@ -16,6 +16,7 @@ const CALLING_MAIN: &str = "package com.acme.app;\n\nimport com.acme.api.Service
 const LOADING_MAIN: &str = "package com.acme.app;\n\nimport com.acme.api.Loader;\n\npublic class Main {\n    public void go() {\n        Loader.ready();\n    }\n}\n";
 const SERVICE: TestClass = TestClass {
     name: "com/acme/api/Service",
+    interfaces: &[],
     methods: &[
         TestMethod {
             name: "init",
@@ -39,8 +40,48 @@ const SERVICE: TestClass = TestClass {
         },
     ],
 };
+const TOOL: TestClass = TestClass {
+    name: "com/acme/api/Tool",
+    interfaces: &[],
+    methods: &[TestMethod {
+        name: "run",
+        calls: &[],
+    }],
+};
+const SHELL_TOOL: TestClass = TestClass {
+    name: "com/acme/api/ShellTool",
+    interfaces: &["com/acme/api/Tool"],
+    methods: &[
+        TestMethod {
+            name: "<init>",
+            calls: &[],
+        },
+        TestMethod {
+            name: "run",
+            calls: &[TestCall {
+                class: "java/lang/ProcessBuilder",
+                name: "<init>",
+                is_static: false,
+            }],
+        },
+    ],
+};
+const TOOLS: TestClass = TestClass {
+    name: "com/acme/api/Tools",
+    interfaces: &[],
+    methods: &[TestMethod {
+        name: "create",
+        calls: &[TestCall {
+            class: "com/acme/api/ShellTool",
+            name: "<init>",
+            is_static: false,
+        }],
+    }],
+};
+const TOOL_MAIN: &str = "package com.acme.app;\n\nimport com.acme.api.Tool;\nimport com.acme.api.Tools;\n\npublic class Main {\n    public void go() {\n        Tool tool = Tools.create();\n        tool.run();\n    }\n}\n";
 const LOADER: TestClass = TestClass {
     name: "com/acme/api/Loader",
+    interfaces: &[],
     methods: &[
         TestMethod {
             name: "<clinit>",
@@ -58,12 +99,25 @@ const LOADER: TestClass = TestClass {
 };
 
 fn repository_calling(main: &str) -> TestRepository {
+    repository_with(Setup {
+        classes: &[&SERVICE, &LOADER],
+        main,
+    })
+}
+
+struct Setup<'a> {
+    classes: &'a [&'a TestClass<'a>],
+    main: &'a str,
+}
+
+fn repository_with(setup: Setup) -> TestRepository {
+    let Setup { classes, main } = setup;
     let mut files = BTreeMap::new();
     files.extend(artifact_files(Artifact {
         name: "api",
         version: "1.0",
         pom: "<project><groupId>com.acme</groupId><artifactId>api</artifactId><version>1.0</version></project>",
-        classes: &[&SERVICE, &LOADER],
+        classes,
     }));
     let base_url = serve_files(files);
     let pom = format!(
@@ -105,6 +159,22 @@ fn a_call_to_a_static_method_runs_the_static_initializer_of_its_class() {
     let notes = summaries(&report_of(&run)["notes"]);
     let note = format!(
         "app exec com.acme:api {MAIN}:7 app/src/main/java/com/acme/app/Main.Main.go > com.acme:api/com/acme/api/Loader.Loader.ready > com.acme:api/com/acme/api/Loader.init > new ProcessBuilder"
+    );
+    assert_eq!(notes, vec![note.clone(), note], "{}", run.stderr);
+}
+
+#[test]
+fn a_call_on_an_interface_reaches_the_loaded_classes_that_implement_it() {
+    let repository = repository_with(Setup {
+        classes: &[&TOOL, &SHELL_TOOL, &TOOLS],
+        main: TOOL_MAIN,
+    });
+
+    let run = repository.run_with_cache(DIFF);
+
+    let notes = summaries(&report_of(&run)["notes"]);
+    let note = format!(
+        "app exec com.acme:api {MAIN}:9 app/src/main/java/com/acme/app/Main.Main.go > com.acme:api/com/acme/api/ShellTool.ShellTool.run > new ProcessBuilder"
     );
     assert_eq!(notes, vec![note.clone(), note], "{}", run.stderr);
 }

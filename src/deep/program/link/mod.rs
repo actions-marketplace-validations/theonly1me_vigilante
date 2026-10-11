@@ -1,6 +1,7 @@
 mod bindings;
 mod fallback;
 mod functions;
+mod hierarchy;
 mod targets;
 mod typed;
 
@@ -51,6 +52,8 @@ struct Linker<'p> {
     graph: Graph,
     functions: Vec<Vec<FunctionId>>,
     in_file: Vec<HashMap<String, Vec<FunctionId>>>,
+    places: Vec<(usize, usize)>,
+    subtypes: HashMap<hierarchy::ClassKey, Vec<hierarchy::ClassKey>>,
     by_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     by_full_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     in_unit: HashMap<Unit, Vec<FunctionId>>,
@@ -72,12 +75,15 @@ pub fn link(input: LinkInput) -> Linked {
         graph: Graph::default(),
         functions: Vec::new(),
         in_file: Vec::new(),
+        places: Vec::new(),
+        subtypes: HashMap::new(),
         by_name: HashMap::new(),
         by_full_name: HashMap::new(),
         in_unit: HashMap::new(),
         fallbacks: HashMap::new(),
     };
     linker.add_functions();
+    linker.add_hierarchy();
     for file in 0..linker.files.len() {
         linker.link_file(file);
     }

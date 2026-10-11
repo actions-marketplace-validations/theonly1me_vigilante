@@ -16,6 +16,7 @@ const RUNNING_MAIN: &str = "package com.acme.app;\n\nimport com.acme.runner.Runn
 const GRADLE_LOCKFILE: &str = "com.acme:runner:1.0=compileClasspath,runtimeClasspath\ncom.acme:spawner:2.0=runtimeClasspath\nempty=annotationProcessor\n";
 const RUNNER: TestClass = TestClass {
     name: "com/acme/runner/Runner",
+    interfaces: &[],
     methods: &[TestMethod {
         name: "start",
         calls: &[TestCall {
@@ -27,6 +28,7 @@ const RUNNER: TestClass = TestClass {
 };
 const SPAWNER: TestClass = TestClass {
     name: "com/acme/spawner/Spawner",
+    interfaces: &[],
     methods: &[TestMethod {
         name: "spawn",
         calls: &[TestCall {

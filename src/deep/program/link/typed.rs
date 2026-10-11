@@ -14,6 +14,11 @@ pub(super) struct TypedUse<'a> {
 
 impl Linker<'_> {
     pub(super) fn call_targets(&mut self, wanted: TypedUse) -> Vec<Target> {
+        let targets = self.resolved_targets(wanted);
+        self.with_overrides(targets)
+    }
+
+    fn resolved_targets(&mut self, wanted: TypedUse) -> Vec<Target> {
         let TypedUse { item, line } = wanted;
         let typed = self
             .types

@@ -140,3 +140,36 @@ fn the_patterns_engine_reports_an_import_without_the_call_graph() {
         vec!["app network own app/src/main/java/com/acme/app/Main.java:3 "]
     );
 }
+
+#[test]
+fn a_call_on_a_base_class_reaches_the_subclass_that_overrides_it() {
+    let report = diff(Change {
+        base: &[
+            (
+                "tools/pom.xml",
+                "<project><artifactId>tools</artifactId></project>\n",
+            ),
+            (
+                "tools/src/main/java/com/acme/tools/Base.java",
+                "package com.acme.tools;\n\npublic class Base {\n    public void run() {\n    }\n\n    public static Base make() {\n        return null;\n    }\n}\n",
+            ),
+            (
+                "tools/src/main/java/com/acme/tools/Shell.java",
+                "package com.acme.tools;\n\npublic class Shell extends Base {\n    public void run() {\n        new ProcessBuilder(\"make\");\n    }\n}\n",
+            ),
+        ],
+        head: &[(
+            MAIN,
+            &main_with(
+                "import com.acme.tools.Base;\nimport com.acme.tools.Shell;\n\npublic class Main {\n    public void go() {\n        Shell unused = null;\n        Base base = Base.make();\n        base.run();\n    }\n}\n",
+            ),
+        )],
+    });
+
+    assert!(
+        summaries(&report["notes"]).contains(
+            &"app exec tools app/src/main/java/com/acme/app/Main.java:10 app/src/main/java/com/acme/app/Main.Main.go > tools/src/main/java/com/acme/tools/Shell.Shell.run > new ProcessBuilder".to_string()
+        ),
+        "{report:#?}"
+    );
+}

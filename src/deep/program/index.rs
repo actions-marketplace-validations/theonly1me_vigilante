@@ -10,6 +10,13 @@ pub struct FileIndex {
     pub exports: Vec<Export>,
     pub loads: Vec<Load>,
     pub ignored: Vec<Range<usize>>,
+    pub supertypes: Vec<Supertypes>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Supertypes {
+    pub class: String,
+    pub names: Vec<String>,
 }
 
 pub struct Definition {

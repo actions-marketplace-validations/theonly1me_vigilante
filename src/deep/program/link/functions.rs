@@ -5,7 +5,7 @@ use crate::deep::graph::Function;
 
 impl Linker<'_> {
     pub(super) fn add_functions(&mut self) {
-        for file in self.files {
+        for (file_position, file) in self.files.iter().enumerate() {
             let unit = unit_of(file);
             let mut ids = Vec::new();
             let mut in_file: HashMap<String, Vec<usize>> = HashMap::new();
@@ -30,6 +30,7 @@ impl Linker<'_> {
                         .push(id);
                 }
                 in_file.entry(definition.name.clone()).or_default().push(id);
+                self.places.push((file_position, position));
                 self.in_unit.entry(unit.clone()).or_default().push(id);
                 ids.push(id);
             }

@@ -11,7 +11,9 @@ use std::collections::HashMap;
 use ast_grep_language::SupportLang;
 
 pub use analyze::AnalyzeInput;
-pub use index::{Binding, Definition, Export, FileIndex, INIT, Imported, Load, Use, UseTarget};
+pub use index::{
+    Binding, Definition, Export, FileIndex, INIT, Imported, Load, Supertypes, Use, UseTarget,
+};
 pub use roots::{RootsInput, selected_roots};
 pub use typed::{TypeCheck, Typed, TypedCall, TypedCalls, TypedTarget};
 

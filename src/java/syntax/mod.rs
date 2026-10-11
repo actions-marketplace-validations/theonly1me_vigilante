@@ -1,4 +1,6 @@
 mod declarations;
+#[cfg(test)]
+mod tests;
 mod uses;
 
 use declarations::{Declarations, DeclarationsIn, declarations};
@@ -117,6 +119,7 @@ struct BindTypes<'a> {
 
 fn bind_types(input: BindTypes) {
     let BindTypes { index, found } = input;
+    index.supertypes.clone_from(&found.supertypes);
     let objects: Vec<String> = index
         .definitions
         .iter()
@@ -125,6 +128,12 @@ fn bind_types(input: BindTypes) {
             UseTarget::Member { object, .. } if object != "this" => Some(object.clone()),
             _ => None,
         })
+        .chain(
+            found
+                .supertypes
+                .iter()
+                .flat_map(|supertypes| supertypes.names.iter().cloned()),
+        )
         .collect();
     for object in objects {
         if index.bindings.contains_key(&object) || found.classes.contains(&object) {
