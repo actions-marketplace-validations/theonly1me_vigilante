@@ -3,7 +3,7 @@ use crate::python_fixtures::summaries;
 use crate::ruby_fixtures::{Change, diff};
 
 #[test]
-fn own_code_that_reaches_the_network_through_a_path_gem_is_a_finding() {
+fn own_code_that_reaches_the_network_through_a_path_gem_is_a_note() {
     let run = diff(Change {
         base: &[
             (
@@ -34,9 +34,9 @@ fn own_code_that_reaches_the_network_through_a_path_gem_is_a_finding() {
     });
 
     assert_eq!(
-        summaries(&report_of(&run)["findings"]),
+        summaries(&report_of(&run)["notes"]),
         vec![
-            ". network own app.rb:5 app.App.main > engines/billing/lib/billing/charger.Charger.charge > Net::HTTP"
+            ". network engines/billing app.rb:5 app.App.main > engines/billing/lib/billing/charger.Charger.charge > Net::HTTP"
         ],
         "{}",
         run.stderr
@@ -59,8 +59,8 @@ fn requiring_a_file_runs_its_top_level_code() {
     });
 
     assert_eq!(
-        summaries(&report_of(&run)["findings"]),
-        vec![". exec own app.rb:1 app.init > engines/tools/lib/boot.init > system"],
+        summaries(&report_of(&run)["notes"]),
+        vec![". exec engines/tools app.rb:1 app.init > engines/tools/lib/boot.init > system"],
         "{}",
         run.stderr
     );

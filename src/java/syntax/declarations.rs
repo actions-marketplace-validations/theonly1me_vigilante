@@ -1,13 +1,15 @@
 use std::collections::{BTreeSet, HashMap};
 
 use crate::code::SyntaxNode;
-use crate::deep::program::{Binding, FileIndex, Imported, Load};
+use crate::deep::program::{Binding, FileIndex, Imported, Load, Supertypes};
 
 const TYPE_HOLDERS: &[&str] = &[
     "field_declaration",
     "local_variable_declaration",
     "formal_parameter",
 ];
+const SUPERTYPE_LISTS: &[&str] = &["superclass", "super_interfaces", "extends_interfaces"];
+const TYPE_NAMES: &[&str] = &["type_identifier", "scoped_type_identifier"];
 const CLASS_KINDS: &[&str] = &[
     "class_declaration",
     "interface_declaration",
@@ -22,6 +24,7 @@ pub struct Declarations {
     pub wildcards: Vec<String>,
     pub variable_types: HashMap<String, String>,
     pub classes: BTreeSet<String>,
+    pub supertypes: Vec<Supertypes>,
 }
 
 pub struct DeclarationsIn<'a, 'r> {
@@ -81,12 +84,37 @@ pub fn declarations(input: DeclarationsIn) -> Declarations {
             kind if CLASS_KINDS.contains(&kind) => {
                 if let Some(name) = node.field("name") {
                     found.classes.insert(name.text().to_string());
+                    let names = supertype_names(&node);
+                    if !names.is_empty() {
+                        found.supertypes.push(Supertypes {
+                            class: name.text().to_string(),
+                            names,
+                        });
+                    }
                 }
             }
             _ => {}
         }
     }
     found
+}
+
+fn supertype_names(class: &SyntaxNode) -> Vec<String> {
+    class
+        .children()
+        .filter(|child| SUPERTYPE_LISTS.contains(&child.kind().as_ref()))
+        .flat_map(|list| list.dfs().collect::<Vec<_>>())
+        .filter(|node| TYPE_NAMES.contains(&node.kind().as_ref()))
+        .filter(|node| {
+            node.ancestors()
+                .take_while(|ancestor| !SUPERTYPE_LISTS.contains(&ancestor.kind().as_ref()))
+                .all(|ancestor| {
+                    ancestor.kind() != "type_arguments"
+                        && ancestor.kind() != "scoped_type_identifier"
+                })
+        })
+        .map(|node| node.text().to_string())
+        .collect()
 }
 
 pub struct Import {

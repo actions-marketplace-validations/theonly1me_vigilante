@@ -10,9 +10,14 @@ fn findings_after(change: Change) -> Vec<String> {
     summaries(&report_of(&run)["findings"])
 }
 
+fn reported_after(change: Change) -> (Vec<String>, Vec<String>) {
+    let report = report_of(&diff(change));
+    (summaries(&report["findings"]), summaries(&report["notes"]))
+}
+
 #[test]
-fn own_code_that_reaches_exec_in_another_project_is_a_finding() {
-    let findings = findings_after(Change {
+fn own_code_that_reaches_exec_only_through_another_project_is_a_note() {
+    let reported = reported_after(Change {
         base: &[
             ("App.csproj", APP_PROJECT),
             ("packages.lock.json", LOCKFILE),
@@ -34,16 +39,20 @@ fn own_code_that_reaches_exec_in_another_project_is_a_finding() {
     });
 
     assert_eq!(
-        findings,
-        vec![
-            ". exec own Program.cs:9 Program.Program.Main > Tools/Shell.Shell.Run > Process.Start"
-        ]
+        reported,
+        (
+            Vec::new(),
+            vec![
+                ". exec Tools Program.cs:9 Program.Program.Main > Tools/Shell.Shell.Run > Process.Start"
+                    .to_string()
+            ]
+        )
     );
 }
 
 #[test]
 fn a_method_reaches_the_network_through_a_field_initializer() {
-    let findings = findings_after(Change {
+    let reported = reported_after(Change {
         base: &[
             ("App.csproj", APP_PROJECT),
             ("packages.lock.json", LOCKFILE),
@@ -61,10 +70,14 @@ fn a_method_reaches_the_network_through_a_field_initializer() {
     });
 
     assert_eq!(
-        findings,
-        vec![
-            ". network own Program.cs:10 Program.Program.Main > Web/Fetcher.Fetcher.Get > Web/Fetcher.init > HttpClient"
-        ]
+        reported,
+        (
+            Vec::new(),
+            vec![
+                ". network Web Program.cs:10 Program.Program.Main > Web/Fetcher.Fetcher.Get > Web/Fetcher.init > HttpClient"
+                    .to_string()
+            ]
+        )
     );
 }
 
@@ -93,4 +106,56 @@ fn transitive_packages_are_resolved_and_the_nearest_version_wins() {
         run.stderr
     );
     assert_eq!(report["skipped"], serde_json::Value::Array(Vec::new()));
+}
+
+#[test]
+fn a_test_project_folder_is_skipped_like_a_test_folder() {
+    let findings = findings_after(Change {
+        base: &[
+            ("App.csproj", APP_PROJECT),
+            ("packages.lock.json", LOCKFILE),
+        ],
+        head: &[
+            ("App.Tests/App.Tests.csproj", APP_PROJECT),
+            ("App.Tests/packages.lock.json", LOCKFILE),
+            (
+                "App.Tests/Support/HttpHelper.cs",
+                "using System.Net.Http;\n\nnamespace App.Tests;\n\npublic class HttpHelper\n{\n    public string Get()\n    {\n        return new HttpClient().GetStringAsync(\"https://example.com\").Result;\n    }\n}\n",
+            ),
+        ],
+    });
+
+    assert_eq!(findings, Vec::<String>::new());
+}
+
+#[test]
+fn a_call_on_a_base_class_reaches_the_subclass_that_overrides_it() {
+    let (_, notes) = reported_after(Change {
+        base: &[
+            ("App.csproj", APP_PROJECT),
+            ("packages.lock.json", LOCKFILE),
+            ("Tools/Tools.csproj", APP_PROJECT),
+            ("Tools/packages.lock.json", LOCKFILE),
+            (
+                "Tools/Base.cs",
+                "namespace Acme.Tools;\n\npublic class Base\n{\n    public virtual void Run()\n    {\n    }\n\n    public static Base Make()\n    {\n        return new Shell();\n    }\n}\n",
+            ),
+            (
+                "Tools/Shell.cs",
+                "using System.Diagnostics;\n\nnamespace Acme.Tools;\n\npublic class Shell : Base\n{\n    public override void Run()\n    {\n        Process.Start(\"make\");\n    }\n}\n",
+            ),
+        ],
+        head: &[(
+            "Program.cs",
+            "using Acme.Tools;\n\nnamespace App;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Base tool = Base.Make();\n        tool.Run();\n    }\n}\n",
+        )],
+    });
+
+    assert!(
+        notes.contains(
+            &". exec Tools Program.cs:10 Program.Program.Main > Tools/Shell.Shell.Run > Process.Start"
+                .to_string()
+        ),
+        "{notes:#?}"
+    );
 }

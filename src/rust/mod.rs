@@ -5,6 +5,7 @@ mod modules;
 mod resolver;
 mod syntax;
 mod test_modules;
+mod typed;
 
 use std::collections::BTreeMap;
 
@@ -12,9 +13,9 @@ use ast_grep_language::SupportLang;
 
 use crate::Error;
 use crate::code::{Rules, language_of};
-use crate::config::Config;
+use crate::config::{Config, LanguageEngine};
 use crate::deep::Analysis;
-use crate::deep::program::{LinkInput, Program, ProgramInput, RootsInput, link, selected_roots};
+use crate::deep::program::{AnalyzeInput, Program, ProgramInput, RootsInput, selected_roots};
 use crate::registry::Registry;
 use crate::scan::Selection;
 use crate::tree::Tree;
@@ -22,6 +23,7 @@ use environment::{EnvironmentInput, RustEnvironment};
 use language::Rust;
 use resolver::RustResolver;
 use test_modules::{TestModulesInput, without_test_modules};
+use typed::{TypeCheckRequest, type_check};
 
 const BUILD_FILES: &[&str] = &["Cargo.toml", "Cargo.lock"];
 
@@ -73,12 +75,20 @@ pub fn analyze(request: RustRequest) -> Result<Analysis, Error> {
     });
     let root_paths: Vec<String> = roots.iter().cloned().collect();
     program.load(&root_paths)?;
-    let linked = link(LinkInput {
-        program: &program,
+    let check = if request.config.rust_engine == LanguageEngine::Typed {
+        Some(type_check(TypeCheckRequest {
+            program: &program,
+            tree: request.tree,
+            limit: request.config.type_check_limit,
+        })?)
+    } else {
+        None
+    };
+    let mut analysis = program.analyze(AnalyzeInput {
         roots: &roots,
+        check: check.as_ref(),
     });
     drop(program);
-    let mut analysis = linked.graph.analyze(&linked.scopes);
-    analysis.skipped = resolver.into_skipped();
+    analysis.skipped.extend(resolver.into_skipped());
     Ok(analysis)
 }

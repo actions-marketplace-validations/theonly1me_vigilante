@@ -14,7 +14,7 @@
 
 Vigilante reads a pull request and lists the new powers that it adds. A power is something like the first `subprocess` call in a package, a CI token that can push, a new MCP server that your agents connect to, or a new install script. You approve powers in a `vigilante.lock` file that your security team owns. If a pull request adds a power that is not in the lock, the check fails.
 
-Vigilante never runs code from the repository that it checks. It reads files, and for Go it type-checks the code with [Capslock](https://github.com/google/capslock). For the other languages, it downloads the locked packages from their public registries and reads them.
+By default, Vigilante never runs code from the repository that it checks. It reads files and resolves calls by type: with [Capslock](https://github.com/google/capslock) for Go, the TypeScript type checker for JavaScript and TypeScript, and Pyright for Python. These tools read code and do not run it. Vigilante also downloads the locked packages from their public registries and reads them. If you set `[engines] rust = "typed"`, Vigilante builds the Rust code in a Docker container with no network ([docs/dependencies.md](docs/dependencies.md#calls-resolved-by-type)).
 
 ## Why
 
@@ -44,14 +44,14 @@ The same pull request also added a second network call to `services/billing`, th
 | Surface | Files | Powers |
 | --- | --- | --- |
 | Code | Rust, JavaScript, TypeScript, Python, Ruby, C#, Java, and Go | `exec`, `network`, `files`, `native`, `dynamic_code`, `read_system_state`, `modify_system_state`, `system_calls` |
-| Code, through dependencies | Go with [Capslock](https://github.com/google/capslock). JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby with Vigilante's own call graph over the locked packages | Every code power, with the call path. For Go, all 13 Capslock capabilities, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
+| Code, through dependencies | Go with [Capslock](https://github.com/google/capslock). JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby with Vigilante's own call graph over the locked packages. Calls resolve by type in JavaScript, TypeScript, and Python, and through the class hierarchy in Java and C# | Every code power, with the call path. For Go, all 13 Capslock capabilities, including `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed` |
 | CI | `.github/workflows/*.yml` | `token_write`, `oidc`, `untrusted_trigger`, `third_party_action`, `secret` |
 | AI agents | `.claude/settings.json`, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
 | Build | `package.json` install scripts, `build.rs`, `setup.py`, `.husky/`, `.pre-commit-config.yaml` | `install_hook`, `git_hook` |
 
 Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root, and for Go it is the Go package. Tests, fixtures, and vendored code are skipped. [docs/powers.md](docs/powers.md) explains each power and the rules that keep the report short.
 
-In every language, a finding is `exec`, `network`, or `native` that your package reaches through its own code. Every other power, a power that comes only through a dependency, and a new package on a call path to a power, are notes, as in `capslock-git-diff`. A new dependency that reaches the network shows up there. Notes do not fail the check. [docs/dependencies.md](docs/dependencies.md) explains how Vigilante reads packages.
+In every language, a finding is `exec`, `network`, or `native` that your package reaches through its own code. Outside Go, a power that a package reaches only through another package of the same repository is a note, because that package shows its own finding. Every other power, a power that comes only through a dependency, and a new package on a call path to a power, are notes, as in `capslock-git-diff`. A new dependency that reaches the network shows up there. Notes do not fail the check. [docs/dependencies.md](docs/dependencies.md) explains how Vigilante reads packages.
 
 ## Install
 

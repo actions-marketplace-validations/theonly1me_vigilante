@@ -4,7 +4,7 @@ use crate::python_fixtures::{Change, RUNNER, SPAWNER, diff, summaries};
 use crate::python_index::PythonIndex;
 
 #[test]
-fn own_code_that_reaches_exec_through_a_relative_import_is_a_finding() {
+fn own_code_that_reaches_exec_through_another_scope_is_a_note_through_that_scope() {
     let report = diff(Change {
         base: &[],
         head: &[
@@ -25,13 +25,14 @@ fn own_code_that_reaches_exec_through_a_relative_import_is_a_finding() {
         ],
     });
 
-    let findings = summaries(&report["findings"]);
-
     assert_eq!(
-        findings,
+        summaries(&report["findings"]),
+        vec!["tools exec own tools/shell.py:5 tools/shell.call > subprocess.run"]
+    );
+    assert_eq!(
+        summaries(&report["notes"]),
         vec![
-            ". exec own app.py:5 app.main > tools/build.run_build > tools/shell.call > subprocess.run",
-            "tools exec own tools/shell.py:5 tools/shell.call > subprocess.run",
+            ". exec tools app.py:5 app.main > tools/build.run_build > tools/shell.call > subprocess.run"
         ]
     );
 }
@@ -172,9 +173,10 @@ fn importing_a_module_runs_its_top_level_code() {
 
     assert_eq!(
         summaries(&report["findings"]),
-        vec![
-            ". exec own app.py:1 app.init > tools/boot.init > subprocess.run",
-            "tools exec own tools/boot.py:3 tools/boot.init > subprocess.run",
-        ]
+        vec!["tools exec own tools/boot.py:3 tools/boot.init > subprocess.run"]
+    );
+    assert_eq!(
+        summaries(&report["notes"]),
+        vec![". exec tools app.py:1 app.init > tools/boot.init > subprocess.run"]
     );
 }

@@ -89,7 +89,7 @@ These rules keep the report short. Each rule leaves out a change that a reviewer
 
 ### Tests, fixtures, and vendored code
 
-Vigilante skips test folders and test files (`tests/`, `__tests__/`, `*_test.go`, `*.spec.ts`, `*Test.java`, `test_*.py`, and more), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. Add more globs with `[scan] exclude`.
+Vigilante skips test folders and test files (`tests/`, `__tests__/`, `*.Tests/`, `*_test.go`, `*.spec.ts`, `*Test.java`, `test_*.py`, and more), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. Add more globs with `[scan] exclude`.
 
 ### Low-signal powers
 
@@ -120,6 +120,8 @@ Actions from `actions/`, `github/`, and local actions (`./`) are not powers. Add
 ### Generated code
 
 The Go `native` rule skips generated protobuf files (`*.pb.go`), which import `unsafe`.
+
+The Rust `native` rule skips `unsafe impl Send` and `unsafe impl Sync`, which only mark a type as safe to share between threads. It also skips `extern` blocks with `#[wasm_bindgen]`, which import JavaScript functions in WebAssembly and do not call native code.
 
 ## Known limits
 

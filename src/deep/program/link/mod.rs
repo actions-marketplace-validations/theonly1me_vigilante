@@ -1,13 +1,18 @@
 mod bindings;
 mod fallback;
+mod functions;
+mod hierarchy;
 mod targets;
+mod typed;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use super::typed::TypedCalls;
 use super::{FileKey, Language, LoadedFile, Program, Resolver, Root, UseTarget};
 use crate::Power;
 use crate::deep::ScopeRoots;
-use crate::deep::graph::{Call, Function, FunctionId, Graph, Owner, Sink, Target};
+use crate::deep::graph::{Call, FunctionId, Graph, Owner, Sink, Target};
+use typed::TypedUse;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum Unit {
@@ -30,6 +35,7 @@ struct FileUse<'a> {
 pub struct LinkInput<'p, 'a> {
     pub program: &'p Program<'a>,
     pub roots: &'p BTreeSet<String>,
+    pub types: Option<&'p TypedCalls>,
 }
 
 pub struct Linked {
@@ -42,8 +48,12 @@ struct Linker<'p> {
     ids: &'p HashMap<FileKey, usize>,
     language: &'p dyn Language,
     resolver: &'p dyn Resolver,
+    types: Option<&'p TypedCalls>,
     graph: Graph,
     functions: Vec<Vec<FunctionId>>,
+    in_file: Vec<HashMap<String, Vec<FunctionId>>>,
+    places: Vec<(usize, usize)>,
+    subtypes: HashMap<hierarchy::ClassKey, Vec<hierarchy::ClassKey>>,
     by_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     by_full_name: HashMap<Unit, HashMap<String, Vec<FunctionId>>>,
     in_unit: HashMap<Unit, Vec<FunctionId>>,
@@ -51,20 +61,29 @@ struct Linker<'p> {
 }
 
 pub fn link(input: LinkInput) -> Linked {
-    let LinkInput { program, roots } = input;
+    let LinkInput {
+        program,
+        roots,
+        types,
+    } = input;
     let mut linker = Linker {
         files: &program.files,
         ids: &program.ids,
         language: program.language(),
         resolver: program.resolver(),
+        types,
         graph: Graph::default(),
         functions: Vec::new(),
+        in_file: Vec::new(),
+        places: Vec::new(),
+        subtypes: HashMap::new(),
         by_name: HashMap::new(),
         by_full_name: HashMap::new(),
         in_unit: HashMap::new(),
         fallbacks: HashMap::new(),
     };
     linker.add_functions();
+    linker.add_hierarchy();
     for file in 0..linker.files.len() {
         linker.link_file(file);
     }
@@ -89,45 +108,17 @@ pub fn link(input: LinkInput) -> Linked {
 }
 
 impl Linker<'_> {
-    fn add_functions(&mut self) {
-        for file in self.files {
-            let unit = unit_of(file);
-            let mut ids = Vec::new();
-            for (position, definition) in file.index.definitions.iter().enumerate() {
-                let id = self.graph.add_function(Function {
-                    name: format!("{}.{}", self.language.stem(&file.display), definition.name),
-                    owner: file.owner.clone(),
-                    path: file.display.clone(),
-                });
-                if position > 0 {
-                    self.by_name
-                        .entry(unit.clone())
-                        .or_default()
-                        .entry(definition.simple.clone())
-                        .or_default()
-                        .push(id);
-                    self.by_full_name
-                        .entry(unit.clone())
-                        .or_default()
-                        .entry(definition.name.clone())
-                        .or_default()
-                        .push(id);
-                }
-                self.in_unit.entry(unit.clone()).or_default().push(id);
-                ids.push(id);
-            }
-            self.functions.push(ids);
-        }
-    }
-
     fn link_file(&mut self, file: usize) {
         let loaded = &self.files[file];
         for (definition, item) in loaded.index.definitions.iter().enumerate() {
             let from = self.functions[file][definition];
             for item_use in &item.uses {
-                for target in self.targets(FileUse {
-                    file,
-                    target: &item_use.target,
+                for target in self.call_targets(TypedUse {
+                    item: FileUse {
+                        file,
+                        target: &item_use.target,
+                    },
+                    line: item_use.line,
                 }) {
                     self.graph.add_call(Call {
                         from,

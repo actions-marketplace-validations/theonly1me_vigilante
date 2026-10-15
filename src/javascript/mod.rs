@@ -6,14 +6,15 @@ mod prefetch;
 mod projects;
 mod resolver;
 mod syntax;
+mod typed;
 
 use ast_grep_language::SupportLang;
 
 use crate::Error;
 use crate::code::{Rules, language_of};
-use crate::config::Config;
+use crate::config::{Config, LanguageEngine};
 use crate::deep::Analysis;
-use crate::deep::program::{LinkInput, Program, ProgramInput, RootsInput, link, selected_roots};
+use crate::deep::program::{AnalyzeInput, Program, ProgramInput, RootsInput, selected_roots};
 use crate::lockfiles::JAVASCRIPT_LOCKFILES;
 use crate::registry::Registry;
 use crate::scan::Selection;
@@ -23,6 +24,7 @@ use packages::{Packages, PackagesInput};
 use paths::is_code_file;
 use projects::Projects;
 use resolver::JavaScriptResolver;
+use typed::{TypeCheckRequest, type_check};
 
 pub struct JavaScriptRequest<'a> {
     pub tree: &'a dyn Tree,
@@ -66,12 +68,21 @@ pub fn analyze(request: JavaScriptRequest) -> Result<Analysis, Error> {
     });
     let root_paths: Vec<String> = roots.iter().cloned().collect();
     program.load(&root_paths)?;
-    let linked = link(LinkInput {
-        program: &program,
+    let check = if request.config.javascript_engine == LanguageEngine::Typed {
+        Some(type_check(TypeCheckRequest {
+            program: &program,
+            tree: request.tree,
+            registry: &registry,
+            limit: request.config.type_check_limit,
+        })?)
+    } else {
+        None
+    };
+    let mut analysis = program.analyze(AnalyzeInput {
         roots: &roots,
+        check: check.as_ref(),
     });
     drop(program);
-    let mut analysis = linked.graph.analyze(&linked.scopes);
-    analysis.skipped = resolver.packages.into_skipped();
+    analysis.skipped.extend(resolver.packages.into_skipped());
     Ok(analysis)
 }

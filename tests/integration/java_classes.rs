@@ -15,6 +15,7 @@ pub struct TestMethod<'a> {
 
 pub struct TestClass<'a> {
     pub name: &'a str,
+    pub interfaces: &'a [&'a str],
     pub methods: &'a [TestMethod<'a>],
 }
 
@@ -70,6 +71,11 @@ pub fn class_bytes(class: &TestClass) -> Vec<u8> {
     let mut pool = Pool::default();
     let this_class = pool.class(class.name);
     let super_class = pool.class("java/lang/Object");
+    let interfaces: Vec<u16> = class
+        .interfaces
+        .iter()
+        .map(|interface| pool.class(interface))
+        .collect();
     let code_name = pool.utf8("Code");
     let mut methods = Vec::new();
     for method in class.methods {
@@ -100,7 +106,11 @@ pub fn class_bytes(class: &TestClass) -> Vec<u8> {
     bytes.extend([0, 0x21]);
     bytes.extend(this_class.to_be_bytes());
     bytes.extend(super_class.to_be_bytes());
-    bytes.extend([0, 0, 0, 0]);
+    bytes.extend((interfaces.len() as u16).to_be_bytes());
+    for interface in interfaces {
+        bytes.extend(interface.to_be_bytes());
+    }
+    bytes.extend([0, 0]);
     bytes.extend((methods.len() as u16).to_be_bytes());
     for method in methods {
         bytes.extend(method);

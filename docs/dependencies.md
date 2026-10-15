@@ -8,10 +8,10 @@ Vigilante never runs code from the repository or from a package. It does not ins
 
 The rule is the same for every language:
 
-1. `exec`, `network`, or `native` that your own code reaches is a finding. The call path stays in your repository until the privileged call. A finding must be in `vigilante.lock`.
+1. `exec`, `network`, or `native` that your own code reaches is a finding. The call path stays in the scope until the privileged call. A finding must be in `vigilante.lock`.
 2. Everything else is a note:
    - any other power that your own code reaches, for example `dynamic_code` or `modify_system_state`;
-   - a power that your code reaches only through a package;
+   - a power that your code reaches only through a package, or through another scope of the repository (that scope shows its own finding);
    - a package that is new on a call path to a power.
 3. Notes appear in the section "New packages on call paths". They do not fail the check and do not go in the lock. The Markdown report only counts the notes for the powers in `report.hide` (for example `files`), and the JSON report has all of them.
 
@@ -80,22 +80,43 @@ The report lists the code and packages that Vigilante did not read, for example:
 
 The Markdown report shows 10 lines and a count. The JSON report has all of them.
 
-## Turn an engine off
+## Calls resolved by type
 
-Set the language to `"patterns"` in `vigilante.toml` to use only the direct-use rules in `packs/`:
+Vigilante resolves calls by type with two tools. It downloads each one from npm, checks it against a pinned checksum, and runs it with Node.js. Neither tool runs code from the repository or its packages.
+
+- JavaScript and TypeScript: the TypeScript 6.0.3 type checker. It resolves the calls in your code. It reads package files only as far as your code imports them, and calls inside package code use the name-based rules.
+- Rust, when `[engines] rust = "typed"`: rust-analyzer in a Docker container (`rust:1.99-slim`, pinned by digest). Vigilante copies the workspace into the container. First, with network, it installs rust-analyzer and runs `cargo fetch`, which runs no project code. Then it disconnects the network and runs `rust-analyzer scip`, which runs `build.rs` and proc macros. The source is read-only, and only the index folder is writable.
+- Python: Pyright, through `@sourcegraph/scip-python` 0.6.6. Vigilante copies the code and the locked packages that it read into temporary folders, and runs the tool without the machine's Python, so packages installed on the machine do not change the result. Pyright resolves the calls in your code, including calls into packages. Calls inside package code use the name-based rules.
+
+Java and C# need no build. Vigilante reads the base class and the interfaces of each class, from source and from the class files and assemblies of the packages. A call on a base class or an interface also goes to the methods that override it in the loaded classes.
+
+1. A call that the checker resolves goes only to the function that the types name, not to every function with that name.
+2. A call through a function value, such as a callback, is an `unanalyzed` note, as in Capslock.
+3. A call that the checker cannot resolve uses the name-based rules.
+4. Findings are the union of the typed and the name-based results, so type data never removes a finding.
+
+If Node.js or Docker is not available, a download or build fails, or a check reaches `[engines] type_check_seconds` (default 300), Vigilante resolves calls by name and lists the scope under "Not analyzed".
+
+## Choose an engine
+
+Set a language to an engine in `vigilante.toml`:
 
 ```toml
 [engines]
-javascript = "patterns"
+javascript = "deep"
+ruby = "patterns"
 ```
 
-The keys are `javascript`, `python`, `java`, `rust`, `csharp`, and `ruby`. Their default is `"deep"`.
+- `"typed"` resolves calls by type, then by name. It is the default for `javascript` and `python`.
+- `"deep"` resolves calls by name and import. It is the default for `java`, `rust`, `csharp`, and `ruby`. `rust = "typed"` is opt-in, because it runs build code; it needs Docker on a Linux runner.
+- `"patterns"` uses only the direct-use rules in `packs/`.
 
 ## Known limits
 
-- A call on an object of unknown type, or through an interface or a trait, goes to every function with that name in the packages that the file imports. This can add packages to the notes, like Capslock's interface calls.
+- Without type data, a call on an object of unknown type, or through an interface or a trait, goes to every function with that name in the packages that the file imports. This can add packages to the notes, like Capslock's interface calls.
 - Calls that are built at run time are not followed: reflection, `eval`, dynamic imports, and Ruby metaprogramming such as `send` and `define_method`.
 - Rust: calls inside macro arguments are not read.
-- Java and C#: inherited methods and Kotlin, F#, and Visual Basic code are not followed.
+- Java and C#: a call on an interface or a base class also goes to the methods that override it in the classes that Vigilante loaded. A method that a class only inherits is not looked up in its base class.
+- Kotlin, F#, and Visual Basic code is not read.
 - Ruby: constants resolve by the Zeitwerk file convention (`Acme::Tools::Shell` is in `acme/tools/shell.rb`).
 - Private registries and feeds that need credentials are skipped.

@@ -36,9 +36,11 @@ rule:
       regex: \b(unsafe|extern)\b
     - kind: impl_item
       regex: ^unsafe\b
+      not: { regex: '^unsafe\s+impl(\s*<[^>]*>)?\s+((::)?(std|core)::marker::)?(Send|Sync)\s+for\b' }
     - kind: trait_item
       regex: ^(pub(\([^)]*\))?\s+)?unsafe\b
     - kind: foreign_mod_item
+      not: { follows: { kind: attribute_item, regex: '^#\[wasm_bindgen\b', stopBy: neighbor } }
     - kind: attribute_item
       regex: ^#\[link\b
     - kind: use_declaration

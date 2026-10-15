@@ -44,7 +44,7 @@ allow = ["https://npm.example.com/"]
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips tests, fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. |
+| `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips tests (including test projects such as `App.Tests/`), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. |
 | `scopes.<name>` | none | Puts the code files that match the glob in one scope with this name. Without it, the scope of a code file is its nearest package root. |
 | `policy.mode` | `"lock"` | `"lock"` fails when a power is not in `vigilante.lock`. `"report"` only reports. |
 | `policy.deny` | `[]` | Powers that always fail the check, even when they are in the lock. `scope` is a glob that matches the scope path, and its default is every scope. `capability` is a power name from [powers.md](powers.md). |
@@ -53,7 +53,10 @@ allow = ["https://npm.example.com/"]
 | `rules.paths` | `[]` | Folders with your own code rules. See [Your own rules](#your-own-rules). |
 | `ci.trusted_owners` | `[]` | GitHub owners whose actions count as first party, like `actions/` and `github/`. The match ignores case. |
 | `engines.go` | `"capslock"` | `"capslock"` follows Go calls into dependencies with Capslock and needs `go` and `capslock`. `"patterns"` uses the direct-use rules in `packs/go.yml`. See [powers.md](powers.md#go-capslock). |
-| `engines.javascript`, `engines.python`, `engines.java`, `engines.rust`, `engines.csharp`, `engines.ruby` | `"deep"` | `"deep"` follows calls into the locked packages of that language. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md). |
+| `engines.javascript`, `engines.python` | `"typed"` | `"typed"` resolves calls by type (the TypeScript checker, or Pyright), then by name, and needs Node.js. `"deep"` resolves calls by name and import. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md#calls-resolved-by-type). |
+| `engines.rust` | `"deep"` | `"typed"` resolves calls with rust-analyzer in a Docker build with no network, then by name. `"deep"` and `"patterns"` as above. See [dependencies.md](dependencies.md#calls-resolved-by-type). |
+| `engines.java`, `engines.csharp`, `engines.ruby` | `"deep"` | `"deep"` follows calls into the locked packages of that language. `"patterns"` uses only the direct-use rules in `packs/`. See [dependencies.md](dependencies.md). |
+| `engines.type_check_seconds` | `300` | The time limit for each type check or typed build, in seconds. If a check reaches it, Vigilante stops the check, resolves calls by name, and lists the scope under "Not analyzed". |
 | `registries.allow` | `[]` | More registries that Vigilante can download packages from. Use it only for registries that need no credentials. See [dependencies.md](dependencies.md#registries-that-are-not-public). |
 
 Globs use `/` between folders. `*` matches inside one folder, and `**` matches any number of folders. `services/**` matches the scopes `services/billing` and `services/billing/api`, but not the scope `services` itself.

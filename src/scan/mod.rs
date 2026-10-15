@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use crate::code::Rules;
-use crate::config::{Config, GoEngine, LanguageEngine};
+use crate::config::{Config, GoEngine};
 use crate::deep::{Reach, Skip};
 use crate::go::{DiscoverInput, GoModules};
 use crate::scope::{Scopes, ScopesInput};
@@ -121,9 +121,14 @@ impl<'a> Scanner<'a> {
                 text: &file.text,
             };
             let detections = self.surfaces.detect(source)?;
+            let code = if self.deep_owns(&file.path) {
+                Vec::new()
+            } else {
+                self.rules.detect(source)
+            };
             for detection in detections
                 .into_iter()
-                .chain(self.rules.detect(source))
+                .chain(code)
                 .filter(|detection| !self.config.trusts(&detection.power))
             {
                 let surface = detection.power.capability.surface();
@@ -163,12 +168,11 @@ impl<'a> Scanner<'a> {
 
     fn deep_owns(&self, path: &str) -> bool {
         self.go.as_ref().is_some_and(|go| go.owns(path))
-            || (self.config.javascript_engine == LanguageEngine::Deep
-                && crate::javascript::owns(path))
-            || (self.config.python_engine == LanguageEngine::Deep && crate::python::owns(path))
-            || (self.config.java_engine == LanguageEngine::Deep && crate::java::owns(path))
-            || (self.config.rust_engine == LanguageEngine::Deep && crate::rust::owns(path))
-            || (self.config.csharp_engine == LanguageEngine::Deep && crate::csharp::owns(path))
-            || (self.config.ruby_engine == LanguageEngine::Deep && crate::ruby::owns(path))
+            || (self.config.javascript_engine.follows_calls() && crate::javascript::owns(path))
+            || (self.config.python_engine.follows_calls() && crate::python::owns(path))
+            || (self.config.java_engine.follows_calls() && crate::java::owns(path))
+            || (self.config.rust_engine.follows_calls() && crate::rust::owns(path))
+            || (self.config.csharp_engine.follows_calls() && crate::csharp::owns(path))
+            || (self.config.ruby_engine.follows_calls() && crate::ruby::owns(path))
     }
 }

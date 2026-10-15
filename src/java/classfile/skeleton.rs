@@ -16,13 +16,21 @@ struct Names {
 pub fn skeleton(class: &ClassFile) -> String {
     let (package, own) = split(&class.name);
     let mut imported: BTreeMap<String, String> = BTreeMap::new();
-    for call in class.methods.iter().flat_map(|method| &method.calls) {
-        if call.class.starts_with('[') || call.class == class.name {
+    let referenced = class
+        .methods
+        .iter()
+        .flat_map(|method| &method.calls)
+        .map(|call| &call.class)
+        .chain(&class.supertypes);
+    for referenced_class in referenced {
+        if referenced_class.starts_with('[') || *referenced_class == class.name {
             continue;
         }
-        let (_, simple) = split(&call.class);
+        let (_, simple) = split(referenced_class);
         if simple != own {
-            imported.entry(simple).or_insert_with(|| call.class.clone());
+            imported
+                .entry(simple)
+                .or_insert_with(|| referenced_class.clone());
         }
     }
     let names = Names {
@@ -40,7 +48,25 @@ pub fn skeleton(class: &ClassFile) -> String {
             .values()
             .map(|class| format!("import {};", dotted(class))),
     );
-    lines.push(format!("class {} {{", identifier(&own)));
+    let supertypes: Vec<String> = class
+        .supertypes
+        .iter()
+        .map(|supertype| {
+            reference_to(Reference {
+                class: supertype,
+                names: &names,
+            })
+        })
+        .collect();
+    lines.push(if supertypes.is_empty() {
+        format!("class {} {{", identifier(&own))
+    } else {
+        format!(
+            "class {} implements {} {{",
+            identifier(&own),
+            supertypes.join(", ")
+        )
+    });
     for method in &class.methods {
         lines.extend(method_lines(Rendered {
             method,
@@ -82,14 +108,10 @@ fn call_lines(input: CallIn) -> Vec<String> {
     if call.class.starts_with('[') {
         return Vec::new();
     }
-    let (_, simple) = split(&call.class);
-    let reference = if call.class == names.own_class {
-        identifier(&names.own)
-    } else if names.imported.get(&simple) == Some(&call.class) {
-        identifier(&simple)
-    } else {
-        dotted(&call.class)
-    };
+    let reference = reference_to(Reference {
+        class: &call.class,
+        names,
+    });
     let name = identifier(&call.name);
     if call.name == CONSTRUCTOR {
         return vec![format!("new {reference}();")];
@@ -102,6 +124,23 @@ fn call_lines(input: CallIn) -> Vec<String> {
         lines.push(format!("{RECEIVER}.{name}();"));
     }
     lines
+}
+
+struct Reference<'a> {
+    class: &'a str,
+    names: &'a Names,
+}
+
+fn reference_to(wanted: Reference) -> String {
+    let Reference { class, names } = wanted;
+    let (_, simple) = split(class);
+    if class == names.own_class {
+        identifier(&names.own)
+    } else if names.imported.get(&simple).map(String::as_str) == Some(class) {
+        identifier(&simple)
+    } else {
+        dotted(class)
+    }
 }
 
 fn split(class: &str) -> (String, String) {

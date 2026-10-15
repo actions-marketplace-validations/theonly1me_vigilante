@@ -109,6 +109,18 @@ fn native_methods_nested_types_and_static_constructors_are_read() {
 }
 
 #[test]
+fn a_class_lists_its_interfaces_and_leaves_out_object() {
+    let assembly = assembly();
+    let named = type_named(&assembly);
+
+    assert_eq!(
+        named("Runner").supertypes,
+        vec![("Acme.Tools".to_string(), "IRunner".to_string())]
+    );
+    assert_eq!(named("Caller").supertypes, Vec::<(String, String)>::new());
+}
+
+#[test]
 fn bytes_that_are_not_an_assembly_are_ignored() {
     assert!(read(b"MZ not really a portable executable").is_none());
     assert!(read(&FIXTURE[..200]).is_none());

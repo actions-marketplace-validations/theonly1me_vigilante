@@ -137,3 +137,31 @@ fn a_crate_that_its_nearest_lockfile_does_not_list_is_listed_as_not_covered() {
         )]
     );
 }
+
+#[test]
+fn a_build_script_gets_no_pattern_findings_next_to_the_engine() {
+    let run = diff(Change {
+        base: &[
+            ("Cargo.toml", &app_manifest(&[])),
+            (
+                "Cargo.lock",
+                "version = 4\n\n[[package]]\nname = \"app\"\nversion = \"0.1.0\"\n",
+            ),
+            ("src/lib.rs", "pub fn build() {}\n"),
+        ],
+        head: &[(
+            "build.rs",
+            "fn main() {\n    let version = std::env::var(\"CARGO_PKG_VERSION\");\n}\n",
+        )],
+    });
+    let report = report_of(&run);
+
+    let code_findings: Vec<&str> = report["findings"]
+        .as_array()
+        .expect("findings")
+        .iter()
+        .filter(|finding| finding["scope"]["surface"] == "code")
+        .filter_map(|finding| finding["power"].as_str())
+        .collect();
+    assert_eq!(code_findings, Vec::<&str>::new(), "{report}");
+}

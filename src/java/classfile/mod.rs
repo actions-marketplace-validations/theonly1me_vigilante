@@ -13,6 +13,7 @@ use bytes::Reader;
 use constants::{Constant, ConstantPool, MethodReference};
 
 const MAGIC: u32 = 0xCAFE_BABE;
+const OBJECT: &str = "java/lang/Object";
 const NATIVE: u16 = 0x0100;
 const CODE: &str = "Code";
 const BOOTSTRAP_METHODS: &str = "BootstrapMethods";
@@ -42,6 +43,7 @@ pub struct Method {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ClassFile {
     pub name: String,
+    pub supertypes: Vec<String>,
     pub methods: Vec<Method>,
 }
 
@@ -54,9 +56,15 @@ pub fn read(data: &[u8]) -> Option<ClassFile> {
     let pool = ConstantPool::read(&mut reader)?;
     reader.skip(2)?;
     let name = pool.class_name(reader.u16()?)?.to_string();
-    reader.skip(2)?;
-    let interfaces = reader.u16()?;
-    reader.skip(usize::from(interfaces) * 2)?;
+    let mut supertypes: Vec<String> = pool
+        .class_name(reader.u16()?)
+        .filter(|superclass| *superclass != OBJECT)
+        .map(str::to_string)
+        .into_iter()
+        .collect();
+    for _ in 0..reader.u16()? {
+        supertypes.push(pool.class_name(reader.u16()?)?.to_string());
+    }
     let fields = reader.u16()?;
     for _ in 0..fields {
         reader.skip(6)?;
@@ -105,7 +113,11 @@ pub fn read(data: &[u8]) -> Option<ClassFile> {
             .unwrap_or_default();
         }
     }
-    Some(ClassFile { name, methods })
+    Some(ClassFile {
+        name,
+        supertypes,
+        methods,
+    })
 }
 
 fn skip_attributes(reader: &mut Reader) -> Option<()> {
