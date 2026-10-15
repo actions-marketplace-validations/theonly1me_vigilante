@@ -13,6 +13,7 @@ const NETWORK: &str = "bridge";
 const SOURCE: &str = "/source";
 pub const OUTPUT: &str = "/output";
 const NO_DOCKER: &str = "Docker is not available";
+const LIFETIME_AFTER_DEADLINE: Duration = Duration::from_secs(60);
 
 pub struct ContainerRequest<'a> {
     pub image: &'a str,
@@ -38,7 +39,9 @@ pub fn run_contained(request: ContainerRequest) -> Result<ContainerRun, Error> {
     let deadline = Instant::now() + request.timeout;
     let source = format!("{}:{SOURCE}:ro", request.source.display());
     let output = format!("{}:{OUTPUT}", request.output.display());
-    let seconds = request.timeout.as_secs().to_string();
+    let seconds = (request.timeout + LIFETIME_AFTER_DEADLINE)
+        .as_secs()
+        .to_string();
     let started = docker(&[
         "run",
         "--detach",

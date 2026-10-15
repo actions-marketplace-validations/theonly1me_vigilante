@@ -38,3 +38,21 @@ fn docker_a_failed_build_step_is_not_built() {
 
     assert!(matches!(built, ContainerRun::NotBuilt(_)));
 }
+
+#[test]
+#[ignore = "needs docker"]
+fn docker_a_step_that_reaches_the_deadline_is_out_of_time() {
+    let source = tempfile::tempdir().expect("source");
+    let output = tempfile::tempdir().expect("output");
+    let run = run_contained(ContainerRequest {
+        image: IMAGE,
+        source: &std::fs::canonicalize(source.path()).expect("source path"),
+        output: &std::fs::canonicalize(output.path()).expect("output path"),
+        prepare: "sleep 30",
+        build: "true",
+        timeout: Duration::from_millis(1900),
+    })
+    .expect("docker runs");
+
+    assert!(matches!(run, ContainerRun::OutOfTime));
+}
