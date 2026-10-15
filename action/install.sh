@@ -18,10 +18,12 @@ archive="vigilante-$target.tar.gz"
 folder="$RUNNER_TEMP/vigilante-$VERSION"
 mkdir -p "$folder"
 gh release download "v$VERSION" --repo "$repository" --pattern "$archive" --dir "$folder" --clobber
+commit="$(gh api "repos/$repository/commits/v$VERSION" --jq .sha)"
 gh attestation verify "$folder/$archive" \
   --repo "$repository" \
   --signer-workflow "$repository/.github/workflows/release.yml" \
-  --source-ref "refs/tags/v$VERSION" \
+  --source-ref refs/heads/main \
+  --source-digest "$commit" \
   --deny-self-hosted-runners
 tar -xzf "$folder/$archive" -C "$folder" --strip-components=1
 "$folder/vigilante" --version

@@ -1,0 +1,167 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        default: ""
+  pull_request:
+    paths:
+      - .github/workflows/build.yml
+      - .github/workflows/release.yml
+      - .github/release-please-config.json
+      - action.yml
+      - packaging/**
+      - npm/**
+      - pyproject.toml
+      - Cargo.toml
+      - Cargo.lock
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: packaging/check-versions.sh "$TAG"
+        env:
+          TAG: ${{ inputs.tag }}
+
+  build:
+    needs: versions
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-24.04
+            runs_on_runner: true
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+            runs_on_runner: true
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            runs_on_runner: true
+          - target: x86_64-apple-darwin
+            runner: macos-15
+            runs_on_runner: false
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: node packaging/registry-readme.mjs > "$RUNNER_TEMP/README.md" && mv "$RUNNER_TEMP/README.md" README.md
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes musl-tools
+      - run: rustup target add "$TARGET"
+      - run: cargo build --release --locked --target "$TARGET"
+      - if: matrix.runs_on_runner
+        run: '"target/$TARGET/release/vigilante" --version'
+      - run: |
+          mkdir -p "dist/vigilante-$TARGET"
+          cp "target/$TARGET/release/vigilante" README.md LICENSE-MIT LICENSE-APACHE "dist/vigilante-$TARGET/"
+          tar -czf "dist/vigilante-$TARGET.tar.gz" -C dist "vigilante-$TARGET"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: archive-${{ matrix.target }}
+          path: dist/vigilante-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+      - run: python3 -m venv "$RUNNER_TEMP/maturin" && "$RUNNER_TEMP/maturin/bin/pip" install maturin==1.15.0
+      - if: runner.os == 'Linux'
+        run: >-
+          "$RUNNER_TEMP/maturin/bin/maturin" build --release --locked
+          --target "$TARGET"
+          --compatibility manylinux2014 musllinux_1_2
+          --out wheels
+      - if: runner.os == 'macOS'
+        run: '"$RUNNER_TEMP/maturin/bin/maturin" build --release --locked --target "$TARGET" --out wheels'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wheel-${{ matrix.target }}
+          path: wheels/*.whl
+          if-no-files-found: error
+
+  npm:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: archive-*
+          path: archives
+          merge-multiple: true
+      - run: node npm/pack.mjs archives npm-packages
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-packages
+          path: npm-packages/*.tgz
+          if-no-files-found: error
+
+  npm-smoke:
+    needs: npm
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-packages
+          path: npm-packages
+      - run: packaging/smoke-npm.sh npm-packages
+
+  wheel-smoke:
+    needs: build
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: wheel-*
+          path: wheels
+          merge-multiple: true
+      - run: packaging/smoke-wheel.sh wheels
+
+  checksums:
+    needs: [build, npm-smoke, wheel-smoke]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+      - working-directory: dist
+        run: sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS
+      - run: packaging/homebrew.sh dist/SHA256SUMS > dist/vigilante.rb
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: dist/*
+          if-no-files-found: error

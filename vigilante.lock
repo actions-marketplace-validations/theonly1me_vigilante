@@ -9,10 +9,23 @@ powers = [
 [code."npm/vigilante"]
 powers = ["exec"]
 
+[ci.".github/workflows"]
+powers = [
+    "third_party_action:googleapis/release-please-action",
+    "third_party_action:pypa/gh-action-pypi-publish",
+    "third_party_action:rust-lang/crates-io-auth-action",
+    "third_party_action:zizmorcore/zizmor-action",
+]
+
 [ci.".github/workflows/release.yml"]
 powers = [
+    "token_write:actions",
     "token_write:artifact-metadata",
     "token_write:attestations",
     "token_write:contents",
+    "token_write:pull-requests",
     "oidc",
+    "secret:CARGO_REGISTRY_TOKEN",
+    "secret:HOMEBREW_TAP_DEPLOY_KEY",
+    "secret:NPM_TOKEN",
 ]
