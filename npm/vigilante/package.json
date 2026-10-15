@@ -1,0 +1,25 @@
+{
+  "name": "@theonly1me/vigilante",
+  "version": "0.1.0",
+  "description": "Shows the new powers that a pull request gives to code, CI, build, and AI agents",
+  "keywords": ["security", "capabilities", "ci", "agents", "supply-chain"],
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theonly1me/vigilante.git",
+    "directory": "npm/vigilante"
+  },
+  "bin": {
+    "vigilante": "bin/vigilante.js"
+  },
+  "files": ["bin", "LICENSE-MIT", "LICENSE-APACHE"],
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "@theonly1me/vigilante-darwin-arm64": "0.1.0",
+    "@theonly1me/vigilante-darwin-x64": "0.1.0",
+    "@theonly1me/vigilante-linux-arm64": "0.1.0",
+    "@theonly1me/vigilante-linux-x64": "0.1.0"
+  }
+}

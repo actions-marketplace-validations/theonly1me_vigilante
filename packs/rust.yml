@@ -1,0 +1,116 @@
+id: rust-exec
+language: rust
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?(std::(process::|\{[^;]*\bprocess::)(\{[^}]*\b(Command|Child)\b|(Command|Child)\b)|tokio::process\b|async_process\b|duct\b)
+    - kind: scoped_identifier
+      regex: ^((std::)?process::Command|tokio::process::Command|duct::cmd)$
+      not: { inside: { kind: use_declaration, stopBy: end } }
+---
+id: rust-network
+language: rust
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?(std::(net::|\{[^;]*\bnet::)(\{[^}]*\b(TcpStream|TcpListener|UdpSocket)\b|(TcpStream|TcpListener|UdpSocket)\b)|tokio::net\b|(reqwest|hyper|ureq|surf|isahc|tonic|attohttpc)\b)
+    - kind: scoped_identifier
+      regex: ^((reqwest|ureq|surf|isahc|attohttpc)::\w+|(std::net::)?(TcpStream|TcpListener|UdpSocket)::(connect|bind))$
+      not: { inside: { kind: use_declaration, stopBy: end } }
+---
+id: rust-native
+language: rust
+message: Uses unsafe code or native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: unsafe_block
+    - kind: function_modifiers
+      regex: \b(unsafe|extern)\b
+    - kind: impl_item
+      regex: ^unsafe\b
+    - kind: trait_item
+      regex: ^(pub(\([^)]*\))?\s+)?unsafe\b
+    - kind: foreign_mod_item
+    - kind: attribute_item
+      regex: ^#\[link\b
+    - kind: use_declaration
+      regex: use\s+(::)?libc\b
+    - kind: scoped_identifier
+      regex: ^libc::\w+$
+---
+id: rust-dynamic-code
+language: rust
+message: Loads code at run time
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?libloading\b
+    - kind: scoped_identifier
+      regex: ^libloading::\w+$
+---
+id: rust-env-read
+language: rust
+message: Reads environment variables
+metadata:
+  capability: read_system_state
+rule:
+  any:
+    - kind: scoped_identifier
+      regex: ^(std::)?env::(var|var_os|vars|vars_os)$
+    - kind: use_declaration
+      regex: use\s+(::)?(std::env::(var|vars)\b|dotenvy?\b)
+---
+id: rust-files
+language: rust
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  any:
+    - kind: use_declaration
+      regex: use\s+(::)?(std|tokio|async_std)::fs\b
+    - kind: scoped_identifier
+      regex: ^(((std|tokio|async_std)::)?fs::\w+|File::(open|create|create_new|options))$
+---
+id: rust-system-info
+language: rust
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  kind: scoped_identifier
+  regex: ^((std::)?env::(current_dir|current_exe|home_dir|temp_dir)|(std::)?process::id)$
+---
+id: rust-modify-system-state
+language: rust
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  any:
+    - kind: scoped_identifier
+      regex: ^((std::)?env::(set_var|remove_var|set_current_dir)|ctrlc::set_handler|tokio::signal::\w+)$
+    - kind: use_declaration
+      regex: use\s+(::)?(std::env::(set_var|remove_var|set_current_dir)\b|signal_hook\b|ctrlc\b)
+---
+id: rust-system-calls
+language: rust
+message: Makes system calls directly
+metadata:
+  capability: system_calls
+rule:
+  any:
+    - kind: scoped_identifier
+      regex: ^(libc::syscall|(nix|rustix)::\w+)$
+    - kind: use_declaration
+      regex: use\s+(::)?(nix|rustix|syscalls)\b

@@ -1,0 +1,96 @@
+id: java-exec
+language: java
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(java\.lang\.)?ProcessBuilder$ }
+    - kind: method_invocation
+      regex: ^Runtime\s*\.\s*getRuntime\s*\(\s*\)\s*\.\s*exec\b
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?org\.apache\.commons\.exec\b
+---
+id: java-network
+language: java
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(java\.net\.(Socket|ServerSocket|DatagramSocket|HttpURLConnection|URLConnection|http)\b|java\.net\.\*|okhttp3?\.(OkHttpClient|Call|WebSocket)\b|okhttp3?\.\*|retrofit2?\.|org\.apache\.(http|hc)\.|org\.springframework\.web\.(client|reactive\.function\.client)\.|feign\.|io\.grpc\.|io\.netty\.)
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(Socket|ServerSocket|DatagramSocket)$ }
+---
+id: java-native
+language: java
+message: Calls native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: method_invocation
+      regex: ^System\s*\.\s*load(Library)?\s*\(
+    - kind: modifiers
+      regex: \bnative\b
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(com\.sun\.jna|sun\.misc\.Unsafe|jdk\.internal\.misc\.Unsafe|java\.lang\.foreign)\b
+---
+id: java-dynamic-code
+language: java
+message: Uses reflection or runs scripts
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(java\.lang\.reflect|java\.lang\.invoke|javax\.script|groovy\.lang)\b
+    - kind: method_invocation
+      regex: ^Class\s*\.\s*forName\s*\(
+    - kind: method_invocation
+      has: { field: name, regex: ^getDeclared(Method|Field|Constructor)s?$ }
+    - kind: type_identifier
+      regex: ^(ScriptEngineManager|GroovyShell|URLClassLoader)$
+---
+id: java-env-read
+language: java
+message: Reads environment variables
+metadata:
+  capability: read_system_state
+rule:
+  kind: method_invocation
+  regex: ^System\s*\.\s*getenv\s*\(
+---
+id: java-files
+language: java
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  any:
+    - kind: import_declaration
+      regex: ^import\s+(static\s+)?(java\.nio\.file\.|java\.io\.(File|FileInputStream|FileOutputStream|FileReader|FileWriter|RandomAccessFile)\b|org\.apache\.commons\.io\.FileUtils\b)
+    - kind: object_creation_expression
+      has: { field: type, regex: ^(java\.io\.)?(File|FileInputStream|FileOutputStream|FileReader|FileWriter|RandomAccessFile)$ }
+    - kind: method_invocation
+      regex: ^(java\.nio\.file\.)?Files\s*\.\s*\w+\s*\(
+---
+id: java-system-info
+language: java
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  kind: method_invocation
+  regex: ^(System\s*\.\s*(getProperty|getProperties)|InetAddress\s*\.\s*getLocalHost|ProcessHandle\s*\.\s*current|NetworkInterface\s*\.\s*getNetworkInterfaces)\s*\(
+---
+id: java-modify-system-state
+language: java
+message: Changes system properties, standard streams, or shutdown and signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  kind: method_invocation
+  regex: ^(System\s*\.\s*(setProperty|clearProperty|setProperties|setOut|setErr|setIn|setSecurityManager)|Runtime\s*\.\s*getRuntime\s*\(\s*\)\s*\.\s*(addShutdownHook|removeShutdownHook)|(sun\.misc\.)?Signal\s*\.\s*handle)\s*\(

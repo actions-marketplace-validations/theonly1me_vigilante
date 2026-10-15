@@ -3,45 +3,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+use super::{Severity, Surface};
 use crate::Error;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Surface {
-    Code,
-    Ci,
-    Agent,
-    Build,
-}
-
-impl Surface {
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Code => "code",
-            Self::Ci => "ci",
-            Self::Agent => "agent",
-            Self::Build => "build",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Severity {
-    Low,
-    Medium,
-    High,
-}
-
-impl Severity {
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Low => "low",
-            Self::Medium => "medium",
-            Self::High => "high",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -50,7 +13,14 @@ pub enum Capability {
     Network,
     Native,
     DynamicCode,
-    Env,
+    ReadSystemState,
+    Files,
+    ModifySystemState,
+    OperatingSystem,
+    SystemCalls,
+    ArbitraryExecution,
+    Runtime,
+    Unanalyzed,
     TokenWrite,
     Oidc,
     UntrustedTrigger,
@@ -65,12 +35,19 @@ pub enum Capability {
 }
 
 impl Capability {
-    pub const ALL: [Capability; 16] = [
+    pub const ALL: [Capability; 23] = [
         Self::Exec,
         Self::Network,
         Self::Native,
         Self::DynamicCode,
-        Self::Env,
+        Self::ReadSystemState,
+        Self::Files,
+        Self::ModifySystemState,
+        Self::OperatingSystem,
+        Self::SystemCalls,
+        Self::ArbitraryExecution,
+        Self::Runtime,
+        Self::Unanalyzed,
         Self::TokenWrite,
         Self::Oidc,
         Self::UntrustedTrigger,
@@ -90,7 +67,14 @@ impl Capability {
             Self::Network => "network",
             Self::Native => "native",
             Self::DynamicCode => "dynamic_code",
-            Self::Env => "env",
+            Self::ReadSystemState => "read_system_state",
+            Self::Files => "files",
+            Self::ModifySystemState => "modify_system_state",
+            Self::OperatingSystem => "operating_system",
+            Self::SystemCalls => "system_calls",
+            Self::ArbitraryExecution => "arbitrary_execution",
+            Self::Runtime => "runtime",
+            Self::Unanalyzed => "unanalyzed",
             Self::TokenWrite => "token_write",
             Self::Oidc => "oidc",
             Self::UntrustedTrigger => "untrusted_trigger",
@@ -107,9 +91,18 @@ impl Capability {
 
     pub fn surface(self) -> Surface {
         match self {
-            Self::Exec | Self::Network | Self::Native | Self::DynamicCode | Self::Env => {
-                Surface::Code
-            }
+            Self::Exec
+            | Self::Network
+            | Self::Native
+            | Self::DynamicCode
+            | Self::ReadSystemState
+            | Self::Files
+            | Self::ModifySystemState
+            | Self::OperatingSystem
+            | Self::SystemCalls
+            | Self::ArbitraryExecution
+            | Self::Runtime
+            | Self::Unanalyzed => Surface::Code,
             Self::TokenWrite
             | Self::Oidc
             | Self::UntrustedTrigger
@@ -131,15 +124,21 @@ impl Capability {
             | Self::Hook
             | Self::McpServer
             | Self::SkipPermissions
-            | Self::InstallHook => Severity::High,
+            | Self::InstallHook
+            | Self::SystemCalls
+            | Self::ArbitraryExecution => Severity::High,
             Self::Network
             | Self::DynamicCode
             | Self::TokenWrite
             | Self::ThirdPartyAction
             | Self::Secret
             | Self::ToolAllow
-            | Self::GitHook => Severity::Medium,
-            Self::Env => Severity::Low,
+            | Self::GitHook
+            | Self::Files
+            | Self::ModifySystemState => Severity::Medium,
+            Self::ReadSystemState | Self::OperatingSystem | Self::Runtime | Self::Unanalyzed => {
+                Severity::Low
+            }
         }
     }
 }

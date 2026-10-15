@@ -33,10 +33,6 @@ impl PowerMap {
             .collect()
     }
 
-    pub fn first_evidence(&self, scope: &Scope, power: &Power) -> Option<&Evidence> {
-        self.scopes.get(scope)?.get(power)?.first()
-    }
-
     pub fn is_empty(&self) -> bool {
         self.scopes.is_empty()
     }

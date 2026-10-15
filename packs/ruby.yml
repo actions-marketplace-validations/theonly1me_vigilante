@@ -1,0 +1,136 @@
+id: ruby-exec
+language: ruby
+message: Runs other programs
+metadata:
+  capability: exec
+rule:
+  any:
+    - kind: subshell
+    - kind: call
+      has: { field: method, regex: ^(system|exec|spawn)$ }
+      not: { has: { field: receiver, regex: . } }
+    - kind: call
+      has: { field: receiver, regex: ^(Open3|PTY)$ }
+    - kind: call
+      regex: ^(IO|Process|Kernel)\s*\.\s*(popen|spawn|exec|system)\b
+---
+id: ruby-network
+language: ruby
+message: Uses the network
+metadata:
+  capability: network
+rule:
+  any:
+    - kind: scope_resolution
+      regex: ^Net::(HTTP|FTP|SMTP|Telnet)$
+    - kind: constant
+      regex: ^(Faraday|HTTParty|TCPSocket|TCPServer|UDPSocket|RestClient|Excon|Typhoeus|HTTPX)$
+    - kind: call
+      regex: ^URI\s*\.\s*open\b
+    - kind: call
+      has: { field: method, regex: ^require$ }
+      regex: '["''](net/https?|socket|open-uri|faraday|httparty|rest-client|excon|typhoeus|httpx)["'']'
+---
+id: ruby-native
+language: ruby
+message: Calls native code
+metadata:
+  capability: native
+rule:
+  any:
+    - kind: scope_resolution
+      regex: '^(FFI|Fiddle)::'
+    - kind: call
+      has: { field: method, regex: ^require$ }
+      regex: '["''](ffi|fiddle)["'']'
+---
+id: ruby-dynamic-code
+language: ruby
+message: Runs code that is built at run time
+metadata:
+  capability: dynamic_code
+rule:
+  any:
+    - kind: call
+      has: { field: method, regex: ^eval$ }
+      not: { has: { field: receiver, regex: . } }
+    - kind: call
+      has:
+        field: method
+        regex: ^(instance_eval|class_eval|module_eval|instance_exec|class_exec|const_get|constantize|safe_constantize)$
+---
+id: ruby-env-read
+language: ruby
+message: Reads environment variables
+metadata:
+  capability: read_system_state
+rule:
+  any:
+    - kind: element_reference
+      has: { field: object, regex: ^ENV$ }
+      not: { inside: { kind: assignment, field: left } }
+    - kind: call
+      has: { field: receiver, regex: ^ENV$ }
+      not: { has: { field: method, regex: '^(delete|update|replace|clear|store|merge!|delete_if|keep_if|select!|reject!|filter!)$' } }
+---
+id: ruby-files
+language: ruby
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  any:
+    - kind: call
+      regex: '^File\s*\.\s*(open|new|read|write|readlines|foreach|binread|binwrite|delete|unlink|rename|chmod|chown|lchmod|lchown|symlink|link|truncate|mkfifo|exist\?|file\?|directory\?|size|mtime|stat|lstat|readlink)([\s(]|$)'
+    - kind: call
+      has: { field: receiver, regex: ^FileUtils$ }
+    - kind: call
+      regex: '^Dir\s*\.\s*(glob|mkdir|rmdir|delete|unlink|entries|children|each_child|foreach|exist\?|mktmpdir|empty\?)([\s(]|$)'
+    - kind: element_reference
+      has: { field: object, regex: ^Dir$ }
+    - kind: call
+      regex: '^IO\s*\.\s*(read|write|readlines|foreach|binread|binwrite|copy_stream)([\s(]|$)'
+    - kind: call
+      has: { field: method, regex: ^require$ }
+      regex: '["''](fileutils|tmpdir|tempfile|pathname)["'']'
+---
+id: ruby-system-info
+language: ruby
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  kind: call
+  regex: '^(Dir\s*\.\s*(pwd|getwd|home)|Socket\s*\.\s*gethostname|Etc\s*\.\s*(getlogin|getpwuid|uname)|Process\s*\.\s*(pid|ppid|uid|gid|euid|egid))\b'
+---
+id: ruby-modify-system-state
+language: ruby
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  any:
+    - kind: assignment
+      has:
+        field: left
+        kind: element_reference
+        has: { field: object, regex: ^ENV$ }
+    - kind: call
+      all:
+        - has: { field: receiver, regex: ^ENV$ }
+        - has: { field: method, regex: '^(delete|update|replace|clear|store|merge!|delete_if|keep_if|select!|reject!|filter!)$' }
+    - kind: call
+      regex: '^(Dir\s*\.\s*chdir|Signal\s*\.\s*trap|Process\s*\.\s*(setsid|setrlimit|setpgid|setproctitle|daemon))\b'
+    - kind: call
+      has: { field: method, regex: ^trap$ }
+      not: { has: { field: receiver, regex: . } }
+---
+id: ruby-system-calls
+language: ruby
+message: Makes system calls directly
+metadata:
+  capability: system_calls
+rule:
+  kind: call
+  has: { field: method, regex: ^syscall$ }
+  not: { has: { field: receiver, regex: . } }

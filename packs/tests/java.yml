@@ -1,0 +1,69 @@
+id: java-exec
+valid:
+  - "class A { void f() { Runtime.getRuntime().availableProcessors(); } }"
+invalid:
+  - "class A { void f() { new ProcessBuilder(command).start(); } }"
+  - "class A { void f() throws Exception { Runtime.getRuntime().exec(command); } }"
+---
+id: java-network
+valid:
+  - "import java.net.URI;"
+  - "import java.util.List;"
+  - "import okhttp3.MediaType;"
+  - "import okhttp3.RequestBody;"
+invalid:
+  - "import java.net.http.HttpClient;"
+  - "import okhttp3.OkHttpClient;"
+  - "import okhttp3.Call;"
+  - "import okhttp3.*;"
+  - "import org.springframework.web.client.RestTemplate;"
+  - "class A { void f() throws Exception { new Socket(host, 80); } }"
+---
+id: java-native
+valid:
+  - "class A { String nativeName = name; }"
+  - "/** Class object for {@code sun.misc.Unsafe}, loaded reflectively */\nclass A {}"
+invalid:
+  - "class A { static { System.loadLibrary(\"native\"); } }"
+  - "class A { public static native int compute(int value); }"
+  - "import com.sun.jna.Library;"
+---
+id: java-dynamic-code
+valid:
+  - "class A { void f() { list.getFirst(); } }"
+invalid:
+  - "import java.lang.reflect.Method;"
+  - "class A { void f() throws Exception { Class.forName(name); } }"
+  - "class A { void f() throws Exception { Method method = target.getDeclaredMethod(\"run\"); } }"
+---
+id: java-env-read
+valid:
+  - "class A { void f() { System.getProperty(\"user.home\"); } }"
+invalid:
+  - "class A { String home = System.getenv(\"HOME\"); }"
+---
+id: java-files
+valid:
+  - "class A { void f() { String name = file.getName(); } }"
+  - "import java.util.List;"
+invalid:
+  - "import java.nio.file.Files;"
+  - "import java.io.FileInputStream;"
+  - "class A { void f() { var stream = new FileOutputStream(path); } }"
+  - "class A { void f() { var text = Files.readString(path); } }"
+---
+id: java-system-info
+valid:
+  - "class A { void f() { config.getProperty(\"x\"); } }"
+invalid:
+  - "class A { void f() { System.getProperty(\"user.home\"); } }"
+  - "class A { void f() { var host = InetAddress.getLocalHost(); } }"
+  - "class A { void f() { long id = ProcessHandle.current().pid(); } }"
+---
+id: java-modify-system-state
+valid:
+  - "class A { void f() { config.setProperty(\"a\", \"b\"); } }"
+invalid:
+  - "class A { void f() { System.setProperty(\"a\", \"b\"); } }"
+  - "class A { void f() { System.setOut(stream); } }"
+  - "class A { void f() { Runtime.getRuntime().addShutdownHook(thread); } }"

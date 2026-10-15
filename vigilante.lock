@@ -1,0 +1,18 @@
+version = 1
+
+[code."."]
+powers = [
+    "exec",
+    "network",
+]
+
+[code."npm/vigilante"]
+powers = ["exec"]
+
+[ci.".github/workflows/release.yml"]
+powers = [
+    "token_write:artifact-metadata",
+    "token_write:attestations",
+    "token_write:contents",
+    "oidc",
+]

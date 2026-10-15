@@ -1,0 +1,83 @@
+id: ruby-exec
+valid:
+  - "# run `bundle exec rake` first"
+  - "connection.exec_query(sql)"
+  - "checker.system(\"x\")"
+invalid:
+  - "output = `git status`"
+  - "system(\"make\", \"build\")"
+  - "system \"make\""
+  - "stdout, status = Open3.capture2(\"ls\")"
+  - "IO.popen(\"ls\")"
+---
+id: ruby-network
+valid:
+  - "require \"json\""
+  - "uri = URI.parse(text)"
+invalid:
+  - "response = Net::HTTP.get(uri)"
+  - "connection = Faraday.new(url: base)"
+  - "require \"net/http\""
+  - "require 'socket'"
+---
+id: ruby-native
+valid:
+  - "require \"set\""
+invalid:
+  - "require \"ffi\""
+  - "module Native\n  extend FFI::Library\nend"
+---
+id: ruby-dynamic-code
+valid:
+  - "# Rack::Builder uses `instance_eval` internally"
+  - "value = record.evaluate"
+invalid:
+  - "klass = name.constantize"
+  - "eval(source)"
+  - "builder.instance_eval(&block)"
+---
+id: ruby-env-read
+valid:
+  - "ENV[\"TOKEN\"] = value"
+  - "ENV.delete(\"TOKEN\")"
+  - "environment = config.env"
+invalid:
+  - "token = ENV[\"TOKEN\"]"
+  - "token = ENV.fetch(\"TOKEN\")"
+---
+id: ruby-files
+valid:
+  - "path = File.join(root, name)"
+  - "name = File.basename(path)"
+  - "folder = Dir.pwd"
+invalid:
+  - "text = File.read(path)"
+  - "File.write(path, text)"
+  - "FileUtils.rm_rf(folder)"
+  - "files = Dir.glob('*.rb')"
+  - "require 'fileutils'"
+---
+id: ruby-system-info
+valid:
+  - "name = config.hostname"
+invalid:
+  - "folder = Dir.pwd"
+  - "name = Socket.gethostname"
+  - "id = Process.pid"
+---
+id: ruby-modify-system-state
+valid:
+  - "token = ENV[\"TOKEN\"]"
+  - "token = ENV.fetch(\"TOKEN\")"
+invalid:
+  - "ENV[\"TOKEN\"] = value"
+  - "ENV.delete(\"TOKEN\")"
+  - "Dir.chdir(folder)"
+  - "trap(\"TERM\") { exit }"
+  - "Signal.trap(\"INT\") { exit }"
+---
+id: ruby-system-calls
+valid:
+  - "result = client.syscall(number)"
+invalid:
+  - "syscall(39)"

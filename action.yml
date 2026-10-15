@@ -1,0 +1,44 @@
+name: Vigilante
+description: Show the new powers that a pull request gives to code, CI, build, and AI agents
+author: theonly1me
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  version:
+    description: The Vigilante version to download and verify
+    default: "0.1.0"
+
+runs:
+  using: composite
+  steps:
+    - id: go
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/detect-go.sh"'
+    - if: steps.go.outputs.modules == 'true'
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: stable
+        cache: false
+    - if: steps.go.outputs.modules == 'true'
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/install-capslock.sh"'
+      env:
+        CAPSLOCK_VERSION: v0.3.3
+    - shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/install.sh"'
+      env:
+        VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ github.token }}
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vigilante-cache/vigilante
+        key: vigilante-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json', '**/npm-shrinkwrap.json', '**/pnpm-lock.yaml', '**/yarn.lock', '**/uv.lock', '**/poetry.lock', '**/Pipfile.lock', '**/requirements*.txt', '**/pom.xml', '**/gradle.lockfile', '**/Cargo.lock', '**/packages.lock.json', '**/*.csproj', '**/Directory.Packages.props', '**/Gemfile.lock', '**/gems.locked') }}
+        restore-keys: vigilante-packages-${{ runner.os }}-
+    - shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/review.sh"'
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        XDG_CACHE_HOME: ${{ runner.temp }}/vigilante-cache

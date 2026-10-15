@@ -73,6 +73,8 @@ pub struct Evidence {
     pub path: String,
     pub line: usize,
     pub rule: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub call_path: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

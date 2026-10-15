@@ -1,0 +1,103 @@
+id: js-exec-module
+valid:
+  - "const name = 'child_process';"
+  - "import { run } from './child_process';"
+  - "export function f() { return 'child_process'; }"
+invalid:
+  - "const { exec } = require('child_process');"
+  - "import { spawn } from 'node:child_process';"
+  - "import { execa } from 'execa';"
+  - "const shell = await import('shelljs');"
+  - "export * from 'child_process';"
+---
+id: js-exec-call
+valid:
+  - "const spawn = options.spawn;"
+invalid:
+  - "const proc = Bun.spawn(['ls']);"
+  - "const command = new Deno.Command('ls');"
+---
+id: js-network-module
+valid:
+  - "import { format } from 'url';"
+  - "import client from './http';"
+  - "const label = 'axios';"
+invalid:
+  - "import axios from 'axios';"
+  - "const https = require('node:https');"
+  - "import { WebSocketServer } from 'ws';"
+  - "import net from 'net';"
+---
+id: js-network-call
+valid:
+  - "client.fetch(query);"
+  - "const fetchUser = () => user;"
+invalid:
+  - "const response = await fetch(url);"
+  - "const socket = new WebSocket(url);"
+---
+id: js-native-module
+valid:
+  - "import data from './data.json';"
+  - "import { buildServerRenderer } from 'react-on-rails-rsc/server.node';"
+invalid:
+  - "const addon = require('./build/Release/addon.node');"
+  - "import koffi from 'koffi';"
+---
+id: js-dynamic-code
+valid:
+  - "const evaluate = (x: number) => x;"
+  - "model.eval();"
+invalid:
+  - "const value = eval(source);"
+  - "const add = new Function('a', 'b', 'return a + b');"
+  - "vm.runInNewContext(code, sandbox);"
+---
+id: js-env-read
+valid:
+  - "process.env.API_KEY = 'x';"
+  - "const env = config.env;"
+invalid:
+  - "const key = process.env.API_KEY;"
+  - "const { NODE_ENV } = process.env;"
+---
+id: js-files-module
+valid:
+  - "import { readFile } from './fs';"
+  - "const fs = require('fsevents-helper');"
+invalid:
+  - "import { readFile } from 'node:fs/promises';"
+  - "import fs from 'fs';"
+  - "const fs = require('fs');"
+  - "import fse from 'fs-extra';"
+---
+id: js-files-call
+valid:
+  - "const file = getFile(path);"
+invalid:
+  - "const text = await Deno.readTextFile(path);"
+  - "const file = Bun.file(path);"
+  - "await Bun.write(path, data);"
+---
+id: js-system-info
+valid:
+  - "const folder = config.cwd;"
+  - "import os from './os';"
+invalid:
+  - "const folder = process.cwd();"
+  - "const id = process.pid;"
+  - "import os from 'node:os';"
+  - "const os = require('os');"
+---
+id: js-modify-system-state
+valid:
+  - "const key = process.env.API_KEY;"
+  - "config.env.API_KEY = 'x';"
+  - "emitter.on('SIGTERM', handler);"
+invalid:
+  - "process.env.API_KEY = 'x';"
+  - "process.env['API_KEY'] = 'x';"
+  - "delete process.env.API_KEY;"
+  - "process.chdir(folder);"
+  - "process.on('SIGTERM', handler);"
+  - "Deno.env.set('API_KEY', 'x');"

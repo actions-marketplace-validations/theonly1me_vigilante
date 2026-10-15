@@ -1,0 +1,88 @@
+id: rust-exec
+valid:
+  - "fn main() { std::process::exit(1); }"
+  - "use std::{env, process::exit};"
+  - "fn main() { let app = clap::Command::new(\"vigilante\"); }"
+  - "/// Runs commands through [`std::process::Command`].\nfn run() {}"
+invalid:
+  - "use std::process::Command;"
+  - "use std::process::{Command, Stdio};"
+  - "fn main() { std::process::Command::new(\"ls\"); }"
+  - "use tokio::process::Command;"
+  - "use std::{env, ffi::OsStr, process::Command};"
+  - "use std::{io, process::{Child, Stdio}};"
+---
+id: rust-network
+valid:
+  - "use std::net::IpAddr;"
+  - "use crate::hyper_utils::Client;"
+  - "use std::{io, net::IpAddr};"
+invalid:
+  - "use std::net::{IpAddr, TcpStream};"
+  - "use std::{io, net::TcpListener};"
+  - "fn main() { let body = reqwest::blocking::get(url); }"
+  - "use reqwest::Client;"
+  - "fn main() { let stream = TcpStream::connect(address); }"
+---
+id: rust-native
+valid:
+  - "fn safe() -> u8 { 1 }"
+  - "fn main() { let unsafe_count = 0; }"
+invalid:
+  - "fn main() { unsafe { ptr.read() } }"
+  - "unsafe fn read(pointer: *const u8) -> u8 { *pointer }"
+  - "unsafe impl Send for Handle {}"
+  - "extern \"C\" { fn abs(input: i32) -> i32; }"
+  - "#[link(name = \"z\")]\nextern {}"
+  - "fn main() { libc::getpid(); }"
+---
+id: rust-dynamic-code
+valid:
+  - "use std::sync::Arc;"
+invalid:
+  - "use libloading::Library;"
+---
+id: rust-env-read
+valid:
+  - "fn main() { let arguments: Vec<String> = std::env::args().collect(); }"
+invalid:
+  - "fn main() { let token = std::env::var(\"TOKEN\"); }"
+  - "fn main() { let token = env::var(\"TOKEN\"); }"
+---
+id: rust-files
+valid:
+  - "fn main() { let name = config.file_name(); }"
+  - "use std::path::Path;"
+invalid:
+  - "use std::fs;"
+  - "use std::fs::{self, File};"
+  - "fn main() { let text = std::fs::read_to_string(path); }"
+  - "fn main() { let text = fs::read_to_string(path); }"
+  - "fn main() { let file = File::create(path); }"
+  - "use tokio::fs;"
+---
+id: rust-system-info
+valid:
+  - "fn main() { let arguments: Vec<String> = std::env::args().collect(); }"
+invalid:
+  - "fn main() { let folder = std::env::current_dir(); }"
+  - "fn main() { let folder = env::current_exe(); }"
+  - "fn main() { let id = std::process::id(); }"
+---
+id: rust-modify-system-state
+valid:
+  - "fn main() { let token = std::env::var(\"TOKEN\"); }"
+invalid:
+  - "fn main() { std::env::set_var(\"TOKEN\", value); }"
+  - "fn main() { env::remove_var(\"TOKEN\"); }"
+  - "fn main() { std::env::set_current_dir(folder); }"
+  - "use signal_hook::consts::SIGTERM;"
+  - "fn main() { ctrlc::set_handler(handler); }"
+---
+id: rust-system-calls
+valid:
+  - "fn main() { let id = libc::getpid(); }"
+invalid:
+  - "fn main() { unsafe { libc::syscall(libc::SYS_gettid) }; }"
+  - "use nix::unistd::fork;"
+  - "use rustix::process::getpid;"

@@ -1,0 +1,93 @@
+id: go-exec-import
+language: go
+message: Imports a package that runs other programs
+metadata:
+  capability: exec
+rule:
+  kind: import_spec
+  has: { field: path, regex: ^"os/exec"$ }
+---
+id: go-exec-call
+language: go
+message: Runs another program
+metadata:
+  capability: exec
+rule:
+  kind: selector_expression
+  regex: ^(syscall\.(Exec|ForkExec|StartProcess)|os\.StartProcess)$
+---
+id: go-network-import
+language: go
+message: Imports a network package
+metadata:
+  capability: network
+rule:
+  kind: import_spec
+  has:
+    field: path
+    regex: ^"(net|net/http|net/rpc|net/smtp|google\.golang\.org/grpc|github\.com/gorilla/websocket|nhooyr\.io/websocket)"$
+---
+id: go-native-import
+language: go
+message: Imports cgo or unsafe
+metadata:
+  capability: native
+ignores:
+  - "**/*.pb.go"
+rule:
+  kind: import_spec
+  has: { field: path, regex: ^"(C|unsafe)"$ }
+---
+id: go-dynamic-code-import
+language: go
+message: Imports reflection or plugins
+metadata:
+  capability: dynamic_code
+rule:
+  kind: import_spec
+  has: { field: path, regex: ^"(reflect|plugin)"$ }
+---
+id: go-env-read
+language: go
+message: Reads environment variables
+metadata:
+  capability: read_system_state
+rule:
+  kind: selector_expression
+  regex: ^os\.(Getenv|LookupEnv|Environ|ExpandEnv)$
+---
+id: go-files
+language: go
+message: Reads or changes files
+metadata:
+  capability: files
+rule:
+  kind: selector_expression
+  regex: ^(os\.(Open|OpenFile|Create|CreateTemp|ReadFile|WriteFile|Remove|RemoveAll|Mkdir|MkdirAll|MkdirTemp|Rename|Chmod|Chown|Lchown|Symlink|Link|ReadDir|Truncate|DirFS|Stat|Lstat)|ioutil\.(ReadFile|WriteFile|ReadDir|TempFile|TempDir)|filepath\.(Walk|WalkDir|Glob))$
+---
+id: go-system-info
+language: go
+message: Reads system information
+metadata:
+  capability: read_system_state
+rule:
+  kind: selector_expression
+  regex: ^os\.(Hostname|Getwd|Getpid|Getppid|Getuid|Geteuid|Getgid|Getegid|Getgroups|Executable|UserHomeDir|UserCacheDir|UserConfigDir|TempDir)$
+---
+id: go-modify-system-state
+language: go
+message: Changes environment variables, the working folder, or signal handlers
+metadata:
+  capability: modify_system_state
+rule:
+  kind: selector_expression
+  regex: ^(os\.(Setenv|Unsetenv|Clearenv|Chdir)|signal\.(Notify|Ignore|Reset|Stop))$
+---
+id: go-system-calls
+language: go
+message: Makes system calls directly
+metadata:
+  capability: system_calls
+rule:
+  kind: selector_expression
+  regex: ^(syscall|unix)\.(Syscall|Syscall6|SyscallN|RawSyscall|RawSyscall6|RawSyscallNoError)$
