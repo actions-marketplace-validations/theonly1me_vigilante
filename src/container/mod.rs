@@ -37,6 +37,16 @@ pub fn run_contained(request: ContainerRequest) -> Result<ContainerRun, Error> {
         return Ok(ContainerRun::NotBuilt(NO_DOCKER.to_string()));
     }
     let deadline = Instant::now() + request.timeout;
+    let Some(pulled) = exec(Exec {
+        arguments: &["pull", "--quiet", request.image],
+        deadline,
+    })?
+    else {
+        return Ok(ContainerRun::OutOfTime);
+    };
+    if !pulled.status.success() {
+        return Ok(ContainerRun::NotBuilt(last_line(&pulled.stderr)));
+    }
     let source = format!("{}:{SOURCE}:ro", request.source.display());
     let output = format!("{}:{OUTPUT}", request.output.display());
     let seconds = (request.timeout + LIFETIME_AFTER_DEADLINE)
@@ -45,6 +55,8 @@ pub fn run_contained(request: ContainerRequest) -> Result<ContainerRun, Error> {
     let started = docker(&[
         "run",
         "--detach",
+        "--pull",
+        "never",
         "--network",
         NETWORK,
         "--volume",
