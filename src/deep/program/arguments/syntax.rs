@@ -39,6 +39,8 @@ const CONTAINER_KINDS: &[&str] = &[
     "arguments",
     "parenthesized_expression",
     "concatenated_string",
+    "object",
+    "hash",
 ];
 const INTERPOLATION_KINDS: &[&str] = &[
     "interpolation",
@@ -56,7 +58,8 @@ const OPTION_KINDS: &[&str] = &[
     "do_block",
     "comment",
 ];
-const COMMAND_KEYWORDS: &[&str] = &["args", "command", "cmd"];
+const LEADING_REQUEST_KINDS: &[&str] = &["object", "hash"];
+const INPUT_KEYWORDS: &[&str] = &["args", "command", "cmd", "url"];
 const ASSIGNMENT_KINDS: &[(&str, &str, &str)] = &[
     ("assignment", "left", "right"),
     ("assignment_expression", "left", "right"),
@@ -76,11 +79,17 @@ pub fn callee_text(call: &SyntaxNode) -> String {
         .unwrap_or_default()
 }
 
-pub fn is_constant_command(arguments: &SyntaxNode) -> bool {
+pub fn input_arguments<'r>(arguments: &SyntaxNode<'r>) -> Vec<SyntaxNode<'r>> {
     arguments
         .children()
-        .filter(|argument| argument.is_named() && !is_option(argument))
-        .all(|argument| is_literal(&argument))
+        .filter(|argument| argument.is_named() && argument.kind() != "comment")
+        .enumerate()
+        .filter(|(position, argument)| {
+            (*position == 0 && LEADING_REQUEST_KINDS.contains(&argument.kind().as_ref()))
+                || !is_option(argument)
+        })
+        .map(|(_, argument)| argument)
+        .collect()
 }
 
 fn is_option(argument: &SyntaxNode) -> bool {
@@ -93,7 +102,7 @@ fn is_option(argument: &SyntaxNode) -> bool {
         "pair" => argument.field("key"),
         _ => return false,
     };
-    name.is_none_or(|name| !COMMAND_KEYWORDS.contains(&name.text().trim_start_matches(':')))
+    name.is_none_or(|name| !INPUT_KEYWORDS.contains(&name.text().trim_start_matches(':')))
 }
 
 pub fn is_literal(node: &SyntaxNode) -> bool {

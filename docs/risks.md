@@ -13,7 +13,7 @@ A risk is one call to an `exec`, `network`, `dynamic_code`, `native`, or `system
 | `dynamic` | Changes at run time | No |
 | `constant` | Is a literal | No, and the report does not show it |
 
-The class looks at the command arguments only. An options object such as `{ cwd: folder }`, a keyword argument such as `cwd=folder`, and a callback do not change the class. The keyword arguments `args`, `command`, and `cmd` carry the command, so they count.
+The class looks at the input arguments only. This rule applies to each input class, also to `untrusted`. An options object after the first argument, such as `{ cwd: folder }`, does not change the class. A keyword argument such as `cwd=folder` and a callback also do not change the class. The keyword arguments `args`, `command`, `cmd`, and `url` carry the input, so they count. An object in the first argument, such as `axios({ url: target })`, is the request, so it counts.
 
 The report shows each risk that the pull request adds or changes under "Changed risks". It shows a risk also when the scope already has the power. For example, a fixed `subprocess.run(["date"])` that becomes `subprocess.run(f"date {request.args['day']}", shell=True)` blocks.
 

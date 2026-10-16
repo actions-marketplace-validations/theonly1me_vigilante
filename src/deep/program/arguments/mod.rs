@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use super::{FileIndex, Language};
 use crate::code::SyntaxNode;
 use syntax::{
-    assignments, callee_text, contains_source, identifiers, is_call, is_constant_command,
+    assignments, callee_text, contains_source, identifiers, input_arguments, is_call, is_literal,
     parameter_names,
 };
 
@@ -84,16 +84,27 @@ pub fn call_facts(input: FactsInput) -> HashMap<usize, ArgumentFacts> {
             assignments: &function.assignments,
             before: start,
         });
-        let from_parameters =
-            identifiers(&expanded).any(|word| function.parameters.iter().any(|name| name == word));
+        let inputs = input_arguments(&arguments);
+        let input_text = inputs
+            .iter()
+            .map(|input| input.text().to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let expanded_input = expand(Expansion {
+            text: &input_text,
+            assignments: &function.assignments,
+            before: start,
+        });
+        let from_parameters = identifiers(&expanded_input)
+            .any(|word| function.parameters.iter().any(|name| name == word));
         let callee = callee_text(&call);
         let method = callee.rsplit(['.', ':']).next().unwrap_or_default();
         let found = ArgumentFacts {
-            constant: is_constant_command(&arguments),
+            constant: inputs.iter().all(is_literal),
             shell: SHELL_OPTIONS.iter().any(|option| expanded.contains(option))
                 || language.shell_callees().contains(&method)
                 || runs_a_shell(&text),
-            untrusted: contains_source(&expanded, sources)
+            untrusted: contains_source(&expanded_input, sources)
                 || (function.parameters_are_sources && from_parameters),
             from_parameters,
         };
