@@ -194,6 +194,31 @@ exports.calculate = (req) => Number(req.body.value);
 ''' }
 
 [[case]]
+name = "javascript: a worker whose fetch handler calls the global fetch"
+group = "javascript"
+base = { "package.json" = '{"name": "worker"}', "worker.js" = '''
+export default {
+  async fetch(request) {
+    return new Response("ok");
+  },
+};
+''' }
+unsafe = { "worker.js" = '''
+export default {
+  async fetch(request) {
+    return fetch("https://example.com/data");
+  },
+};
+''' }
+safe = { "worker.js" = '''
+export default {
+  async fetch(request) {
+    return new Response("ready");
+  },
+};
+''' }
+
+[[case]]
 name = "java: a fully qualified socket"
 group = "java"
 base = { "App.java" = '''

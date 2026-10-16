@@ -58,6 +58,7 @@ mod rust_fixtures;
 mod rust_packages;
 mod rust_skips;
 mod rust_types;
+mod shadows;
 mod slow_tools;
 mod support;
 mod surface_powers;

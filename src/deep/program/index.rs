@@ -15,6 +15,7 @@ pub struct FileIndex {
     pub call_facts: HashMap<usize, ArgumentFacts>,
     pub ignored: Vec<Range<usize>>,
     pub supertypes: Vec<Supertypes>,
+    pub members: Vec<Range<usize>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -100,6 +101,7 @@ impl FileIndex {
         let own = &self.definitions[1..];
         own.iter().any(|definition| {
             definition.simple == name
+                && !self.members.contains(&definition.range)
                 && !own.iter().any(|outer| {
                     outer.range != definition.range
                         && outer.range.start <= definition.range.start

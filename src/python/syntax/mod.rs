@@ -52,6 +52,9 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                         local: simple.clone(),
                     });
                 }
+                if class.is_some() {
+                    index.members.push(node.range());
+                }
                 index.definitions.push(Definition {
                     name,
                     simple,
