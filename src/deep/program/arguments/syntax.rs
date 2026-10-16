@@ -45,6 +45,18 @@ const INTERPOLATION_KINDS: &[&str] = &[
     "template_substitution",
     "interpolated_string_expression",
 ];
+const OPTION_KINDS: &[&str] = &[
+    "object",
+    "hash",
+    "arrow_function",
+    "function_expression",
+    "function",
+    "lambda",
+    "block",
+    "do_block",
+    "comment",
+];
+const COMMAND_KEYWORDS: &[&str] = &["args", "command", "cmd"];
 const ASSIGNMENT_KINDS: &[(&str, &str, &str)] = &[
     ("assignment", "left", "right"),
     ("assignment_expression", "left", "right"),
@@ -62,6 +74,26 @@ pub fn callee_text(call: &SyntaxNode) -> String {
         .find_map(|field| call.field(field))
         .map(|callee| callee.text().to_string())
         .unwrap_or_default()
+}
+
+pub fn is_constant_command(arguments: &SyntaxNode) -> bool {
+    arguments
+        .children()
+        .filter(|argument| argument.is_named() && !is_option(argument))
+        .all(|argument| is_literal(&argument))
+}
+
+fn is_option(argument: &SyntaxNode) -> bool {
+    let kind = argument.kind();
+    if OPTION_KINDS.contains(&kind.as_ref()) {
+        return true;
+    }
+    let name = match kind.as_ref() {
+        "keyword_argument" | "named_argument" => argument.field("name"),
+        "pair" => argument.field("key"),
+        _ => return false,
+    };
+    name.is_none_or(|name| !COMMAND_KEYWORDS.contains(&name.text().trim_start_matches(':')))
 }
 
 pub fn is_literal(node: &SyntaxNode) -> bool {

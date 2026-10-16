@@ -219,6 +219,22 @@ export default {
 ''' }
 
 [[case]]
+name = "javascript: a build command with a working folder"
+group = "javascript"
+base = { "package.json" = '{"name": "app"}', "build.js" = '''
+const { execSync } = require("child_process");
+exports.build = (folder, task) => execSync("npm run build");
+''' }
+unsafe = { "build.js" = '''
+const { execSync } = require("child_process");
+exports.build = (folder, task) => execSync(`npm run ${task}`, { cwd: folder });
+''' }
+safe = { "build.js" = '''
+const { execSync } = require("child_process");
+exports.build = (folder, task) => execSync("npm run build", { cwd: folder, stdio: "inherit" });
+''' }
+
+[[case]]
 name = "java: a fully qualified socket"
 group = "java"
 base = { "App.java" = '''

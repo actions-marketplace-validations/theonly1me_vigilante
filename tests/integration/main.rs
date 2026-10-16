@@ -47,6 +47,7 @@ mod report;
 mod report_summary;
 mod review;
 mod risk_classes;
+mod risk_options;
 mod risk_reports;
 mod risks;
 mod ruby_code;

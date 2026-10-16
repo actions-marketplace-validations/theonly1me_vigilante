@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use super::{FileIndex, Language};
 use crate::code::SyntaxNode;
 use syntax::{
-    assignments, callee_text, contains_source, identifiers, is_call, is_literal, parameter_names,
+    assignments, callee_text, contains_source, identifiers, is_call, is_constant_command,
+    parameter_names,
 };
 
 const SHELLS: &[&str] = &[
@@ -88,7 +89,7 @@ pub fn call_facts(input: FactsInput) -> HashMap<usize, ArgumentFacts> {
         let callee = callee_text(&call);
         let method = callee.rsplit(['.', ':']).next().unwrap_or_default();
         let found = ArgumentFacts {
-            constant: is_literal(&arguments),
+            constant: is_constant_command(&arguments),
             shell: SHELL_OPTIONS.iter().any(|option| expanded.contains(option))
                 || language.shell_callees().contains(&method)
                 || runs_a_shell(&text),
