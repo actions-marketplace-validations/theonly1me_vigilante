@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1](https://github.com/theonly1me/vigilante/compare/v0.2.0...v0.2.1) (2026-10-16)
+
+
+### Fixes
+
+* **deep:** class untrusted input by the input arguments, not by options ([d6b14c9](https://github.com/theonly1me/vigilante/commit/d6b14c95928a1de2c79cb9910810290add9d4f64))
+* **deep:** class untrusted input by the input arguments, not by options ([f8ee81b](https://github.com/theonly1me/vigilante/commit/f8ee81b457eecd561d53860ef3d13670a99f7b31))
+* **doctor:** check the configured rule folders and each file in a protected folder ([990eebf](https://github.com/theonly1me/vigilante/commit/990eebfd0e305360c874151193785a6bdf172125))
+* **doctor:** check the configured rule folders and each file in a protected folder ([e647503](https://github.com/theonly1me/vigilante/commit/e647503f31092c3a0a6b41d2612283919eafb536))
+
 ## [0.2.0](https://github.com/theonly1me/vigilante/compare/v0.1.1...v0.2.0) (2026-10-16)
 
 
