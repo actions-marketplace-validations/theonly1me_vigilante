@@ -64,7 +64,7 @@ A finding is `exec`, `network`, or `native` that your package reaches through it
 - a power that your package reaches only through a dependency, or through another package of the same repository;
 - a new package on a call path to a power.
 
-Notes do not make the check fail. For example, a new dependency that reaches the network is a note. [docs/dependencies.md](docs/dependencies.md) tells you how Vigilante reads packages.
+Notes do not make the check fail, unless a `deny` rule matches their power. For example, a new dependency that reaches the network is a note. [docs/dependencies.md](docs/dependencies.md) tells you how Vigilante reads packages.
 
 ## Install
 
@@ -92,7 +92,7 @@ Run these commands in the root of your repository.
 
 | Command | What it does |
 | --- | --- |
-| `vigilante scan` | Shows each power in the repository. |
+| `vigilante scan` | Shows each power in the repository, and the code that Vigilante could not read. |
 | `vigilante lock` | Writes `vigilante.lock`. Commit this file. |
 | `vigilante diff --base origin/main` | Shows the powers that your branch adds, compared with its merge base. |
 | `vigilante check` | Fails if `vigilante.lock` does not agree with the repository. |

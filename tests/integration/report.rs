@@ -1,5 +1,7 @@
 use serde_json::Value;
-use vigilante::{Format, Lock, PolicyMode, Review, ReviewMode, ScanRequest, Skip, Source};
+use vigilante::{
+    Coverage, Format, Lock, PolicyMode, Review, ReviewMode, ScanRequest, Skip, Source,
+};
 
 use crate::support::{Branches, TestRepository};
 
@@ -174,6 +176,8 @@ fn markdown_shows_the_first_ten_lines_that_were_not_analyzed_and_counts_the_rest
                 reason: "1 package has no exact version.".to_string(),
             })
             .collect(),
+        coverage: Coverage::Warn,
+        new_gaps: Vec::new(),
     };
 
     let markdown = review.render(Format::Markdown);

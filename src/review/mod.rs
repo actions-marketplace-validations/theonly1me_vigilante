@@ -1,3 +1,4 @@
+mod judge;
 mod notes;
 mod run;
 
@@ -5,7 +6,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use crate::config::Mode;
+use crate::config::{Coverage, Mode};
 pub use crate::deep::Skip;
 use crate::{Error, Evidence, Power, Scope, Severity, Source};
 
@@ -24,6 +25,8 @@ pub struct Review {
     pub notes: Vec<Note>,
     pub stale: Vec<LockEntry>,
     pub skipped: Vec<Skip>,
+    pub coverage: Coverage,
+    pub new_gaps: Vec<Skip>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -77,7 +80,8 @@ pub fn review(request: ReviewRequest) -> Result<Review, Error> {
 impl Review {
     pub fn passed(&self) -> bool {
         let lock_is_current = self.policy == Mode::Report || self.stale.is_empty();
-        lock_is_current && !self.findings.iter().any(|finding| self.blocks(finding))
+        let gaps_allowed = self.coverage == Coverage::Warn || self.new_gaps.is_empty();
+        lock_is_current && gaps_allowed && !self.findings.iter().any(|finding| self.blocks(finding))
     }
 
     pub fn blocks(&self, finding: &Finding) -> bool {

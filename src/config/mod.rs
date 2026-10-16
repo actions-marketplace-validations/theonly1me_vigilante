@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use globset::{Glob, GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder};
 
-pub use file::{GoEngine, LanguageEngine, Mode};
+pub use file::{Coverage, GoEngine, LanguageEngine, Mode};
 
 use crate::registry::Sources;
 use crate::tree::Tree;
@@ -16,6 +16,7 @@ use file::ConfigFile;
 
 pub struct Config {
     pub mode: Mode,
+    pub coverage: Coverage,
     pub rule_paths: Vec<String>,
     pub go_engine: GoEngine,
     pub javascript_engine: LanguageEngine,
@@ -68,6 +69,7 @@ impl Config {
             .collect::<Result<_, Error>>()?;
         Ok(Self {
             mode: file.policy.mode,
+            coverage: file.policy.coverage,
             rule_paths: file.rules.paths,
             go_engine: file.engines.go,
             javascript_engine: file.engines.javascript,

@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use vigilante::{
-    Error, Format, Lock, ReviewRequest, ScanRequest, Source, power_map_json, power_map_text,
-};
+use vigilante::{Error, Format, Lock, ReviewRequest, ScanRequest, Source, scan_json, scan_text};
 
 #[derive(Parser)]
 #[command(
@@ -93,13 +91,13 @@ fn run(cli: Cli) -> Result<Outcome, Error> {
     let repository = cli.repository;
     match cli.command {
         Command::Scan { commit, format } => {
-            let map = vigilante::scan(ScanRequest {
+            let report = vigilante::scan_report(ScanRequest {
                 repository,
                 source: source_of(commit),
             })?;
             match format {
-                ScanFormat::Text => print!("{}", power_map_text(&map)),
-                ScanFormat::Json => print!("{}", power_map_json(&map)),
+                ScanFormat::Text => print!("{}", scan_text(&report)),
+                ScanFormat::Json => print!("{}", scan_json(&report)),
             }
             Ok(Outcome::Pass)
         }

@@ -13,7 +13,7 @@ The rule is the same for each language:
    - another power that your own code reaches, for example `dynamic_code` or `modify_system_state`;
    - a power that your code reaches only through a package, or through another scope of the repository (that scope shows its own finding);
    - a package that is new on a call path to a power.
-3. Notes are in the section "New packages on call paths". They do not make the check fail, and they do not go into the lock. For the powers in `report.hide`, such as `files`, the Markdown report shows only a count. The JSON report has all the notes.
+3. Notes are in the section "New packages on call paths". They do not go into the lock. A note makes the check fail only when a `deny` rule matches its power. For the powers in `report.hide`, such as `files`, the Markdown report shows only a count. The JSON report has all the notes.
 
 A new dependency that reaches the network is a note that names the dependency. A finding appears only the first time that its power appears in its scope.
 
@@ -80,7 +80,9 @@ The report lists the code and the packages that Vigilante did not read. Some rea
 - a package is larger than 256 MiB;
 - a type check did not complete.
 
-The Markdown report shows 10 lines and a count. The JSON report has all of them.
+The Markdown report shows 10 lines and a count, and it marks each line that the pull request adds as new. The JSON report has all of them. The SARIF report lists them as tool notifications, and `vigilante scan --format json` lists them under `not_analyzed`.
+
+By default, these lines do not make the check fail. To fail a pull request that adds a new line, set `[policy] coverage = "block"`.
 
 ## Calls resolved by type
 

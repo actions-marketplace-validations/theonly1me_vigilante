@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use super::markdown::code;
-use crate::{Evidence, Note, Review};
+use crate::{Coverage, Evidence, Note, Review, ReviewMode};
 
 const CALL_SEPARATOR: &str = " → ";
 const MAXIMUM_SKIPPED_LINES: usize = 10;
@@ -86,12 +86,27 @@ pub fn skipped_section(review: &Review) -> Vec<String> {
         "Vigilante did not read this code, so the report does not show its powers.".to_string(),
         String::new(),
     ];
+    if review.coverage == Coverage::Block && !review.new_gaps.is_empty() {
+        lines.push(
+            "The lines marked new fail the check, because `[policy] coverage` is `\"block\"`."
+                .to_string(),
+        );
+        lines.push(String::new());
+    }
     lines.extend(
         review
             .skipped
             .iter()
             .take(MAXIMUM_SKIPPED_LINES)
-            .map(|skip| format!("- {}: {}", code(&skip.source), skip.reason)),
+            .map(|skip| {
+                let is_diff = matches!(review.mode, ReviewMode::Diff { .. });
+                let marker = if is_diff && review.new_gaps.contains(skip) {
+                    " (new)"
+                } else {
+                    ""
+                };
+                format!("- {}{marker}: {}", code(&skip.source), skip.reason)
+            }),
     );
     let more = review.skipped.len().saturating_sub(MAXIMUM_SKIPPED_LINES);
     if more > 0 {

@@ -13,6 +13,7 @@ payments = "services/payments/**"
 
 [policy]
 mode = "lock"
+coverage = "warn"
 deny = [
   { scope = "web/**", capability = "exec" },
   { capability = "skip_permissions" },
@@ -47,7 +48,8 @@ allow = ["https://npm.example.com/"]
 | `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips tests (also test projects such as `App.Tests/`), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. |
 | `scopes.<name>` | none | Puts the code files that match the glob into one scope with this name. Without this key, the scope of a code file is its nearest package root. |
 | `policy.mode` | `"lock"` | `"lock"` fails if a power is not in `vigilante.lock`. `"report"` only shows the report. |
-| `policy.deny` | `[]` | Powers that always make the check fail, also when they are in the lock. `scope` is a glob for the scope path, and its default is all scopes. `capability` is a power name from [powers.md](powers.md). |
+| `policy.deny` | `[]` | Powers that always make the check fail, also when they are in the lock or when the report shows them as notes. `scope` is a glob for the scope path, and its default is all scopes. `capability` is a power name from [powers.md](powers.md). |
+| `policy.coverage` | `"warn"` | `"warn"` lists the code that Vigilante could not read under "Not analyzed". `"block"` also fails a diff that adds a new line there. In `vigilante check`, `"block"` fails on each line. |
 | `report.hide` | `["read_system_state", "files", "operating_system", "runtime", "unanalyzed"]` | Powers that the report hides when they are in the lock. The lock still records them. If a hidden power is not in the lock, the report shows it. |
 | `severity.<power>` | See [powers.md](powers.md) | `"low"`, `"medium"`, or `"high"` for a power. |
 | `rules.paths` | `[]` | Folders with your own code rules. See [Your own rules](#your-own-rules). |
@@ -63,13 +65,13 @@ Globs use `/` between folders. `*` matches in one folder, and `**` matches any n
 
 ## Which files each command reads
 
-| Command | `vigilante.toml` | `vigilante.lock` |
+| Command | `vigilante.toml` and the rule files in `rules.paths` | `vigilante.lock` |
 | --- | --- | --- |
 | `vigilante diff --base <base> --head <head>` | From the merge base of base and head | From head |
 | `vigilante check` | From the working directory, or from `--commit` | From the same place |
 | `vigilante lock` | From the working directory | Writes it in the working directory |
 
-In a pull request, the configuration comes from the merge base. So a pull request cannot exclude its own files, change to report mode, or remove a `deny` rule.
+In a pull request, the configuration and the custom rules come from the merge base. So a pull request cannot exclude its own files, change to report mode, remove a `deny` rule, or weaken a custom rule.
 
 ## vigilante.lock
 
