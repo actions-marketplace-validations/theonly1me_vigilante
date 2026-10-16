@@ -45,11 +45,12 @@ allow = ["https://npm.example.com/"]
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips tests (also test projects such as `App.Tests/`), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. |
+| `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. It reads tests, fixtures, and mocks as test code. |
 | `scopes.<name>` | none | Puts the code files that match the glob into one scope with this name. Without this key, the scope of a code file is its nearest package root. |
 | `policy.mode` | `"lock"` | `"lock"` fails if a power is not in `vigilante.lock`. `"report"` only shows the report. |
 | `policy.deny` | `[]` | Powers that always make the check fail, also when they are in the lock or when the report shows them as notes. `scope` is a glob for the scope path, and its default is all scopes. `capability` is a power name from [powers.md](powers.md). |
 | `policy.coverage` | `"warn"` | `"warn"` lists the code that Vigilante could not read under "Not analyzed". `"block"` also fails a diff that adds a new line there. In `vigilante check`, `"block"` fails on each line. |
+| `policy.tests` | `"report"` | `"report"` lists the powers in test code apart from the findings, and they block only when a `deny` rule matches. `"lock"` puts them in `vigilante.lock` under the `test` surface, as other code. See [powers.md](powers.md#test-code-and-vendored-code). |
 | `report.hide` | `["read_system_state", "files", "operating_system", "runtime", "unanalyzed"]` | Powers that the report hides when they are in the lock. The lock still records them. If a hidden power is not in the lock, the report shows it. |
 | `severity.<power>` | See [powers.md](powers.md) | `"low"`, `"medium"`, or `"high"` for a power. |
 | `rules.paths` | `[]` | Folders with your own code rules. See [Your own rules](#your-own-rules). |

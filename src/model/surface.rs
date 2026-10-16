@@ -7,6 +7,7 @@ pub enum Surface {
     Ci,
     Agent,
     Build,
+    Test,
 }
 
 impl Surface {
@@ -16,6 +17,7 @@ impl Surface {
             Self::Ci => "ci",
             Self::Agent => "agent",
             Self::Build => "build",
+            Self::Test => "test",
         }
     }
 }

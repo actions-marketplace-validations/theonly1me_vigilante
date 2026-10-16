@@ -1,4 +1,4 @@
-pub const TEST_AND_VENDORED_PATHS: &[&str] = &[
+pub const TEST_PATHS: &[&str] = &[
     "**/test/**",
     "**/tests/**",
     "**/testing/**",
@@ -24,15 +24,18 @@ pub const TEST_AND_VENDORED_PATHS: &[&str] = &[
     "**/mock/**",
     "**/mocks/**",
     "**/__mocks__/**",
-    "**/node_modules/**",
-    "**/vendor/**",
-    "**/dist/**",
-    "**/build/**",
     "**/*_test.go",
     "**/*.{test,spec}.{js,jsx,mjs,cjs,ts,tsx,mts,cts}",
     "**/*_spec.rb",
     "**/*{Test,Tests}.{java,cs}",
     "**/test_*.{py,rb}",
     "**/*_test.py",
+];
+
+pub const VENDORED_PATHS: &[&str] = &[
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/build/**",
     "**/*.min.js",
 ];

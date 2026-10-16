@@ -92,6 +92,20 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     }));
     facts.extend(denied_notes);
     let findings = judge.findings(facts);
+    let base_tests: BTreeSet<_> = base_scan
+        .tests
+        .iter()
+        .map(|sighting| (&sighting.scope, &sighting.power, &sighting.evidence.path))
+        .collect();
+    let tests = judge.test_findings(facts_of(
+        head_scan
+            .tests
+            .iter()
+            .filter(|sighting| {
+                !base_tests.contains(&(&sighting.scope, &sighting.power, &sighting.evidence.path))
+            })
+            .cloned(),
+    ));
     Ok(Review {
         mode: ReviewMode::Diff { base, head },
         policy: config.mode,
@@ -106,6 +120,7 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
             .collect(),
         skipped: head_scan.skipped,
         coverage: config.coverage,
+        tests,
     })
 }
 
@@ -155,6 +170,7 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         notes: Vec::new(),
         stale,
         new_gaps: scanned.skipped.clone(),
+        tests: judge.test_findings(facts_of(scanned.tests.into_iter())),
         skipped: scanned.skipped,
         coverage: config.coverage,
     })

@@ -178,6 +178,7 @@ fn markdown_shows_the_first_ten_lines_that_were_not_analyzed_and_counts_the_rest
             .collect(),
         coverage: Coverage::Warn,
         new_gaps: Vec::new(),
+        tests: Vec::new(),
     };
 
     let markdown = review.render(Format::Markdown);

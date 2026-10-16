@@ -27,7 +27,7 @@ mod surfaces;
 mod tree;
 mod xml;
 
-pub use config::{Coverage, Mode as PolicyMode};
+pub use config::{Coverage, Mode as PolicyMode, TestPolicy};
 pub use error::Error;
 pub use lock::{Granted, Lock};
 pub use model::{

@@ -1,20 +1,24 @@
 mod deep;
+mod report;
 mod rule_files;
 mod source;
+mod test_code;
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use crate::code::Rules;
-use crate::config::{Config, GoEngine};
+use crate::config::{Config, GoEngine, TestPolicy};
 use crate::deep::{Reach, Skip};
 use crate::go::{DiscoverInput, GoModules};
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::{self, Placement, Surfaces};
 use crate::tree::Tree;
 use crate::{Error, Evidence, PowerMap, Scope, Sighting, SourceFile, Surface};
+pub use report::{ScanReport, scan_report};
 use rule_files::{RuleSources, rules_of};
 pub use source::{Location, Source};
+use test_code::{TestFile, test_sightings};
 
 #[derive(Clone, Debug)]
 pub struct ScanRequest {
@@ -26,29 +30,9 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
     scan_report(request).map(|report| report.map)
 }
 
-pub struct ScanReport {
-    pub map: PowerMap,
-    pub not_analyzed: Vec<Skip>,
-}
-
-pub fn scan_report(request: ScanRequest) -> Result<ScanReport, Error> {
-    let located = request.source.locate(&request.repository)?;
-    let config = Config::load(located.tree.as_ref())?;
-    let scanned = Scanner::new(ScannerInput {
-        tree: located.tree.as_ref(),
-        rules_tree: located.tree.as_ref(),
-        config: &config,
-        location: located.location(),
-    })?
-    .scan(&Selection::Everything)?;
-    Ok(ScanReport {
-        map: scanned.map,
-        not_analyzed: scanned.skipped,
-    })
-}
-
 pub struct Scanned {
     pub map: PowerMap,
+    pub tests: Vec<Sighting>,
     pub reaches: Vec<Reach>,
     pub skipped: Vec<Skip>,
 }
@@ -121,19 +105,35 @@ impl<'a> Scanner<'a> {
             .iter()
             .map(String::as_str)
             .filter(|path| {
-                let is_wanted = self.surfaces.handles(path)
-                    || (self.rules.handles(path)
-                        && is_selected_code(path)
-                        && !self.deep_owns(path));
-                is_wanted && !self.config.is_excluded(path)
+                if self.config.is_excluded(path) {
+                    return false;
+                }
+                let is_code = self.rules.handles(path) && is_selected_code(path);
+                if self.config.is_test(path) {
+                    return is_code;
+                }
+                self.surfaces.handles(path) || (is_code && !self.deep_owns(path))
             })
             .collect();
         let mut map = PowerMap::default();
+        let mut tests = Vec::new();
         for file in self.tree.read(&wanted)? {
             let source = SourceFile {
                 path: &file.path,
                 text: &file.text,
             };
+            if self.config.is_test(&file.path) {
+                let found = test_sightings(TestFile {
+                    rules: &self.rules,
+                    scope: self.scopes.code_scope_of(source.path),
+                    source,
+                });
+                match self.config.tests {
+                    TestPolicy::Lock => found.into_iter().for_each(|sighting| map.insert(sighting)),
+                    TestPolicy::Report => tests.extend(found),
+                }
+                continue;
+            }
             let detections = self.surfaces.detect(source)?;
             let code = if self.deep_owns(&file.path) {
                 Vec::new()
@@ -175,6 +175,7 @@ impl<'a> Scanner<'a> {
         }
         Ok(Scanned {
             map,
+            tests,
             reaches: analysis.reaches,
             skipped: analysis.skipped,
         })

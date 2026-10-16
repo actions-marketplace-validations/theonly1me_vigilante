@@ -59,6 +59,23 @@ impl Judge<'_> {
         findings
     }
 
+    pub fn test_findings(&self, facts: Vec<Fact>) -> Vec<Finding> {
+        let mut findings: Vec<Finding> = facts.into_iter().map(|fact| self.finding(fact)).collect();
+        findings.sort_by(|left, right| {
+            (&left.scope, &left.evidence.path, &left.power).cmp(&(
+                &right.scope,
+                &right.evidence.path,
+                &right.power,
+            ))
+        });
+        findings.dedup_by(|left, right| {
+            left.scope == right.scope
+                && left.power == right.power
+                && left.evidence.path == right.evidence.path
+        });
+        findings
+    }
+
     pub fn split_denied(&self, notes: Vec<Note>) -> (Vec<Fact>, Vec<Note>) {
         let (denied, allowed): (Vec<Note>, Vec<Note>) = notes.into_iter().partition(|note| {
             self.denies(Subject {

@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use super::notes::{evidence_text, markdown_section, skipped_section};
 use super::summary;
+use super::test_code::test_code_section;
 use crate::{Coverage, Finding, Lock, Review, ReviewMode};
 
 const MAXIMUM_CELL_LENGTH: usize = 120;
@@ -32,6 +33,7 @@ pub fn render(review: &Review) -> String {
         lines.push(String::new());
     }
     lines.extend(markdown_section(review));
+    lines.extend(test_code_section(review));
     lines.extend(skipped_section(review));
     if !review.stale.is_empty() {
         lines.push(format!("Stale entries in {}:", Lock::FILE));

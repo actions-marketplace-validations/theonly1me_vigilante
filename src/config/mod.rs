@@ -6,17 +6,18 @@ use std::time::Duration;
 
 use globset::{Glob, GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder};
 
-pub use file::{Coverage, GoEngine, LanguageEngine, Mode};
+pub use file::{Coverage, GoEngine, LanguageEngine, Mode, TestPolicy};
 
 use crate::registry::Sources;
 use crate::tree::Tree;
 use crate::{Capability, Error, Power, Scope, Severity};
-use excludes::TEST_AND_VENDORED_PATHS;
+use excludes::{TEST_PATHS, VENDORED_PATHS};
 use file::ConfigFile;
 
 pub struct Config {
     pub mode: Mode,
     pub coverage: Coverage,
+    pub tests: TestPolicy,
     pub rule_paths: Vec<String>,
     pub go_engine: GoEngine,
     pub javascript_engine: LanguageEngine,
@@ -28,6 +29,7 @@ pub struct Config {
     pub type_check_limit: Duration,
     registry_sources: Sources,
     excluded: GlobSet,
+    test_paths: GlobSet,
     named_scopes: Vec<(String, GlobMatcher)>,
     denied: Vec<(GlobMatcher, Capability)>,
     hidden: BTreeSet<Capability>,
@@ -49,7 +51,11 @@ impl Config {
         let file: ConfigFile = toml::from_str(text)
             .map_err(|error| Error::new(format!("invalid {}: {error}", Self::FILE)))?;
         let mut excluded = GlobSetBuilder::new();
-        for pattern in TEST_AND_VENDORED_PATHS
+        let mut test_paths = GlobSetBuilder::new();
+        for pattern in TEST_PATHS {
+            test_paths.add(glob(pattern)?);
+        }
+        for pattern in VENDORED_PATHS
             .iter()
             .copied()
             .chain(file.scan.exclude.iter().map(String::as_str))
@@ -70,6 +76,10 @@ impl Config {
         Ok(Self {
             mode: file.policy.mode,
             coverage: file.policy.coverage,
+            tests: file.policy.tests,
+            test_paths: test_paths
+                .build()
+                .map_err(|error| Error::new(format!("invalid test pattern: {error}")))?,
             rule_paths: file.rules.paths,
             go_engine: file.engines.go,
             javascript_engine: file.engines.javascript,
@@ -97,6 +107,14 @@ impl Config {
 
     pub fn is_excluded(&self, path: &str) -> bool {
         self.excluded.is_match(path)
+    }
+
+    pub fn is_test(&self, path: &str) -> bool {
+        self.test_paths.is_match(path)
+    }
+
+    pub fn is_outside_analysis(&self, path: &str) -> bool {
+        self.is_excluded(path) || self.is_test(path)
     }
 
     pub fn named_scope_of(&self, path: &str) -> Option<&str> {

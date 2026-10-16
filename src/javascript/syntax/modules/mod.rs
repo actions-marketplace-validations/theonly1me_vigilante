@@ -13,6 +13,7 @@ pub struct ModuleItems {
     bindings: HashMap<String, Binding>,
     exports: Vec<Export>,
     loads: Vec<Load>,
+    unresolved_loads: Vec<usize>,
 }
 
 pub struct NewBinding<'a> {
@@ -55,6 +56,7 @@ impl ModuleItems {
         index.bindings = self.bindings;
         index.exports = self.exports;
         index.loads = self.loads;
+        index.unresolved_loads = self.unresolved_loads;
     }
 
     pub(super) fn bind(&mut self, binding: NewBinding) {
@@ -69,6 +71,10 @@ impl ModuleItems {
 
     pub(super) fn add_export(&mut self, export: Export) {
         self.exports.push(export);
+    }
+
+    pub(super) fn unresolved(&mut self, node: &SyntaxNode) {
+        self.unresolved_loads.push(line_of(node));
     }
 
     pub(super) fn load(&mut self, site: LoadSite) {
