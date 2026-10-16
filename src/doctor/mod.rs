@@ -1,19 +1,15 @@
 mod branch;
 mod codeowners;
+mod owners;
+mod protected;
 
 use std::path::PathBuf;
 
 use branch::branch_rules;
-use codeowners::CodeOwners;
+use owners::owner_items;
 
 const GUIDE: &str =
     "https://github.com/theonly1me/vigilante/blob/main/docs/github-action.md#protect-the-check";
-const PROTECTED_PATHS: &[(&str, &str)] = &[
-    ("vigilante.lock", "vigilante.lock"),
-    ("vigilante.toml", "vigilante.toml"),
-    (".vigilante/", ".vigilante/rules/rule.yml"),
-    (".github/workflows/", ".github/workflows/vigilante.yml"),
-];
 
 pub struct DoctorRequest {
     pub repository: PathBuf,
@@ -57,32 +53,6 @@ impl Doctor {
         });
         lines.join("\n") + "\n"
     }
-}
-
-fn owner_items(request: &DoctorRequest) -> Vec<Item> {
-    let Some(code_owners) = CodeOwners::find(&request.repository) else {
-        return vec![Item {
-            passed: false,
-            text:
-                "The repository has no CODEOWNERS file in `.github/`, the top folder, or `docs/`."
-                    .to_string(),
-        }];
-    };
-    PROTECTED_PATHS
-        .iter()
-        .copied()
-        .chain([(code_owners.path, code_owners.path)])
-        .map(|(label, sample)| match code_owners.owners_of(sample) {
-            [] => Item {
-                passed: false,
-                text: format!("`{label}` has no code owner in `{}`.", code_owners.path),
-            },
-            owners => Item {
-                passed: true,
-                text: format!("`{label}` has the code owners `{}`.", owners.join("`, `")),
-            },
-        })
-        .collect()
 }
 
 fn branch_items(request: &DoctorRequest) -> Vec<Item> {

@@ -23,19 +23,21 @@ case "$*" in
     exit 1 ;;
 esac
 "#;
-const ALL_OWNED: &str = "vigilante.lock @acme/security\nvigilante.toml @acme/security\n.vigilante/ @acme/security\n.github/ @acme/security\n";
-const PROTECTED_RULES: &str = r#"[{"type":"pull_request","parameters":{"require_code_owner_review":true}},{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"vigilante"}]}}]"#;
+pub const ALL_OWNED: &str = "vigilante.lock @acme/security\nvigilante.toml @acme/security\n.vigilante/ @acme/security\n.github/ @acme/security\n";
+pub const PROTECTED_RULES: &str = r#"[{"type":"pull_request","parameters":{"require_code_owner_review":true}},{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"vigilante"}]}}]"#;
 
-struct Doctor<'a> {
-    codeowners: &'a str,
-    rules: &'a str,
-    protection: Option<&'a str>,
-    has_gh: bool,
+pub struct Doctor<'a> {
+    pub codeowners: &'a str,
+    pub files: &'a [(&'a str, &'a str)],
+    pub rules: &'a str,
+    pub protection: Option<&'a str>,
+    pub has_gh: bool,
 }
 
-fn run_doctor(doctor: Doctor) -> Run {
+pub fn run_doctor(doctor: Doctor) -> Run {
     let repository = TestRepository::new();
     repository.write(&[(".github/CODEOWNERS", doctor.codeowners)]);
+    repository.write(doctor.files);
     let tools = TempDir::new().expect("temporary folder");
     let gh = tools.path().join("gh");
     fs::write(&gh, FAKE_GH).expect("fake gh");
@@ -64,7 +66,7 @@ fn run_doctor(doctor: Doctor) -> Run {
     }
 }
 
-fn unchecked(stdout: &str) -> Vec<&str> {
+pub fn unchecked(stdout: &str) -> Vec<&str> {
     stdout
         .lines()
         .filter(|line| line.starts_with("- [ ]"))
@@ -75,6 +77,7 @@ fn unchecked(stdout: &str) -> Vec<&str> {
 fn doctor_passes_when_code_owners_and_branch_rules_protect_the_lock() {
     let run = run_doctor(Doctor {
         codeowners: ALL_OWNED,
+        files: &[],
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: true,
@@ -94,6 +97,7 @@ fn doctor_passes_when_code_owners_and_branch_rules_protect_the_lock() {
 fn doctor_lists_each_missing_protection() {
     let run = run_doctor(Doctor {
         codeowners: "* @acme/everyone\nvigilante.lock\n/.github/ @acme/security\n",
+        files: &[],
         rules: r#"[{"type":"pull_request","parameters":{"require_code_owner_review":false}},{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"test"}]}}]"#,
         protection: None,
         has_gh: true,
@@ -116,6 +120,7 @@ fn doctor_lists_each_missing_protection() {
 fn doctor_reads_classic_branch_protection() {
     let run = run_doctor(Doctor {
         codeowners: ALL_OWNED,
+        files: &[],
         rules: "[]",
         protection: Some(
             r#"{"required_pull_request_reviews":{"require_code_owner_reviews":true},"required_status_checks":{"contexts":["Vigilante / vigilante"]}}"#,
@@ -131,6 +136,7 @@ fn doctor_reads_classic_branch_protection() {
 fn doctor_fails_when_it_cannot_read_the_branch_rules() {
     let run = run_doctor(Doctor {
         codeowners: ALL_OWNED,
+        files: &[],
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: false,

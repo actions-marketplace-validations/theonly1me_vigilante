@@ -11,6 +11,7 @@ mod csharp_code;
 mod csharp_fixtures;
 mod csharp_packages;
 mod doctor;
+mod doctor_paths;
 mod file_server;
 mod go_blocking;
 mod go_capslock;
