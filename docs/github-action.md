@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: theonly1me/vigilante@v0.1.0
+      - uses: theonly1me/vigilante@v0.1.1
 ```
 <!-- x-release-please-end -->
 
@@ -57,10 +57,10 @@ The job needs only `contents: read`, and it needs no secrets. It works on pull r
 ### Pin the action
 
 <!-- x-release-please-start-version -->
-`@v0.1.0` is a tag. For the strongest guarantee, pin the action to the full commit SHA of the tag:
+`@v0.1.1` is a tag. For the strongest guarantee, pin the action to the full commit SHA of the tag:
 
 ```yaml
-      - uses: theonly1me/vigilante@<commit SHA of v0.1.0>
+      - uses: theonly1me/vigilante@<commit SHA of v0.1.1>
 ```
 <!-- x-release-please-end -->
 

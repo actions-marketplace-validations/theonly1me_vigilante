@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/theonly1me/vigilante/compare/v0.1.0...v0.1.1) (2026-10-16)
+
+
+### Fixes
+
+* **deps:** update zip to 9.0.3, because 9.0.0 to 9.0.2 are yanked ([7ce70b3](https://github.com/theonly1me/vigilante/commit/7ce70b325c0f928c5f508a8a4d59b822c860031e))
+
 ## 0.1.0 (2026-10-15)
 
 
