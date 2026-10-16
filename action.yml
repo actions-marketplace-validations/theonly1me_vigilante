@@ -9,6 +9,9 @@ inputs:
   version:
     description: The Vigilante version to download and verify
     default: "0.1.1" # x-release-please-version
+  comment:
+    description: Write the report as one comment on the pull request. The job needs the permission pull-requests write.
+    default: "false"
 
 runs:
   using: composite
@@ -36,9 +39,20 @@ runs:
         path: ${{ runner.temp }}/vigilante-cache/vigilante
         key: vigilante-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json', '**/npm-shrinkwrap.json', '**/pnpm-lock.yaml', '**/yarn.lock', '**/uv.lock', '**/poetry.lock', '**/Pipfile.lock', '**/requirements*.txt', '**/pom.xml', '**/gradle.lockfile', '**/Cargo.lock', '**/packages.lock.json', '**/*.csproj', '**/Directory.Packages.props', '**/Gemfile.lock', '**/gems.locked') }}
         restore-keys: vigilante-packages-${{ runner.os }}-
-    - shell: bash
+    - id: review
+      shell: bash
       run: '"$GITHUB_ACTION_PATH/action/review.sh"'
       env:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         XDG_CACHE_HOME: ${{ runner.temp }}/vigilante-cache
+        REPORT_FILE: ${{ runner.temp }}/vigilante-report.md
+    - if: always() && steps.review.outcome != 'skipped' && inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/action/comment.sh"'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPOSITORY: ${{ github.repository }}
+        REPORT_FILE: ${{ runner.temp }}/vigilante-report.md
+        REVIEW_OUTCOME: ${{ steps.review.outcome }}

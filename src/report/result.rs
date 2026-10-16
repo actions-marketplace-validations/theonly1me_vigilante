@@ -1,6 +1,57 @@
-use crate::{Coverage, Lock, Review};
+use crate::{Coverage, Lock, Review, ReviewMode};
 
 pub fn result(review: &Review) -> String {
+    let verdict = verdict(review);
+    match approval_request(review) {
+        Some(request) => format!("{verdict} {request}"),
+        None => verdict,
+    }
+}
+
+fn approval_request(review: &Review) -> Option<String> {
+    if !matches!(review.mode, ReviewMode::Diff { .. }) {
+        return None;
+    }
+    let powers = review
+        .findings
+        .iter()
+        .filter(|finding| finding.locked)
+        .count();
+    let risks = review.risks.iter().filter(|risk| risk.approved).count();
+    let power_text = counted(Plural {
+        count: powers,
+        ..NEW_POWER
+    });
+    let risk_text = counted(Plural {
+        count: risks,
+        ..RISK
+    });
+    let approved = match (powers, risks) {
+        (0, 0) => return None,
+        (_, 0) => power_text,
+        (0, _) => risk_text,
+        _ => format!("{power_text} and {risk_text}"),
+    };
+    let verb = if powers + risks == 1 { "is" } else { "are" };
+    Some(format!(
+        "{approved} {verb} in {}. A code owner of {} must approve this pull request.",
+        Lock::FILE,
+        Lock::FILE
+    ))
+}
+
+const NEW_POWER: Plural = Plural {
+    count: 0,
+    one: "new power",
+    many: "new powers",
+};
+const RISK: Plural = Plural {
+    count: 0,
+    one: "risk",
+    many: "risks",
+};
+
+fn verdict(review: &Review) -> String {
     if review.passed() {
         return "**Result: pass.**".to_string();
     }
@@ -96,6 +147,11 @@ struct Plural {
     count: usize,
     one: &'static str,
     many: &'static str,
+}
+
+fn counted(word: Plural) -> String {
+    let count = word.count;
+    format!("{count} {}", plural(word))
 }
 
 fn plural(word: Plural) -> &'static str {

@@ -3,6 +3,7 @@ mod config;
 mod container;
 mod csharp;
 mod deep;
+mod doctor;
 mod document;
 mod error;
 mod go;
@@ -28,6 +29,7 @@ mod tree;
 mod xml;
 
 pub use config::{Coverage, Mode as PolicyMode, TestPolicy};
+pub use doctor::{Doctor, DoctorRequest, doctor};
 pub use error::Error;
 pub use lock::{Granted, Lock};
 pub use model::{

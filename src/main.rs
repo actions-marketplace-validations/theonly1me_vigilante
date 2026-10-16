@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use vigilante::{Error, Format, Lock, ReviewRequest, ScanRequest, Source, scan_json, scan_text};
+use vigilante::{
+    DoctorRequest, Error, Format, Lock, ReviewRequest, ScanRequest, Source, scan_json, scan_text,
+};
 
 #[derive(Parser)]
 #[command(
@@ -44,6 +46,15 @@ enum Command {
         commit: Option<String>,
         #[arg(long, value_enum, default_value_t = ReportFormat::Markdown)]
         format: ReportFormat,
+    },
+    #[command(about = "Check that code owners and branch rules protect vigilante.lock")]
+    Doctor {
+        #[arg(
+            long,
+            default_value = "vigilante",
+            help = "A part of the required check name"
+        )]
+        check: String,
     },
 }
 
@@ -134,6 +145,15 @@ fn run(cli: Cli) -> Result<Outcome, Error> {
             },
             format,
         }),
+        Command::Doctor { check } => {
+            let doctor = vigilante::doctor(DoctorRequest { repository, check });
+            print!("{}", doctor.render());
+            Ok(if doctor.passed() {
+                Outcome::Pass
+            } else {
+                Outcome::Fail
+            })
+        }
         Command::Check { commit, format } => report(Report {
             request: ReviewRequest {
                 repository,
