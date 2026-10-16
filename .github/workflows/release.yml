@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag of an existing release to publish again, for example v0.1.0
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -18,21 +23,17 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      actions: write
     outputs:
       created: ${{ steps.release.outputs.release_created }}
-      tag: ${{ steps.release.outputs.tag_name }}
+      tag: ${{ inputs.tag || steps.release.outputs.tag_name }}
+      publish: ${{ (github.event_name == 'workflow_dispatch' && inputs.tag != '') || steps.release.outputs.release_created == 'true' }}
     steps:
       - id: release
+        if: github.event_name == 'push' || inputs.tag == ''
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
-      - if: steps.release.outputs.prs_created == 'true'
-        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
 
   build:
     needs: [gate, release-please]
@@ -64,7 +65,11 @@ jobs:
           TAG: ${{ needs.release-please.outputs.tag }}
 
   crates:
-    needs: [release-please, github]
+    needs: [gate, release-please, github]
+    if: >-
+      ${{ !cancelled() && needs.gate.result == 'success' &&
+      needs.release-please.outputs.publish == 'true' &&
+      (needs.github.result == 'success' || needs.release-please.outputs.created != 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: release
@@ -77,6 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.release-please.outputs.tag }}
           persist-credentials: false
       - id: published
         run: packaging/crate-published.sh "$TAG" >> "$GITHUB_OUTPUT"
@@ -93,13 +99,18 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
 
   npm:
-    needs: [release-please, github]
+    needs: [gate, release-please, github]
+    if: >-
+      ${{ !cancelled() && needs.gate.result == 'success' &&
+      needs.release-please.outputs.publish == 'true' &&
+      (needs.github.result == 'success' || needs.release-please.outputs.created != 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: release
     permissions:
       contents: read
       id-token: write
+      attestations: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,47 +118,66 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: npm-packages
-          path: npm-packages
+      - run: packaging/download-release.sh "$TAG" "$PATTERN" "$FOLDER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+          PATTERN: theonly1me-vigilante-*.tgz
+          FOLDER: npm-packages
       - run: packaging/publish-npm.sh npm-packages
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   pypi:
-    needs: [release-please, github]
+    needs: [gate, release-please, github]
+    if: >-
+      ${{ !cancelled() && needs.gate.result == 'success' &&
+      needs.release-please.outputs.publish == 'true' &&
+      (needs.github.result == 'success' || needs.release-please.outputs.created != 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: release
     permissions:
+      contents: read
       id-token: write
+      attestations: read
     steps:
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          pattern: wheel-*
-          path: wheels
-          merge-multiple: true
+          persist-credentials: false
+      - run: packaging/download-release.sh "$TAG" "$PATTERN" "$FOLDER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+          PATTERN: "*.whl"
+          FOLDER: wheels
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: wheels/
           skip-existing: true
 
   homebrew:
-    needs: [release-please, github]
+    needs: [gate, release-please, github]
+    if: >-
+      ${{ !cancelled() && needs.gate.result == 'success' &&
+      needs.release-please.outputs.publish == 'true' &&
+      (needs.github.result == 'success' || needs.release-please.outputs.created != 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: release
     permissions:
       contents: read
+      attestations: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-files
-          path: dist
+      - run: packaging/download-release.sh "$TAG" "$PATTERN" "$FOLDER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+          PATTERN: vigilante.rb
+          FOLDER: dist
       - run: packaging/publish-homebrew.sh dist/vigilante.rb "$TAG"
         env:
           GH_TOKEN: ${{ github.token }}

@@ -12,6 +12,8 @@ Release Please sets the version in `Cargo.toml`, `Cargo.lock`, `npm/vigilante/pa
 - `registry-readme.mjs`: writes a copy of the README with absolute links to the release tag.
 - `homebrew.sh`: writes `vigilante.rb` from `SHA256SUMS`.
 - `smoke.sh`, `smoke-npm.sh`, `smoke-wheel.sh`: install a package and run `vigilante --version` and one failing command.
+- `download-release.sh`: downloads files of a release and verifies the attestation of each file.
+- `publish-npm.sh`: publishes the npm packages. With `DRY_RUN=true`, it only checks them. `build.yml` runs it that way.
 
 ## Rules
 

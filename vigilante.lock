@@ -19,7 +19,6 @@ powers = [
 
 [ci.".github/workflows/release.yml"]
 powers = [
-    "token_write:actions",
     "token_write:artifact-metadata",
     "token_write:attestations",
     "token_write:contents",

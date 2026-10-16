@@ -12,7 +12,7 @@ Users run Vigilante from npm, PyPI, Homebrew, crates.io, GitHub Releases, and a 
 4. The publish jobs use the `release` environment, which only `main` can use. Each job skips a version that its registry already has.
 5. PyPI uses trusted publishing from the first release. crates.io and npm cannot make a new package with trusted publishing, so the first release uses tokens. After that, they use trusted publishing, and the tokens go away.
 6. The Action verifies the attestation of each archive. The attestation must come from `release.yml` on `main`, at the commit of the version tag.
-7. The release workflow starts CI on the release pull request with `workflow_dispatch`, because a pull request that `GITHUB_TOKEN` makes does not start workflows.
+7. To publish an existing release again, a maintainer runs the release workflow by hand with its tag. The publish jobs download the files of that release, verify each attestation, and publish the missing versions. So a fix on `main` can complete a release without a new build.
 
 ## Consequences
 
