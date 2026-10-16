@@ -34,6 +34,7 @@ Limits for code:
 
 - Go has no risks, because Capslock gives no facts about arguments.
 - The engine finds input by text in the call and in local assignments. It does not follow data through fields, return values, or package code.
+- A call into a package is a risk only when a rule names that package or function as a sink. Examples are `axios` and `execa`. A path through other package functions is a note.
 
 ## CI
 

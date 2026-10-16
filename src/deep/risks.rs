@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::graph::{FunctionId, Graph, Owner, Target};
 use super::program::ArgumentFacts;
-use super::search::toward_each_power;
 use super::{Risk, RiskClass};
 use crate::{Capability, Evidence, Power, Scope, Surface};
 
@@ -87,41 +86,25 @@ pub fn risks(input: RisksInput) -> Vec<Risk> {
 }
 
 fn sites(graph: &Graph) -> Vec<Site> {
-    let towards = toward_each_power(graph);
-    let mut sites = Vec::new();
-    for call in graph.own_calls() {
-        match call.target {
-            Target::Sink(sink) => {
-                let sink = graph.sink(sink);
-                if RISK_CAPABILITIES.contains(&sink.power.capability) {
-                    sites.push(Site {
-                        from: call.from,
-                        line: call.line,
-                        sink: sink.name.clone(),
-                        power: sink.power.clone(),
-                        rule: sink.rule.clone(),
-                    });
-                }
-            }
-            Target::Function(callee) => {
-                if !matches!(graph.function(callee).owner, Owner::Dependency { .. }) {
-                    continue;
-                }
-                for (power, toward) in &towards {
-                    if RISK_CAPABILITIES.contains(&power.capability) && toward.reaches(callee) {
-                        sites.push(Site {
-                            from: call.from,
-                            line: call.line,
-                            sink: graph.function(callee).name.clone(),
-                            power: power.clone(),
-                            rule: String::new(),
-                        });
-                    }
-                }
-            }
-        }
-    }
-    sites
+    graph
+        .own_calls()
+        .iter()
+        .filter_map(|call| {
+            let Target::Sink(sink) = call.target else {
+                return None;
+            };
+            let sink = graph.sink(sink);
+            RISK_CAPABILITIES
+                .contains(&sink.power.capability)
+                .then(|| Site {
+                    from: call.from,
+                    line: call.line,
+                    sink: sink.name.clone(),
+                    power: sink.power.clone(),
+                    rule: sink.rule.clone(),
+                })
+        })
+        .collect()
 }
 
 struct TaintInput<'a> {
