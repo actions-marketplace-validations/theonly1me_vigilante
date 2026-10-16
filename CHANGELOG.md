@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.2.0](https://github.com/theonly1me/vigilante/compare/v0.1.1...v0.2.0) (2026-10-16)
+
+
+### Features
+
+* **action:** write the report as an opt-in pull request comment ([9b5a2ae](https://github.com/theonly1me/vigilante/commit/9b5a2ae8e5211f72cb9392ae9cea5c324c006f25))
+* **agent:** read skill frontmatter, open code options, deny rules, and unknown install programs ([a6235ea](https://github.com/theonly1me/vigilante/commit/a6235ea3a17f36cf004c64e6aa9af0ea86302555))
+* **ci:** report script injection, head checkouts, and weaker action pins as risks ([320dfd3](https://github.com/theonly1me/vigilante/commit/320dfd3782f6504c051c6a36626cc5d60309e380))
+* **ci:** report script injection, head checkouts, and weaker action pins as risks ([d7cc1f2](https://github.com/theonly1me/vigilante/commit/d7cc1f285a36751cfebe4b0ef75df818f0809ec3))
+* **deep:** find privileged calls through aliases, constants, and global objects, and skip local shadows ([2137e2f](https://github.com/theonly1me/vigilante/commit/2137e2ff892f648b4ba43d683dbe413523de81b6))
+* **deep:** find the input class of each privileged call in own code ([4bb33e5](https://github.com/theonly1me/vigilante/commit/4bb33e5e28c69b070353a00e0be443c8d2940507))
+* **deep:** skip module members that a rule marks as inert ([37746d9](https://github.com/theonly1me/vigilante/commit/37746d9ce73e215fa5ef89360e2c7dbe0ba529d0))
+* **doctor:** check that code owners and branch rules protect the lock ([283abfa](https://github.com/theonly1me/vigilante/commit/283abfaef67d61e93606b2713801c9689ba90d81))
+* **doctor:** check that code owners and branch rules protect the lock ([7441667](https://github.com/theonly1me/vigilante/commit/74416675c1f349c07d71d765f6b548258be8ae17))
+* enforce deny rules on every power, trust only base rules, and report analysis gaps ([d010110](https://github.com/theonly1me/vigilante/commit/d010110ee0a13b15e5fed6f380101d41e72b329c))
+* find privileged calls by identity, not only by spelling ([85596a1](https://github.com/theonly1me/vigilante/commit/85596a176acfa847250f69349d86a24d0370d84f))
+* **javascript:** report a module load whose name is not a literal as an analysis gap ([b249894](https://github.com/theonly1me/vigilante/commit/b24989409601b5e611327af5bd1ad87d8f14deea))
+* report test code and unreadable module loads ([bf0da67](https://github.com/theonly1me/vigilante/commit/bf0da672f0a7acec79d9de7069ac7db9563e54ee))
+* **report:** list analysis gaps in every format and let a policy block new gaps ([e58c3ca](https://github.com/theonly1me/vigilante/commit/e58c3cacce7dba61d3d60c6009e9ed02e44c3458))
+* **report:** put the result and the needed approval at the top of the report ([0c18357](https://github.com/theonly1me/vigilante/commit/0c183573a1297f3fc757b79f14d4f8814143d549))
+* **review:** report changed risks and approve them in the lock ([0f4d951](https://github.com/theonly1me/vigilante/commit/0f4d951d709c09e2cbde2523c2b7228625368333))
+* **review:** report changed risks and approve them in the lock ([0d093e7](https://github.com/theonly1me/vigilante/commit/0d093e74437dabb1956634c90b65a39a8b82e8b3))
+* **scan:** report the powers of tests and fixtures as test code ([9c443e9](https://github.com/theonly1me/vigilante/commit/9c443e94b710861fb215316e8eda35948228101f))
+
+
+### Fixes
+
+* **deep:** class a command by its command arguments, not by its options or callback ([a6a6da3](https://github.com/theonly1me/vigilante/commit/a6a6da308db277f7cf50f3e2e02a5f210587c54a))
+* **deep:** class a command by its command arguments, not by its options or callback ([ad727c1](https://github.com/theonly1me/vigilante/commit/ad727c1da959bcec7c12063ff7f13023dde36196))
+* **deep:** keep object and class methods from hiding a global call with the same name ([9e36cc1](https://github.com/theonly1me/vigilante/commit/9e36cc152c745a878194c6172d538a8b59ab74e9))
+* **deep:** keep object and class methods from hiding a global call with the same name ([69f1540](https://github.com/theonly1me/vigilante/commit/69f15403221fe9e1bf4c0d6db6924c84d2661939))
+* **deep:** make risks only at sinks, not at each call into a package ([58b4b82](https://github.com/theonly1me/vigilante/commit/58b4b824a6abae2dcd9b05b6553f21b0b6557a67))
+* **deep:** make risks only at sinks, not at each call into a package ([c9eb892](https://github.com/theonly1me/vigilante/commit/c9eb89257060a6ce935bf22143b4d2f5f72d3626))
+* **packs:** match fully qualified Java sockets and asyncio subprocesses ([095b13f](https://github.com/theonly1me/vigilante/commit/095b13f39a24b76a8b00c0bb2bfd4d22fb3da8d2))
+* **review:** block a denied power also when the report makes it a note ([85966ec](https://github.com/theonly1me/vigilante/commit/85966eca6492d6515b0d47f834539f9e2f8fa5b7))
+* **scan:** read custom rules from the merge base in a diff ([fff0587](https://github.com/theonly1me/vigilante/commit/fff05873e03a6a05bbc592230eef0e2a71352d78))
+
+
+### Documentation
+
+* add the benchmark results and the comparison with capslock-git-diff ([371db5d](https://github.com/theonly1me/vigilante/commit/371db5d93ab286b90a471807cbdd0bdf3c5e5da8))
+* describe CI and agent risks, and the new surface powers ([c5c790f](https://github.com/theonly1me/vigilante/commit/c5c790f28dc102356edf467e08cf617b51b10ee6))
+* describe risks, their input classes, and their approval ([8aef62d](https://github.com/theonly1me/vigilante/commit/8aef62d5b65f2cef7b7f20fd4b287d15f67eefa1))
+* describe the result summary, vigilante doctor, and the pull request comment ([69a7d5f](https://github.com/theonly1me/vigilante/commit/69a7d5f79b7199aa2f0c99ce5888d27051e49db2))
+* split a long sentence in the CI risk record ([a650b88](https://github.com/theonly1me/vigilante/commit/a650b8814a91454115e0aabbb30dc1ef61e75eaf))
+
 ## [0.1.1](https://github.com/theonly1me/vigilante/compare/v0.1.0...v0.1.1) (2026-10-16)
 
 

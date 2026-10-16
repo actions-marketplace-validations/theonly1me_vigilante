@@ -127,7 +127,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: theonly1me/vigilante@v0.1.1
+      - uses: theonly1me/vigilante@v0.2.0
 ```
 <!-- x-release-please-end -->
 
