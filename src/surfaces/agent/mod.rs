@@ -1,6 +1,7 @@
 mod allow_rule;
 mod claude;
 mod codex;
+mod frontmatter;
 mod mcp;
 
 use super::parse_json;
@@ -11,6 +12,7 @@ enum AgentFile {
     ClaudeSettings,
     McpServers { key: &'static str },
     CodexConfig,
+    Frontmatter,
 }
 
 pub fn handles(path: &str) -> bool {
@@ -25,11 +27,15 @@ pub fn detect(file: SourceFile) -> Result<Vec<Detection>, Error> {
             .map(mcp::detect)
             .unwrap_or_default()),
         Some(AgentFile::CodexConfig) => codex::detect(file),
+        Some(AgentFile::Frontmatter) => frontmatter::detect(file),
         None => Ok(Vec::new()),
     }
 }
 
 fn kind_of(path: &str) -> Option<AgentFile> {
+    if frontmatter::is_frontmatter_file(path) {
+        return Some(AgentFile::Frontmatter);
+    }
     let mut parts = path.rsplit('/');
     let name = parts.next()?;
     let folder = parts.next().unwrap_or_default();

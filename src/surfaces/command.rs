@@ -50,6 +50,26 @@ const CODE_RUNNERS: &[&str] = &[
     "zsh",
 ];
 const PACKAGE_MANAGERS: &[&str] = &["npm", "pnpm", "yarn"];
+const PLAIN_PROGRAMS: &[&str] = &[
+    "cat",
+    "chmod",
+    "cp",
+    "echo",
+    "exit",
+    "husky",
+    "is-ci",
+    "lefthook",
+    "ln",
+    "mkdir",
+    "mv",
+    "printf",
+    "rimraf",
+    "rm",
+    "simple-git-hooks",
+    "touch",
+    "true",
+    "tsc",
+];
 const SHELL_OPERATORS: &[char] = &['|', ';', '&', '$', '`', '<', '>', '(', ')', '\n'];
 const MAXIMUM_SCRIPT_DEPTH: usize = 4;
 
@@ -67,6 +87,7 @@ pub type PackageScripts<'a> = BTreeMap<&'a str, &'a str>;
 pub struct LocalCommand<'a> {
     pub command: &'a str,
     pub package_scripts: Option<&'a PackageScripts<'a>>,
+    pub unknown_programs_run_code: bool,
 }
 
 pub fn is_plain(local: LocalCommand) -> bool {
@@ -92,6 +113,11 @@ pub fn is_plain(local: LocalCommand) -> bool {
             }
             [manager, "audit", ..] if is_package_manager(manager) => {}
             [program, ..] if program.contains('/') || runs_code(program) => return false,
+            [program, ..]
+                if local.unknown_programs_run_code && !PLAIN_PROGRAMS.contains(program) =>
+            {
+                return false;
+            }
             _ => {}
         }
     }

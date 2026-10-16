@@ -54,5 +54,6 @@ pub fn input_of(class: RiskClass) -> &'static str {
         RiskClass::Dynamic => "with input that changes at run time",
         RiskClass::Shell => "through a shell, with a command that is not constant",
         RiskClass::Untrusted => "with untrusted input",
+        RiskClass::Unpinned => "with a reference that can change",
     }
 }

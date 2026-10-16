@@ -3,6 +3,7 @@ use crate::document::Located;
 use crate::{Capability, Detection, Power};
 
 const BUILT_IN_SECRET: &str = "GITHUB_TOKEN";
+const ALL_SECRETS: &str = "all";
 const EXPRESSION_START: &str = "${{";
 const EXPRESSION_END: &str = "}}";
 
@@ -54,18 +55,44 @@ pub fn secrets(located: &Located) -> Vec<Detection> {
 }
 
 fn secret_names(text: &str) -> impl Iterator<Item = &str> {
-    const PREFIX: &str = "secrets.";
-    text.match_indices(PREFIX).filter_map(move |(index, _)| {
-        let follows_identifier = text[..index]
+    const CONTEXT: &str = "secrets";
+    text.match_indices(CONTEXT).filter_map(move |(index, _)| {
+        let follows_name = text[..index]
             .chars()
             .next_back()
-            .is_some_and(|character| character.is_ascii_alphanumeric() || character == '_');
-        let rest = &text[index + PREFIX.len()..];
-        let length = rest
-            .find(|character: char| {
-                !(character.is_ascii_alphanumeric() || character == '_' || character == '-')
-            })
-            .unwrap_or(rest.len());
-        (!follows_identifier && length > 0).then_some(&rest[..length])
+            .is_some_and(|character| is_name_character(character) || character == '.');
+        let is_in_literal = text[..index].matches('\'').count() % 2 == 1;
+        if follows_name || is_in_literal {
+            return None;
+        }
+        let rest = &text[index + CONTEXT.len()..];
+        if let Some(member) = rest.strip_prefix('.') {
+            let name = &member[..name_length(member)];
+            return (!name.is_empty()).then_some(name);
+        }
+        if let Some(index_text) = rest.strip_prefix('[') {
+            return Some(quoted_name(index_text.trim_start()).unwrap_or(ALL_SECRETS));
+        }
+        let continues_name = rest.chars().next().is_some_and(is_name_character);
+        (!continues_name).then_some(ALL_SECRETS)
     })
+}
+
+fn quoted_name(text: &str) -> Option<&str> {
+    let quote = text
+        .chars()
+        .next()
+        .filter(|character| "'\"".contains(*character))?;
+    let body = &text[1..];
+    let name = &body[..body.find(quote)?];
+    (!name.is_empty() && name_length(name) == name.len()).then_some(name)
+}
+
+fn name_length(text: &str) -> usize {
+    text.find(|character: char| !is_name_character(character))
+        .unwrap_or(text.len())
+}
+
+fn is_name_character(character: char) -> bool {
+    character.is_ascii_alphanumeric() || character == '_' || character == '-'
 }

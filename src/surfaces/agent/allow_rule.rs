@@ -40,6 +40,28 @@ const RISKY_COMMANDS: &[(&str, &str)] = &[
     ("yarn", "dlx"),
 ];
 const COMMAND_WRAPPERS: &[&str] = &["command", "env", "nice", "nohup", "sudo", "time"];
+const CODE_FLAGS: &[(&[&str], &[&str])] = &[
+    (&["bash", "dash", "python", "python3", "sh", "zsh"], &["-c"]),
+    (&["bun", "node"], &["-e", "--eval", "-p", "--print"]),
+    (&["deno"], &["eval"]),
+    (&["perl", "ruby"], &["-e"]),
+    (&["php"], &["-r"]),
+    (
+        &["curl"],
+        &[
+            "-X",
+            "--request",
+            "-d",
+            "--data",
+            "-F",
+            "--form",
+            "-T",
+            "--upload-file",
+        ],
+    ),
+    (&["wget"], &["--post-data", "--post-file", "--method"]),
+];
+const PREFIX_FLAGS: &[&str] = &["--data"];
 
 pub fn grants_power(rule: &str) -> bool {
     let (tool, argument) = match rule.split_once('(') {
@@ -78,6 +100,10 @@ fn command_grants_power(command: &str) -> bool {
                     .any(|word| RISKY_COMMANDS.contains(&(program, word)))
                     || (segment.is_piped && runs_code(program))
                     || (is_open && is_package_manager(program) && rest == ["run"])
+                    || (is_open
+                        && rest
+                            .iter()
+                            .any(|word| is_code_flag(CodeFlag { program, word })))
             }
         }
     })
@@ -103,4 +129,24 @@ fn segments_of(command: &str) -> Vec<Segment<'_>> {
             })
         })
         .collect()
+}
+
+struct CodeFlag<'a> {
+    program: &'a str,
+    word: &'a str,
+}
+
+fn is_code_flag(flag: CodeFlag) -> bool {
+    let program = flag.program.rsplit('/').next().unwrap_or(flag.program);
+    let flag_name = flag
+        .word
+        .split_once('=')
+        .map_or(flag.word, |(name, _)| name);
+    CODE_FLAGS.iter().any(|(programs, flags)| {
+        programs.contains(&program)
+            && (flags.contains(&flag_name)
+                || PREFIX_FLAGS
+                    .iter()
+                    .any(|prefix| flags.contains(prefix) && flag_name.starts_with(prefix)))
+    })
 }

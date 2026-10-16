@@ -51,6 +51,7 @@ pub fn summary(capability: Capability) -> &'static str {
         }
         Capability::ThirdPartyAction => "The workflow runs a third-party action",
         Capability::Secret => "The workflow reads a secret",
+        Capability::RemoteScript => "CI runs a script that it downloads",
         Capability::ToolAllow => "The agent can use a tool without asking",
         Capability::Hook => "The agent runs a command",
         Capability::McpServer => "The agent connects to an MCP server",

@@ -1,6 +1,6 @@
 # Powers
 
-A power is an action that a change lets code, CI, a build, or an AI agent do. Vigilante reports a power when a pull request adds it to a scope that did not have it before. It also reports a [risk](#risks) when a call gets more dangerous input, also in a scope that has the power.
+A power is an action that a change lets code, CI, a build, or an AI agent do. Vigilante reports a power when a pull request adds it to a scope that did not have it before. It also reports a [risk](risks.md) when a call gets more dangerous input, also in a scope that has the power.
 
 ## Every power
 
@@ -22,9 +22,10 @@ A power is an action that a change lets code, CI, a build, or an AI agent do. Vi
 | `oidc` | ci | high | The CI job can get cloud credentials (OIDC) | `permissions: id-token: write` |
 | `untrusted_trigger` | ci | high | The workflow runs with secrets on events that forks can start | `on: pull_request_target`, `on: workflow_run` |
 | `third_party_action` | ci | medium | The workflow runs a third-party action | `uses: some-org/some-action@v1` |
-| `secret` | ci | medium | The workflow reads a secret | `${{ secrets.NPM_TOKEN }}`, `secrets: inherit` |
-| `tool_allow` | agent | medium | The agent can use a tool without asking | `"allow": ["Bash(curl:*)"]` in `.claude/settings.json` |
-| `hook` | agent | high | The agent runs a command | A Claude Code hook, `statusLine`, or `apiKeyHelper` command |
+| `secret` | ci | medium | The workflow reads a secret | `${{ secrets.NPM_TOKEN }}`, `${{ secrets['NPM_TOKEN'] }}`, `secrets: inherit`. Detail `all` for `toJSON(secrets)` or a computed name |
+| `remote_script` | ci | high | CI runs a script that it downloads | `curl https://example.com/install.sh \| sh`, `bash <(curl ...)`. The detail is the host |
+| `tool_allow` | agent | medium | The agent can use a tool without asking | `"allow": ["Bash(curl:*)"]` in `.claude/settings.json`, `allowed-tools: Bash` in a skill or a command |
+| `hook` | agent | high | The agent runs a command | A Claude Code hook in settings or in a skill, `statusLine`, or `apiKeyHelper` command |
 | `mcp_server` | agent | high | The agent connects to an MCP server | A new server in `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.gemini/settings.json`, or `.codex/config.toml` |
 | `skip_permissions` | agent | high | The agent skips permission checks | `"defaultMode": "bypassPermissions"`, `enableAllProjectMcpServers`, Codex `approval_policy = "never"` |
 | `install_hook` | build | high | Runs a command when dependencies install | `postinstall` in `package.json`, `build.rs`, `setup.py` |
@@ -45,36 +46,7 @@ See [dependencies.md](dependencies.md).
 
 ## Risks
 
-A risk is one call to an `exec`, `network`, `dynamic_code`, `native`, or `system_calls` sink in your code, with the class of its input:
-
-| Class | The input | Blocks |
-| --- | --- | --- |
-| `untrusted` | Comes from a web request, a serverless event, or the URL of a browser page, also through other functions of your code | For `exec`, `dynamic_code`, and `network` |
-| `shell` | Is a shell command that is not constant, for example `shell=True` with a variable | For `exec` |
-| `dynamic` | Changes at run time | No |
-| `constant` | Is a literal | No, and the report does not show it |
-
-The report shows each risk that the pull request adds or changes under "Changed risks". It shows a risk also when the scope already has the power. For example, a fixed `subprocess.run(["date"])` that becomes `subprocess.run(f"date {request.args['day']}", shell=True)` blocks.
-
-Each risk has an identity: `power:function:sink:class`, for example `exec:app.export:subprocess.run:untrusted`. The identity has no line number, so a risk that only moves does not change. To approve a blocking risk, run `vigilante lock`. The lock then lists its identity under `risks`. See [configuration.md](configuration.md#vigilantelock).
-
-Vigilante treats input from these sources as untrusted:
-
-| Language | Sources |
-| --- | --- |
-| Python | `request.args`, `request.form`, `request.values`, `request.json`, `request.get_json(`, `request.data`, `request.files`, `request.cookies`, `request.headers`, `request.GET`, `request.POST`, `request.query_params`, and the FastAPI parameters `Query(`, `Body(`, `Form(`, `Header(`, `Cookie(` |
-| JavaScript and TypeScript | `req.query`, `req.body`, `req.params`, `req.headers`, `req.cookies`, `request.query`, `request.body`, `request.params`, `ctx.query`, `ctx.request`, `ctx.params`, `event.body`, `event.queryStringParameters`, `event.pathParameters`, `event.headers`, `searchParams.get(`, `location.search`, `document.cookie` |
-| Java | `getParameter(`, `getHeader(`, `getQueryString(`, `getInputStream(`, `@RequestParam`, `@PathVariable`, `@RequestBody`, `@RequestHeader`, `@CookieValue` |
-| C# | `Request.Query`, `Request.Form`, `[FromQuery]`, `[FromBody]`, `[FromRoute]`, `[FromForm]`, `[FromHeader]` |
-| Rust | `Query(`, `Json(`, `web::Query`, `Form(` |
-| Ruby | `params[` |
-
-Vigilante treats command line arguments and standard input as local input. The person who starts the program can already run programs.
-
-Limits:
-
-- Go has no risks, because Capslock gives no facts about arguments.
-- The engine finds input by text in the call and in local assignments. It does not follow data through fields, return values, or package code.
+A risk is one use of a power, with the class of its input. Vigilante reports each changed risk, also in a scope that already has the power. See [risks.md](risks.md).
 
 ## Go: Capslock
 
@@ -127,7 +99,7 @@ Vigilante puts powers into scopes. It reports a power only the first time that t
 
 - **Go, with Capslock:** the Go package folder, as in `capslock-git-diff`.
 - **Code:** the nearest folder with a package file (`Cargo.toml`, `package.json`, `pyproject.toml`, `setup.py`, `setup.cfg`, `go.mod`, `pom.xml`, `build.gradle`, `build.gradle.kts`, `Gemfile`, `*.gemspec`, or `*.csproj`). If there is no such folder, the scope is the top folder of the file. `[scopes]` in `vigilante.toml` can put files into a scope with a name.
-- **Third-party actions:** all workflows together (`.github/workflows`). An action that one workflow uses is not new in another workflow.
+- **Third-party actions and downloaded scripts:** all workflows and composite actions together (`.github/workflows`). An action that one workflow uses is not new in another workflow.
 - **All other files:** the file, for example `.github/workflows/release.yml` or `.mcp.json`.
 
 So Vigilante does not report a second HTTP call in a package that already uses the network. It reports the first `subprocess` call in a new package, also when another package already has one.
@@ -161,11 +133,16 @@ An allow rule is a power only when it lets the agent run any code, install packa
   - a prefix that is one program that runs code, such as `Bash(node:*)`, `Bash(python3:*)`, or `Bash(git:*)`;
   - a prefix for any package script, such as `Bash(npm run:*)`;
   - a risky action in any part of the command, such as `git push`, `npm install`, `pip install`, `gem install`, or `cargo install`;
-  - a pipe into a program that runs code, such as `Bash(curl -s https://x | sh)`.
+  - a pipe into a program that runs code, such as `Bash(curl -s https://x | sh)`;
+  - an open option that runs code or sends data, such as `Bash(node -e *)`, `Bash(sh -c *)`, `Bash(python3 -c *)`, or `Bash(curl -X POST *)`.
 
 Before it reads the program name, Vigilante skips `env`, `sudo`, `nice`, `nohup`, `time`, `command`, and `X=Y`.
 
 These are not powers: file tools (`Read`, `Edit`, `Write`, `Glob`, `Grep`), fixed commands such as `Bash(python3 -m pytest tests/)`, and narrow prefixes such as `Bash(git add:*)` and `Bash(yarn run lint:*)`.
+
+The deny rules for the same tool are part of the power. For example, `allow: ["Bash"]` with `deny: ["Bash(rm:*)"]` gives `tool_allow:Bash, except Bash(rm:*)`. So a change to the deny rules of a tool changes the power, and the report shows it.
+
+Vigilante also reads the frontmatter of skills (`.claude/skills/**/SKILL.md`) and commands (`.claude/commands/**/*.md`). The rules above apply to `allowed-tools`, and `hooks` are `hook` powers.
 
 ### Install and git hooks that run plain local commands
 
@@ -174,8 +151,9 @@ An install script in `package.json` or a local hook in `.pre-commit-config.yaml`
 - It is one command, with no shell operator.
 - The command is not a program that runs code.
 - The command is not a path to a script.
+- In `package.json`, Vigilante knows the program. The known programs are `cp`, `mv`, `rm`, `mkdir`, `echo`, `touch`, `chmod`, `ln`, `true`, `cat`, `printf`, `exit`, `husky`, `tsc`, `rimraf`, `lefthook`, `simple-git-hooks`, and `is-ci`.
 
-For example, `prepare: husky` and `postinstall: cp vendor/a.wasm public/` are not powers.
+For example, `prepare: husky` and `postinstall: cp vendor/a.wasm public/` are not powers. `postinstall: company-bootstrap` is a power, because Vigilante cannot read what the program does.
 
 For `npm run <script>`, `yarn run <script>`, and `pnpm run <script>`, Vigilante follows the script in the same `package.json`, with its `pre` and `post` scripts. So `prepare: npm run build` is not a power when `build` is `tsc`. It is a power when `prebuild` runs `curl ... | sh`.
 
