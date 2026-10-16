@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::deep::Risk;
 use crate::tree::Tree;
 use crate::{Error, Power, PowerMap, PowersByScope, Scope, Surface};
 
@@ -10,6 +11,7 @@ const VERSION: u32 = 1;
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Lock {
     pub powers: PowersByScope,
+    pub risks: BTreeMap<Scope, BTreeSet<String>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -22,7 +24,10 @@ struct LockFile {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Entry {
+    #[serde(default)]
     powers: BTreeSet<Power>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    risks: BTreeSet<String>,
 }
 
 impl Lock {
@@ -31,7 +36,24 @@ impl Lock {
     pub fn of(map: &PowerMap) -> Self {
         Self {
             powers: map.powers(),
+            risks: BTreeMap::new(),
         }
+    }
+
+    pub fn approving(mut self, risks: &[Risk]) -> Self {
+        for risk in risks.iter().filter(|risk| risk.blocks()) {
+            self.risks
+                .entry(risk.scope.clone())
+                .or_default()
+                .insert(risk.identity.clone());
+        }
+        self
+    }
+
+    pub fn approves(&self, risk: &Risk) -> bool {
+        self.risks
+            .get(&risk.scope)
+            .is_some_and(|identities| identities.contains(&risk.identity))
     }
 
     pub fn parse(text: &str) -> Result<Self, Error> {
@@ -44,16 +66,18 @@ impl Lock {
                 file.version
             )));
         }
-        let powers = file
-            .surfaces
-            .into_iter()
-            .flat_map(|(surface, scopes)| {
-                scopes
-                    .into_iter()
-                    .map(move |(path, entry)| (Scope { surface, path }, entry.powers))
-            })
-            .collect();
-        Ok(Self { powers })
+        let mut powers = PowersByScope::new();
+        let mut risks = BTreeMap::new();
+        for (surface, scopes) in file.surfaces {
+            for (path, entry) in scopes {
+                let scope = Scope { surface, path };
+                if !entry.risks.is_empty() {
+                    risks.insert(scope.clone(), entry.risks);
+                }
+                powers.insert(scope, entry.powers);
+            }
+        }
+        Ok(Self { powers, risks })
     }
 
     pub fn render(&self) -> String {
@@ -63,8 +87,19 @@ impl Lock {
                 scope.path.clone(),
                 Entry {
                     powers: powers.clone(),
+                    risks: self.risks.get(scope).cloned().unwrap_or_default(),
                 },
             );
+        }
+        for (scope, risks) in &self.risks {
+            surfaces
+                .entry(scope.surface)
+                .or_default()
+                .entry(scope.path.clone())
+                .or_insert_with(|| Entry {
+                    powers: BTreeSet::new(),
+                    risks: risks.clone(),
+                });
         }
         let file = LockFile {
             version: VERSION,

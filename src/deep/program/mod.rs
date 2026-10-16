@@ -1,4 +1,5 @@
 mod analyze;
+mod arguments;
 mod canonical;
 mod canonical_call;
 mod index;
@@ -13,6 +14,7 @@ use std::collections::HashMap;
 use ast_grep_language::SupportLang;
 
 pub use analyze::AnalyzeInput;
+pub use arguments::ArgumentFacts;
 pub use canonical_call::CanonicalCall;
 pub use index::{
     Binding, Definition, Export, FileIndex, INIT, Imported, Load, Supertypes, Use, UseTarget,
@@ -99,6 +101,14 @@ pub trait Language: Sync {
 
     fn canonical_calls<'r>(&self, _root: &SyntaxNode<'r>) -> Vec<CanonicalCall<'r>> {
         Vec::new()
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    fn shell_callees(&self) -> &'static [&'static str] {
+        &[]
     }
 }
 

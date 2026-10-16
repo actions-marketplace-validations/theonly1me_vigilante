@@ -50,6 +50,8 @@ pub struct Graph {
     sinks: Vec<Sink>,
     sink_ids: HashMap<Sink, SinkId>,
     linked: HashSet<(FunctionId, Target)>,
+    own_calls: Vec<Call>,
+    own_call_keys: HashSet<(FunctionId, Target, usize)>,
 }
 
 impl Graph {
@@ -69,6 +71,14 @@ impl Graph {
     }
 
     pub fn add_call(&mut self, call: Call) {
+        let is_own = matches!(self.functions[call.from].owner, Owner::Repository { .. });
+        if is_own
+            && self
+                .own_call_keys
+                .insert((call.from, call.target, call.line))
+        {
+            self.own_calls.push(call);
+        }
         if self.linked.insert((call.from, call.target)) {
             self.edges[call.from].push(Edge {
                 line: call.line,
@@ -87,6 +97,10 @@ impl Graph {
 
     pub fn sink(&self, id: SinkId) -> &Sink {
         &self.sinks[id]
+    }
+
+    pub fn own_calls(&self) -> &[Call] {
+        &self.own_calls
     }
 
     pub fn function_count(&self) -> usize {

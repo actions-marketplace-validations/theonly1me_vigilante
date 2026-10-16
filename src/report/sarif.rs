@@ -3,8 +3,9 @@ use std::collections::BTreeSet;
 use serde_json::{Value, json};
 
 use super::notes::call_path_text;
+use super::risks::input_of;
 use super::summary;
-use crate::{Capability, Coverage, Finding, Review};
+use crate::{Capability, Coverage, Finding, Review, RiskFinding};
 
 const SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const INFORMATION_URI: &str = "https://github.com/theonly1me/vigilante";
@@ -15,6 +16,7 @@ pub fn render(review: &Review) -> String {
         .iter()
         .chain(&review.tests)
         .map(|finding| finding.power.capability)
+        .chain(review.risks.iter().map(|risk| risk.power.capability))
         .collect();
     let rules: Vec<Value> = capabilities
         .into_iter()
@@ -38,7 +40,16 @@ pub fn render(review: &Review) -> String {
             blocks: finding.denied,
         })
     });
-    let results: Vec<Value> = finding_results.chain(test_results).collect();
+    let risk_results = review.risks.iter().map(|risk| {
+        risk_result_of(GradedRisk {
+            risk,
+            blocks: review.risk_blocks(risk),
+        })
+    });
+    let results: Vec<Value> = finding_results
+        .chain(test_results)
+        .chain(risk_results)
+        .collect();
     let gap_level = if review.coverage == Coverage::Block {
         "error"
     } else {
@@ -116,4 +127,31 @@ fn message_of(finding: &Finding) -> String {
         Some(call_path) => format!("{message} via {call_path}"),
         None => message,
     }
+}
+
+struct GradedRisk<'a> {
+    risk: &'a RiskFinding,
+    blocks: bool,
+}
+
+fn risk_result_of(graded: GradedRisk) -> Value {
+    let risk = graded.risk;
+    let message = format!(
+        "{} in {}, {}: {}",
+        summary(risk.power.capability),
+        risk.scope.path,
+        input_of(risk.class),
+        risk.identity
+    );
+    json!({
+        "ruleId": risk.power.capability.name(),
+        "level": if graded.blocks { "error" } else { "note" },
+        "message": { "text": message },
+        "locations": [{
+            "physicalLocation": {
+                "artifactLocation": { "uri": risk.evidence.path },
+                "region": { "startLine": risk.evidence.line },
+            },
+        }],
+    })
 }

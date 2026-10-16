@@ -5,6 +5,7 @@ use std::thread;
 
 use ast_grep_core::tree_sitter::LanguageExt;
 
+use super::arguments::{FactsInput, call_facts};
 use super::canonical::{CanonicalInput, canonical_sinks};
 use super::{FileIndex, Language, Privilege, PrivilegedQuery, SiteSink};
 use crate::Error;
@@ -15,6 +16,7 @@ const SINK_NAME_LENGTH: usize = 60;
 pub struct Source {
     pub display: String,
     pub text: String,
+    pub own: bool,
 }
 
 pub struct Parsed {
@@ -90,7 +92,14 @@ fn parse(input: SourceRules) -> Parsed {
     } = input;
     let document = language.grammar().ast_grep(&source.text);
     let root = document.root();
-    let index = language.index(&root);
+    let mut index = language.index(&root);
+    if source.own {
+        index.call_facts = call_facts(FactsInput {
+            root: &root,
+            language,
+            index: &index,
+        });
+    }
     let mut privileged: HashMap<String, Vec<Privilege>> = HashMap::new();
     let mut sites = Vec::new();
     for found in rules.matches(MatchRequest {

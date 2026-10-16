@@ -4,6 +4,9 @@ use super::syntax::{self, loaded};
 use crate::code::SyntaxNode;
 use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
 
+const UNTRUSTED_SOURCES: &[&str] = &["params["];
+const SHELL_CALLEES: &[&str] = &["system", "exec", "spawn"];
+
 pub struct Ruby;
 
 impl Language for Ruby {
@@ -29,5 +32,13 @@ impl Language for Ruby {
 
     fn finds_members_by_type(&self) -> bool {
         false
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        UNTRUSTED_SOURCES
+    }
+
+    fn shell_callees(&self) -> &'static [&'static str] {
+        SHELL_CALLEES
     }
 }

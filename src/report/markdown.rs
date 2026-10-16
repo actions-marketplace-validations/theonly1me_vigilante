@@ -1,9 +1,11 @@
 use std::collections::BTreeSet;
 
 use super::notes::{evidence_text, markdown_section, skipped_section};
+use super::result::result;
+use super::risks::risk_section;
 use super::summary;
 use super::test_code::test_code_section;
-use crate::{Coverage, Finding, Lock, Review, ReviewMode};
+use crate::{Finding, Lock, Review, ReviewMode};
 
 const MAXIMUM_CELL_LENGTH: usize = 120;
 
@@ -32,6 +34,7 @@ pub fn render(review: &Review) -> String {
         ));
         lines.push(String::new());
     }
+    lines.extend(risk_section(review));
     lines.extend(markdown_section(review));
     lines.extend(test_code_section(review));
     lines.extend(skipped_section(review));
@@ -56,7 +59,7 @@ fn title(review: &Review) -> String {
         (ReviewMode::Diff { .. }, 0) => "this pull request adds no new powers".to_string(),
         (ReviewMode::Diff { .. }, 1) => "this pull request adds 1 new power".to_string(),
         (ReviewMode::Diff { .. }, count) => format!("this pull request adds {count} new powers"),
-        (ReviewMode::Check, 0) if review.stale.is_empty() => format!("{} is current", Lock::FILE),
+        (ReviewMode::Check, 0) if review.passed() => format!("{} is current", Lock::FILE),
         (ReviewMode::Check, _) => format!("{} needs an update", Lock::FILE),
     }
 }
@@ -85,82 +88,6 @@ fn row(row: Row) -> String {
         summary(finding.power.capability),
         code(&evidence_text(&finding.evidence)),
     )
-}
-
-fn result(review: &Review) -> String {
-    if review.passed() {
-        return "**Result: pass.**".to_string();
-    }
-    let mut reasons = Vec::new();
-    let unlocked = review
-        .findings
-        .iter()
-        .filter(|finding| review.blocks(finding) && !finding.denied)
-        .count();
-    if unlocked > 0 {
-        reasons.push(format!(
-            "{unlocked} {} not in {}. Run `vigilante lock` and commit the file.",
-            plural(Plural {
-                count: unlocked,
-                one: "power is",
-                many: "powers are"
-            }),
-            Lock::FILE
-        ));
-    }
-    let denied = review
-        .findings
-        .iter()
-        .filter(|finding| finding.denied)
-        .count();
-    if denied > 0 {
-        reasons.push(format!(
-            "{denied} {} denied by the policy in vigilante.toml.",
-            plural(Plural {
-                count: denied,
-                one: "power is",
-                many: "powers are"
-            })
-        ));
-    }
-    if !review.stale.is_empty() {
-        let stale = review.stale.len();
-        reasons.push(format!(
-            "{stale} {} stale. Run `vigilante lock` to remove {}.",
-            plural(Plural {
-                count: stale,
-                one: "lock entry is",
-                many: "lock entries are"
-            }),
-            plural(Plural {
-                count: stale,
-                one: "it",
-                many: "them"
-            })
-        ));
-    }
-    let gaps = review.new_gaps.len();
-    if review.coverage == Coverage::Block && gaps > 0 {
-        reasons.push(format!(
-            "{gaps} new {} not analyzed.",
-            plural(Plural {
-                count: gaps,
-                one: "source is",
-                many: "sources are"
-            })
-        ));
-    }
-    format!("**Result: fail.** {}", reasons.join(" "))
-}
-
-struct Plural {
-    count: usize,
-    one: &'static str,
-    many: &'static str,
-}
-
-fn plural(word: Plural) -> &'static str {
-    if word.count == 1 { word.one } else { word.many }
 }
 
 pub(super) fn code(text: &str) -> String {

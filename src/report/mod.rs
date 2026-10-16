@@ -1,6 +1,8 @@
 mod json;
 mod markdown;
 mod notes;
+mod result;
+mod risks;
 mod sarif;
 mod test_code;
 mod text;

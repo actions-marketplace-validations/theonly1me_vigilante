@@ -1,6 +1,6 @@
 # Powers
 
-A power is an action that a change lets code, CI, a build, or an AI agent do. Vigilante reports a power when a pull request adds it to a scope that did not have it before.
+A power is an action that a change lets code, CI, a build, or an AI agent do. Vigilante reports a power when a pull request adds it to a scope that did not have it before. It also reports a [risk](#risks) when a call gets more dangerous input, also in a scope that has the power.
 
 ## Every power
 
@@ -42,6 +42,39 @@ For JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby, Vigilante makes it
 - All other results are notes.
 
 See [dependencies.md](dependencies.md).
+
+## Risks
+
+A risk is one call to an `exec`, `network`, `dynamic_code`, `native`, or `system_calls` sink in your code, with the class of its input:
+
+| Class | The input | Blocks |
+| --- | --- | --- |
+| `untrusted` | Comes from a web request, a serverless event, or the URL of a browser page, also through other functions of your code | For `exec`, `dynamic_code`, and `network` |
+| `shell` | Is a shell command that is not constant, for example `shell=True` with a variable | For `exec` |
+| `dynamic` | Changes at run time | No |
+| `constant` | Is a literal | No, and the report does not show it |
+
+The report shows each risk that the pull request adds or changes under "Changed risks". It shows a risk also when the scope already has the power. For example, a fixed `subprocess.run(["date"])` that becomes `subprocess.run(f"date {request.args['day']}", shell=True)` blocks.
+
+Each risk has an identity: `power:function:sink:class`, for example `exec:app.export:subprocess.run:untrusted`. The identity has no line number, so a risk that only moves does not change. To approve a blocking risk, run `vigilante lock`. The lock then lists its identity under `risks`. See [configuration.md](configuration.md#vigilantelock).
+
+Vigilante treats input from these sources as untrusted:
+
+| Language | Sources |
+| --- | --- |
+| Python | `request.args`, `request.form`, `request.values`, `request.json`, `request.get_json(`, `request.data`, `request.files`, `request.cookies`, `request.headers`, `request.GET`, `request.POST`, `request.query_params`, and the FastAPI parameters `Query(`, `Body(`, `Form(`, `Header(`, `Cookie(` |
+| JavaScript and TypeScript | `req.query`, `req.body`, `req.params`, `req.headers`, `req.cookies`, `request.query`, `request.body`, `request.params`, `ctx.query`, `ctx.request`, `ctx.params`, `event.body`, `event.queryStringParameters`, `event.pathParameters`, `event.headers`, `searchParams.get(`, `location.search`, `document.cookie` |
+| Java | `getParameter(`, `getHeader(`, `getQueryString(`, `getInputStream(`, `@RequestParam`, `@PathVariable`, `@RequestBody`, `@RequestHeader`, `@CookieValue` |
+| C# | `Request.Query`, `Request.Form`, `[FromQuery]`, `[FromBody]`, `[FromRoute]`, `[FromForm]`, `[FromHeader]` |
+| Rust | `Query(`, `Json(`, `web::Query`, `Form(` |
+| Ruby | `params[` |
+
+Vigilante treats command line arguments and standard input as local input. The person who starts the program can already run programs.
+
+Limits:
+
+- Go has no risks, because Capslock gives no facts about arguments.
+- The engine finds input by text in the call and in local assignments. It does not follow data through fields, return values, or package code.
 
 ## Go: Capslock
 

@@ -4,6 +4,18 @@ use super::syntax::{self, import_of};
 use crate::code::SyntaxNode;
 use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
+const UNTRUSTED_SOURCES: &[&str] = &[
+    "getParameter(",
+    "getHeader(",
+    "getQueryString(",
+    "getInputStream(",
+    "@RequestParam",
+    "@PathVariable",
+    "@RequestBody",
+    "@RequestHeader",
+    "@CookieValue",
+];
+
 pub struct Java;
 
 impl Language for Java {
@@ -40,5 +52,9 @@ impl Language for Java {
 
     fn finds_members_by_type(&self) -> bool {
         false
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        UNTRUSTED_SOURCES
     }
 }

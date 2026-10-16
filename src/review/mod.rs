@@ -1,10 +1,13 @@
 mod judge;
 mod notes;
+mod risks;
 mod run;
 
 use std::path::PathBuf;
 
 use serde::Serialize;
+
+pub use risks::{RiskFinding, StaleRisk};
 
 use crate::config::{Coverage, Mode};
 pub use crate::deep::Skip;
@@ -28,6 +31,8 @@ pub struct Review {
     pub coverage: Coverage,
     pub new_gaps: Vec<Skip>,
     pub tests: Vec<Finding>,
+    pub risks: Vec<RiskFinding>,
+    pub stale_risks: Vec<StaleRisk>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -80,12 +85,18 @@ pub fn review(request: ReviewRequest) -> Result<Review, Error> {
 
 impl Review {
     pub fn passed(&self) -> bool {
-        let lock_is_current = self.policy == Mode::Report || self.stale.is_empty();
+        let lock_is_current =
+            self.policy == Mode::Report || (self.stale.is_empty() && self.stale_risks.is_empty());
         let gaps_allowed = self.coverage == Coverage::Warn || self.new_gaps.is_empty();
         lock_is_current
             && gaps_allowed
             && !self.findings.iter().any(|finding| self.blocks(finding))
             && !self.tests.iter().any(|finding| finding.denied)
+            && !self.risks.iter().any(|risk| self.risk_blocks(risk))
+    }
+
+    pub fn risk_blocks(&self, risk: &RiskFinding) -> bool {
+        self.policy == Mode::Lock && risk.blocks && !risk.approved
     }
 
     pub fn blocks(&self, finding: &Finding) -> bool {

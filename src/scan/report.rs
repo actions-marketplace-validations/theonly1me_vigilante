@@ -1,10 +1,11 @@
 use super::{ScanRequest, Scanner, ScannerInput, Selection};
 use crate::config::Config;
-use crate::deep::Skip;
+use crate::deep::{Risk, Skip};
 use crate::{Error, PowerMap};
 
 pub struct ScanReport {
     pub map: PowerMap,
+    pub risks: Vec<Risk>,
     pub not_analyzed: Vec<Skip>,
 }
 
@@ -20,6 +21,7 @@ pub fn scan_report(request: ScanRequest) -> Result<ScanReport, Error> {
     .scan(&Selection::Everything)?;
     Ok(ScanReport {
         map: scanned.map,
+        risks: scanned.risks,
         not_analyzed: scanned.skipped,
     })
 }

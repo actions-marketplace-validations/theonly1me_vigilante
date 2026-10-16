@@ -1,9 +1,9 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use super::link::{LinkInput, link};
 use super::typed::TypeCheck;
-use super::{Program, Root};
-use crate::deep::{Analysis, Skip};
+use super::{ArgumentFacts, Program, Root};
+use crate::deep::{Analysis, RisksInput, Skip, risks};
 
 pub struct AnalyzeInput<'p> {
     pub roots: &'p BTreeSet<String>,
@@ -72,11 +72,39 @@ impl Program<'_> {
                 !found.contains(&(sighting.scope.clone(), sighting.power.clone()))
             }),
         );
+        let known: HashSet<_> = typed
+            .risks
+            .iter()
+            .map(|risk| (risk.scope.clone(), risk.identity.clone()))
+            .collect();
+        typed.risks.extend(
+            by_name
+                .risks
+                .into_iter()
+                .filter(|risk| !known.contains(&(risk.scope.clone(), risk.identity.clone()))),
+        );
         typed
     }
 }
 
 fn analyzed(input: LinkInput) -> Analysis {
+    let program = input.program;
     let linked = link(input);
-    linked.graph.analyze(&linked.scopes)
+    let mut analysis = linked.graph.analyze(&linked.scopes);
+    let facts: HashMap<&str, &HashMap<usize, ArgumentFacts>> = program
+        .files
+        .iter()
+        .filter(|file| file.key.root == Root::Repository)
+        .map(|file| (file.display.as_str(), &file.index.call_facts))
+        .collect();
+    analysis.risks = risks(RisksInput {
+        graph: &linked.graph,
+        facts: &|path, line| {
+            facts
+                .get(path)
+                .and_then(|by_line| by_line.get(&line))
+                .copied()
+        },
+    });
+    analysis
 }

@@ -3,6 +3,7 @@ use std::path::Path;
 
 use super::judge::{Judge, facts_of, sightings};
 use super::notes::{NotesInput, new_notes};
+use super::risks::{RiskChange, RiskCheck, changed_risks, checked_risks};
 use super::{LockEntry, Review, ReviewMode};
 use crate::config::Config;
 use crate::lock::Lock;
@@ -92,6 +93,11 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     }));
     facts.extend(denied_notes);
     let findings = judge.findings(facts);
+    let risks = changed_risks(RiskChange {
+        base: &base_scan.risks,
+        head: head_scan.risks,
+        lock: &lock,
+    });
     let base_tests: BTreeSet<_> = base_scan
         .tests
         .iter()
@@ -121,6 +127,8 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
         skipped: head_scan.skipped,
         coverage: config.coverage,
         tests,
+        risks,
+        stale_risks: Vec::new(),
     })
 }
 
@@ -137,6 +145,10 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
     })?
     .scan(&Selection::Everything)?;
     let map = scanned.map;
+    let (risks, stale_risks) = checked_risks(RiskCheck {
+        head: scanned.risks,
+        lock: &lock,
+    });
     let judge = Judge {
         config: &config,
         lock: &lock,
@@ -173,5 +185,7 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         tests: judge.test_findings(facts_of(scanned.tests.into_iter())),
         skipped: scanned.skipped,
         coverage: config.coverage,
+        risks,
+        stale_risks,
     })
 }

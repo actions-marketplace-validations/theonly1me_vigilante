@@ -4,6 +4,16 @@ use super::syntax;
 use crate::code::SyntaxNode;
 use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
 
+const UNTRUSTED_SOURCES: &[&str] = &[
+    "Request.Query",
+    "Request.Form",
+    "[FromQuery]",
+    "[FromBody]",
+    "[FromRoute]",
+    "[FromForm]",
+    "[FromHeader]",
+];
+
 pub struct CSharp;
 
 impl Language for CSharp {
@@ -43,5 +53,9 @@ impl Language for CSharp {
 
     fn finds_members_by_type(&self) -> bool {
         false
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        UNTRUSTED_SOURCES
     }
 }

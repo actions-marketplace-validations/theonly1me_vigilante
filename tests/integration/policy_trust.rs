@@ -50,11 +50,11 @@ fn a_power_that_is_not_denied_stays_a_note() {
     let review = review_of(Change {
         base: &[
             ("vigilante.toml", DEEP_PYTHON),
-            ("app.py", "def execute(request):\n    return 0\n"),
+            ("app.py", "def execute(expression):\n    return 0\n"),
         ],
         head: &[(
             "app.py",
-            "def execute(request):\n    return eval(request.args[\"expression\"])\n",
+            "def execute(expression):\n    return eval(expression)\n",
         )],
     });
 
