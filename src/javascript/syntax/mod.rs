@@ -8,7 +8,7 @@ pub use crate::deep::program::{
     Binding, Definition, Export, FileIndex, INIT, Imported, Load, Use, UseTarget,
 };
 use members::member_use;
-use modules::ModuleItems;
+use modules::{ModuleItems, constant_strings};
 use names::{Definable, class_name, definition_name};
 use references::is_reference;
 
@@ -28,7 +28,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
         }],
         ..FileIndex::default()
     };
-    let mut items = ModuleItems::default();
+    let mut items = ModuleItems::with_constants(constant_strings(root));
     let mut stack = vec![Visit {
         node: root.clone(),
         definition: 0,

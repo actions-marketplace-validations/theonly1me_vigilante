@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::code::SyntaxNode;
 
 pub const MODULE_EXPORTS: &str = "module.exports";
@@ -141,4 +143,21 @@ pub fn plain(node: &SyntaxNode) -> String {
 
 fn plain_text(text: &str) -> String {
     text.trim_matches(['"', '\'', '`']).to_string()
+}
+
+pub fn constant_strings(root: &SyntaxNode) -> HashMap<String, String> {
+    root.dfs()
+        .filter(|node| node.kind() == "variable_declarator")
+        .filter(|declarator| {
+            declarator
+                .parent()
+                .and_then(|declaration| declaration.children().next())
+                .is_some_and(|keyword| keyword.text() == "const")
+        })
+        .filter_map(|declarator| {
+            let name = declarator.field("name")?;
+            let value = literal(&declarator.field("value")?)?;
+            (name.kind() == "identifier").then(|| (name.text().to_string(), value))
+        })
+        .collect()
 }

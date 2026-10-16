@@ -2,6 +2,7 @@ mod bindings;
 mod fallback;
 mod functions;
 mod hierarchy;
+mod privileged;
 mod targets;
 mod typed;
 

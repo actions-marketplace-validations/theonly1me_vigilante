@@ -3,6 +3,7 @@ language: python
 message: Imports a module that runs other programs
 metadata:
   capability: exec
+  inert: [list2cmdline, CompletedProcess, CalledProcessError, TimeoutExpired, SubprocessError, PIPE, DEVNULL, STDOUT]
 rule:
   kind: dotted_name
   regex: ^(subprocess|pty)(\.|$)
@@ -19,7 +20,7 @@ rule:
   kind: call
   has:
     field: function
-    regex: ^os\.(system|popen|exec[lv]p?e?|spawn[lv]p?e?|posix_spawnp?)$
+    regex: ^(os\.(system|popen|exec[lv]p?e?|spawn[lv]p?e?|posix_spawnp?)|asyncio\.create_subprocess_(exec|shell))$
 ---
 id: python-network-import
 language: python

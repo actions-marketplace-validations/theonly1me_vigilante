@@ -5,6 +5,7 @@ use std::thread;
 
 use ast_grep_core::tree_sitter::LanguageExt;
 
+use super::canonical::{CanonicalInput, canonical_sinks};
 use super::{FileIndex, Language, Privilege, PrivilegedQuery, SiteSink};
 use crate::Error;
 use crate::code::{MatchRequest, Rules, SyntaxNode};
@@ -98,7 +99,7 @@ fn parse(input: SourceRules) -> Parsed {
         root: &root,
     }) {
         let start = found.node.range().start;
-        if index.ignored.iter().any(|range| range.contains(&start)) {
+        if index.ignored.iter().any(|range| range.contains(&start)) || index.shadows(&found.node) {
             continue;
         }
         let is_privileged = |text: &str| {
@@ -119,6 +120,7 @@ fn parse(input: SourceRules) -> Parsed {
         let privilege = Privilege {
             capability: found.capability,
             rule: found.rule.clone(),
+            inert: found.inert.clone(),
         };
         if specifiers.is_empty() {
             sites.push(SiteSink {
@@ -136,6 +138,24 @@ fn parse(input: SourceRules) -> Parsed {
             }
         }
     }
+    for sink in canonical_sinks(CanonicalInput {
+        language,
+        rules,
+        display: &source.display,
+        root: &root,
+        index: &index,
+    }) {
+        if sink.specifiers.is_empty() {
+            sites.push(sink.site);
+        } else {
+            for specifier in sink.specifiers {
+                privileged
+                    .entry(specifier)
+                    .or_default()
+                    .push(sink.privilege.clone());
+            }
+        }
+    }
     Parsed {
         index,
         privileged,
@@ -143,7 +163,7 @@ fn parse(input: SourceRules) -> Parsed {
     }
 }
 
-fn sink_name(node: &SyntaxNode) -> String {
+pub(super) fn sink_name(node: &SyntaxNode) -> String {
     let callee = match node.kind().as_ref() {
         "call_expression" | "call" => node.field("function"),
         "new_expression" => node.field("constructor"),

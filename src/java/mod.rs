@@ -1,3 +1,4 @@
+mod canonical;
 mod classfile;
 mod environment;
 mod gradle;

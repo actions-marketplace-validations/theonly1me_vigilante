@@ -3,6 +3,9 @@ mod exports;
 mod imports;
 mod nodes;
 
+pub use nodes::constant_strings;
+use nodes::{arguments, is_loader, loaded_specifier};
+
 use std::collections::HashMap;
 
 use super::{Binding, Export, FileIndex, Imported, Load, UseTarget, line_of};
@@ -14,6 +17,7 @@ pub struct ModuleItems {
     exports: Vec<Export>,
     loads: Vec<Load>,
     unresolved_loads: Vec<usize>,
+    constants: HashMap<String, String>,
 }
 
 pub struct NewBinding<'a> {
@@ -50,6 +54,25 @@ impl ModuleItems {
             }
             _ => Outcome::default(),
         }
+    }
+
+    pub fn with_constants(constants: HashMap<String, String>) -> Self {
+        Self {
+            constants,
+            ..Self::default()
+        }
+    }
+
+    pub(super) fn loaded_specifier(&self, node: &SyntaxNode) -> Option<String> {
+        loaded_specifier(node).or_else(|| {
+            if !is_loader(node) {
+                return None;
+            }
+            let [argument] = arguments(node).try_into().ok()?;
+            (argument.kind() == "identifier")
+                .then(|| self.constants.get(argument.text().as_ref()).cloned())
+                .flatten()
+        })
     }
 
     pub fn finish(self, index: &mut FileIndex) {

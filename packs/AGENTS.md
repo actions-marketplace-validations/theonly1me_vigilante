@@ -16,3 +16,4 @@ Each file in `packs/` holds the ast-grep rules for one language. A rule finds a 
 - Use one capability for each rule.
 - Do not add a rule for `files` or `read_system_state` that matches common code. The report hides these powers, but the lock records them.
 - If a call is a power only through a package, put the package in an import rule. The engine then treats calls through that import as sinks.
+- If some members of such a package do not have the power, list them in `metadata.inert`. For example, `subprocess.list2cmdline` only formats text.

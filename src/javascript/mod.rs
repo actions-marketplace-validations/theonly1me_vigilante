@@ -1,3 +1,4 @@
+mod canonical;
 mod language;
 mod manifest;
 mod packages;

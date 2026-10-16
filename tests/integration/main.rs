@@ -1,4 +1,5 @@
 mod agent;
+mod api_identity;
 mod check;
 mod ci;
 mod cli;

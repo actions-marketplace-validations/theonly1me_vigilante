@@ -2,7 +2,7 @@ use ast_grep_language::SupportLang;
 
 use super::syntax::{self, Leaf, SEPARATOR, leaves};
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
+use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
 pub struct Rust;
 
@@ -32,6 +32,10 @@ impl Language for Rust {
 
     fn imports_run_code(&self) -> bool {
         false
+    }
+
+    fn canonical_calls<'r>(&self, root: &SyntaxNode<'r>) -> Vec<CanonicalCall<'r>> {
+        super::canonical::canonical_calls(root)
     }
 
     fn finds_members_by_type(&self) -> bool {

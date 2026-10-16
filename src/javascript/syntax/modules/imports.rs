@@ -1,4 +1,4 @@
-use super::nodes::{NodeChildren, literal, loaded_specifier, plain, unwrapped};
+use super::nodes::{NodeChildren, literal, plain, unwrapped};
 use super::{LoadSite, ModuleItems, NewBinding, Outcome};
 use crate::code::SyntaxNode;
 use crate::javascript::syntax::Imported;
@@ -83,7 +83,7 @@ impl ModuleItems {
             return;
         };
         let value = unwrapped(value);
-        if let Some(specifier) = loaded_specifier(&value) {
+        if let Some(specifier) = self.loaded_specifier(&value) {
             match name.kind().as_ref() {
                 "identifier" => self.bind(NewBinding {
                     local: &name.text(),
@@ -123,7 +123,7 @@ impl ModuleItems {
         if value.kind() == "member_expression"
             && name.kind() == "identifier"
             && let (Some(object), Some(property)) = (value.field("object"), value.field("property"))
-            && let Some(specifier) = loaded_specifier(&unwrapped(object))
+            && let Some(specifier) = self.loaded_specifier(&unwrapped(object))
         {
             self.bind(NewBinding {
                 local: &name.text(),

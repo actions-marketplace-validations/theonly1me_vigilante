@@ -10,6 +10,7 @@ pub type SyntaxNode<'r> = Node<'r, StrDoc<SupportLang>>;
 pub struct RuleMatch<'r> {
     pub rule: String,
     pub capability: Capability,
+    pub inert: Vec<String>,
     pub node: SyntaxNode<'r>,
 }
 
@@ -30,6 +31,7 @@ impl Rules {
                     .map(move |found| RuleMatch {
                         rule: rule.id.clone(),
                         capability: rule.capability,
+                        inert: rule.inert.clone(),
                         node: found.get_node().clone(),
                     })
             })

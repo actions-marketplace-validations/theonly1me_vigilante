@@ -1,6 +1,6 @@
+use super::privileged::PrivilegedUse;
 use super::{InFile, Linker, Unit, specifier_module, unit_of};
-use crate::Power;
-use crate::deep::graph::{Sink, Target};
+use crate::deep::graph::Target;
 use crate::deep::program::{Export, Imported};
 
 const MAXIMUM_FORWARDS: usize = 8;
@@ -15,12 +15,6 @@ pub struct BindingUse<'a> {
     pub file: usize,
     pub local: &'a str,
     pub member: Option<&'a str>,
-}
-
-pub struct PrivilegedUse<'a> {
-    pub file: usize,
-    pub specifier: &'a str,
-    pub sink_name: String,
 }
 
 struct ExportQuery<'a> {
@@ -45,9 +39,14 @@ impl Linker<'_> {
             (Imported::Module, Some(member)) => format!("{module}.{member}"),
             (Imported::Named(name), _) => format!("{module}.{name}"),
         };
+        let used_member = match (&binding.imported, member) {
+            (Imported::Named(name), _) => Some(name.as_str()),
+            (Imported::Module, member) => member,
+        };
         let privileged = self.privileged(PrivilegedUse {
             file,
             specifier: &binding.specifier,
+            member: used_member,
             sink_name,
         });
         if !privileged.is_empty() {
@@ -111,28 +110,6 @@ impl Linker<'_> {
             }
         }
         found
-    }
-
-    pub(super) fn privileged(&mut self, wanted: PrivilegedUse) -> Vec<Target> {
-        let PrivilegedUse {
-            file,
-            specifier,
-            sink_name: name,
-        } = wanted;
-        let Some(privileges) = self.files[file].privileged.get(specifier) else {
-            return Vec::new();
-        };
-        privileges
-            .iter()
-            .map(|privilege| Sink {
-                name: name.clone(),
-                power: Power::new(privilege.capability),
-                rule: privilege.rule.clone(),
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(|sink| Target::Sink(self.graph.add_sink(sink)))
-            .collect()
     }
 
     fn exported(&self, query: ExportQuery) -> Vec<ExportedLocal> {

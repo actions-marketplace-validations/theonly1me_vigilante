@@ -1,3 +1,4 @@
+mod canonical;
 mod environment;
 mod language;
 mod prefetch;
