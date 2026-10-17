@@ -47,7 +47,7 @@ allow = ["https://npm.example.com/"]
 | `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips tests (also test projects such as `App.Tests/`), fixtures, mocks, `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. |
 | `scopes.<name>` | none | Puts the code files that match the glob into one scope with this name. Without this key, the scope of a code file is its nearest package root. |
 | `policy.mode` | `"lock"` | `"lock"` fails if a power is not in `vigilante.lock`. `"report"` only shows the report. |
-| `policy.deny` | `[]` | Powers that always make the check fail, also when they are in the lock. `scope` is a glob for the scope path, and its default is all scopes. `capability` is a power name from [powers.md](powers.md). |
+| `policy.deny` | `[]` | Powers that always make the check fail, also when they are in the lock or when the report shows them as notes. `scope` is a glob for the scope path, and its default is all scopes. `capability` is a power name from [powers.md](powers.md). |
 | `report.hide` | `["read_system_state", "files", "operating_system", "runtime", "unanalyzed"]` | Powers that the report hides when they are in the lock. The lock still records them. If a hidden power is not in the lock, the report shows it. |
 | `severity.<power>` | See [powers.md](powers.md) | `"low"`, `"medium"`, or `"high"` for a power. |
 | `rules.paths` | `[]` | Folders with your own code rules. See [Your own rules](#your-own-rules). |

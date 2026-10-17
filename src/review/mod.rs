@@ -1,3 +1,4 @@
+mod judge;
 mod notes;
 mod run;
 

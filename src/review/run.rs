@@ -1,13 +1,14 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use super::judge::{Judge, facts_of, sightings};
 use super::notes::{NotesInput, new_notes};
-use super::{Finding, LockEntry, Review, ReviewMode};
+use super::{LockEntry, Review, ReviewMode};
 use crate::config::Config;
-use crate::lock::{Granted, Lock};
+use crate::lock::Lock;
 use crate::scan::{Changes, Location, Scanner, ScannerInput, Selection};
 use crate::tree::{CommitPair, Git};
-use crate::{Error, PowerMap, Sighting, Source};
+use crate::{Error, Source};
 
 pub struct DiffRequest<'a> {
     pub repository: &'a Path,
@@ -77,21 +78,20 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
         config: &config,
         lock: &lock,
     };
-    let findings = judge.findings(
-        sightings(&head_scan.map)
-            .filter(|sighting| {
-                !base_powers
-                    .get(&sighting.scope)
-                    .is_some_and(|powers| powers.contains(&sighting.power))
-            })
-            .collect(),
-    );
     let notes = new_notes(NotesInput {
         base: &base_scan.reaches,
         base_powers: &base_powers,
         head: head_scan.reaches,
         config: &config,
     });
+    let (denied_notes, notes) = judge.split_denied(notes);
+    let mut facts = facts_of(sightings(&head_scan.map).filter(|sighting| {
+        !base_powers
+            .get(&sighting.scope)
+            .is_some_and(|powers| powers.contains(&sighting.power))
+    }));
+    facts.extend(denied_notes);
+    let findings = judge.findings(facts);
     Ok(Review {
         mode: ReviewMode::Diff { base, head },
         policy: config.mode,
@@ -119,8 +119,10 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         config: &config,
         lock: &lock,
     };
+    let mut facts = facts_of(sightings(&map));
+    facts.extend(judge.denied_reaches(scanned.reaches));
     let findings = judge
-        .findings(sightings(&map).collect())
+        .findings(facts)
         .into_iter()
         .filter(|finding| !finding.locked || finding.denied)
         .collect();
@@ -147,55 +149,4 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         stale,
         skipped: scanned.skipped,
     })
-}
-
-fn sightings(map: &PowerMap) -> impl Iterator<Item = Sighting> + '_ {
-    map.scopes.iter().flat_map(|(scope, powers)| {
-        powers.iter().filter_map(move |(power, evidence)| {
-            Some(Sighting {
-                scope: scope.clone(),
-                power: power.clone(),
-                evidence: evidence.first()?.clone(),
-            })
-        })
-    })
-}
-
-struct Judge<'a> {
-    config: &'a Config,
-    lock: &'a Lock,
-}
-
-impl Judge<'_> {
-    fn findings(&self, sightings: Vec<Sighting>) -> Vec<Finding> {
-        let mut findings: Vec<Finding> = sightings
-            .into_iter()
-            .map(|sighting| {
-                let capability = sighting.power.capability;
-                Finding {
-                    locked: self.lock.contains(Granted {
-                        scope: &sighting.scope,
-                        power: &sighting.power,
-                    }),
-                    denied: self
-                        .config
-                        .denied_capabilities(&sighting.scope)
-                        .contains(&capability),
-                    hidden: self.config.is_hidden(capability),
-                    severity: self.config.severity_of(capability),
-                    scope: sighting.scope,
-                    power: sighting.power,
-                    evidence: sighting.evidence,
-                }
-            })
-            .collect();
-        findings.sort_by(|left, right| {
-            right
-                .severity
-                .cmp(&left.severity)
-                .then_with(|| left.scope.cmp(&right.scope))
-                .then_with(|| left.power.cmp(&right.power))
-        });
-        findings
-    }
 }

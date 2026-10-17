@@ -73,7 +73,7 @@ How it works:
    - another capability that your own code reaches, for example signal handling or reflection;
    - a capability that your package reaches only through other packages, such as a dependency or the standard library;
    - a package that is new on a call path to a power.
-6. Each note names the first outside package on the path, for example a new dependency that reaches `network`. Notes have their own section in the report, and they do not make the check fail. The findings and the notes together cover all the results of `capslock-git-diff`.
+6. Each note names the first outside package on the path, for example a new dependency that reaches `network`. Notes have their own section in the report. They make the check fail only when a `deny` rule matches. The findings and the notes together cover all the results of `capslock-git-diff`.
 
 Why notes: a finding through other packages almost always comes from library internals, such as hash assembly, terminal checks, and JSON reflection. Signal handling, reflection, and system calls in your own code seldom need a review. As notes, these results stay visible, and they do not make the check fail.
 
