@@ -19,7 +19,7 @@ rule:
   kind: call
   has:
     field: function
-    regex: ^os\.(system|popen|exec[lv]p?e?|spawn[lv]p?e?|posix_spawnp?)$
+    regex: ^(os\.(system|popen|exec[lv]p?e?|spawn[lv]p?e?|posix_spawnp?)|asyncio\.create_subprocess_(exec|shell))$
 ---
 id: python-network-import
 language: python

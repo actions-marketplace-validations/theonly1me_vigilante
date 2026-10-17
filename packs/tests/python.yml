@@ -14,10 +14,13 @@ id: python-exec-call
 valid:
   - "model.system('x')"
   - "os.path.join(a, b)"
+  - "asyncio.create_task(run())"
 invalid:
   - "os.system('make')"
   - "stream = os.popen('ls')"
   - "os.execvp('ls', ['ls'])"
+  - "process = await asyncio.create_subprocess_exec('ls')"
+  - "process = await asyncio.create_subprocess_shell('ls -l')"
 ---
 id: python-network-import
 valid:
