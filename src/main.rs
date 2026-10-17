@@ -102,11 +102,11 @@ fn run(cli: Cli) -> Result<Outcome, Error> {
             Ok(Outcome::Pass)
         }
         Command::Lock => {
-            let map = vigilante::scan(ScanRequest {
+            let report = vigilante::scan_report(ScanRequest {
                 repository: repository.clone(),
                 source: Source::WorkingDirectory,
             })?;
-            let lock = Lock::of(&map);
+            let lock = Lock::of(&report.map).approving(&report.risks);
             let target = repository.join(Lock::FILE);
             fs::write(&target, lock.render()).map_err(|error| {
                 Error::new(format!("cannot write {}: {error}", target.display()))

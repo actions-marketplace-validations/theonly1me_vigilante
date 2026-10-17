@@ -35,5 +35,8 @@ pub use model::{
     SourceFile, Surface,
 };
 pub use report::{Format, scan_json, scan_text, summary};
-pub use review::{Finding, LockEntry, Note, Review, ReviewMode, ReviewRequest, Skip, review};
+pub use review::{
+    Finding, LockEntry, Note, Review, ReviewMode, ReviewRequest, RiskFinding, Skip, StaleRisk,
+    review,
+};
 pub use scan::{ScanReport, ScanRequest, Source, scan, scan_report};
