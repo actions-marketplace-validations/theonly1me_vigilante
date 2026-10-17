@@ -1,3 +1,4 @@
+use super::ArgumentFacts;
 use crate::code::SyntaxNode;
 use std::collections::HashMap;
 use std::ops::Range;
@@ -11,6 +12,7 @@ pub struct FileIndex {
     pub exports: Vec<Export>,
     pub loads: Vec<Load>,
     pub unresolved_loads: Vec<usize>,
+    pub call_facts: HashMap<usize, ArgumentFacts>,
     pub ignored: Vec<Range<usize>>,
     pub supertypes: Vec<Supertypes>,
 }

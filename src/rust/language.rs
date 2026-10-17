@@ -4,6 +4,8 @@ use super::syntax::{self, Leaf, SEPARATOR, leaves};
 use crate::code::SyntaxNode;
 use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
+const UNTRUSTED_SOURCES: &[&str] = &["Query(", "Json(", "web::Query", "Form("];
+
 pub struct Rust;
 
 impl Language for Rust {
@@ -40,5 +42,9 @@ impl Language for Rust {
 
     fn finds_members_by_type(&self) -> bool {
         true
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        UNTRUSTED_SOURCES
     }
 }

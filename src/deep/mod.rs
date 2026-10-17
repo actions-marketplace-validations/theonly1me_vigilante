@@ -1,11 +1,13 @@
 mod classify;
 pub mod graph;
 pub mod program;
+mod risks;
 mod search;
 
 use serde::Serialize;
 
 pub use classify::ScopeRoots;
+pub use risks::{RisksInput, risks};
 
 use crate::{Capability, Evidence, Power, Scope, Sighting};
 
@@ -16,7 +18,62 @@ const BLOCKING_CAPABILITIES: [Capability; 3] =
 pub struct Analysis {
     pub sightings: Vec<Sighting>,
     pub reaches: Vec<Reach>,
+    pub risks: Vec<Risk>,
     pub skipped: Vec<Skip>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Risk {
+    pub scope: Scope,
+    pub identity: String,
+    pub power: Power,
+    pub class: RiskClass,
+    pub evidence: Evidence,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RiskClass {
+    Constant,
+    Dynamic,
+    Shell,
+    Untrusted,
+}
+
+impl Risk {
+    pub fn blocks(&self) -> bool {
+        let capability = self.power.capability;
+        match self.class {
+            RiskClass::Untrusted => [
+                Capability::Exec,
+                Capability::DynamicCode,
+                Capability::Network,
+            ]
+            .contains(&capability),
+            RiskClass::Shell => capability == Capability::Exec,
+            RiskClass::Constant | RiskClass::Dynamic => false,
+        }
+    }
+}
+
+impl Analysis {
+    pub fn absorb(&mut self, other: Analysis) {
+        self.sightings.extend(other.sightings);
+        self.reaches.extend(other.reaches);
+        self.risks.extend(other.risks);
+        self.skipped.extend(other.skipped);
+    }
+}
+
+impl RiskClass {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Constant => "constant",
+            Self::Dynamic => "dynamic",
+            Self::Shell => "shell",
+            Self::Untrusted => "untrusted",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]

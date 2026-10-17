@@ -5,6 +5,28 @@ use super::syntax;
 use crate::code::SyntaxNode;
 use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
+const UNTRUSTED_SOURCES: &[&str] = &[
+    "req.query",
+    "req.body",
+    "req.params",
+    "req.headers",
+    "req.cookies",
+    "request.query",
+    "request.body",
+    "request.params",
+    "ctx.query",
+    "ctx.request",
+    "ctx.params",
+    "event.body",
+    "event.queryStringParameters",
+    "event.pathParameters",
+    "event.headers",
+    "searchParams.get(",
+    "location.search",
+    "document.cookie",
+];
+const SHELL_CALLEES: &[&str] = &["exec", "execSync"];
+
 pub struct JavaScript;
 
 impl Language for JavaScript {
@@ -38,5 +60,13 @@ impl Language for JavaScript {
 
     fn finds_members_by_type(&self) -> bool {
         false
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        UNTRUSTED_SOURCES
+    }
+
+    fn shell_callees(&self) -> &'static [&'static str] {
+        SHELL_CALLEES
     }
 }

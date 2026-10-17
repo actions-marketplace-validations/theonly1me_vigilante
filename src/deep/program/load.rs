@@ -65,7 +65,11 @@ impl<'a> Program<'a> {
                 };
                 if let Some(text) = text {
                     let (display, owner) = self.identity(&key);
-                    sources.push(Source { display, text });
+                    sources.push(Source {
+                        display,
+                        text,
+                        own: key.root == Root::Repository,
+                    });
                     keys.push((key, owner));
                 }
             }

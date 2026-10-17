@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use crate::code::Rules;
 use crate::config::{Config, GoEngine, TestPolicy};
-use crate::deep::{Reach, Skip};
+use crate::deep::{Reach, Risk, Skip};
 use crate::go::{DiscoverInput, GoModules};
 use crate::scope::{Scopes, ScopesInput};
 use crate::surfaces::{self, Placement, Surfaces};
@@ -33,6 +33,7 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
 pub struct Scanned {
     pub map: PowerMap,
     pub tests: Vec<Sighting>,
+    pub risks: Vec<Risk>,
     pub reaches: Vec<Reach>,
     pub skipped: Vec<Skip>,
 }
@@ -176,6 +177,7 @@ impl<'a> Scanner<'a> {
         Ok(Scanned {
             map,
             tests,
+            risks: analysis.risks,
             reaches: analysis.reaches,
             skipped: analysis.skipped,
         })

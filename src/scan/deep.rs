@@ -31,9 +31,7 @@ impl Scanner<'_> {
                 scope_of: &|path| self.scopes.code_scope_of(path),
                 selection,
             })?;
-            analysis.sightings.extend(found.sightings);
-            analysis.reaches.extend(found.reaches);
-            analysis.skipped.extend(found.skipped);
+            analysis.absorb(found);
         }
         if self.config.python_engine.follows_calls() {
             let found = python::analyze(PythonRequest {
@@ -43,9 +41,7 @@ impl Scanner<'_> {
                 scope_of: &|path| self.scopes.code_scope_of(path),
                 selection,
             })?;
-            analysis.sightings.extend(found.sightings);
-            analysis.reaches.extend(found.reaches);
-            analysis.skipped.extend(found.skipped);
+            analysis.absorb(found);
         }
         if self.config.java_engine.follows_calls() {
             let found = java::analyze(JavaRequest {
@@ -55,9 +51,7 @@ impl Scanner<'_> {
                 scope_of: &|path| self.scopes.code_scope_of(path),
                 selection,
             })?;
-            analysis.sightings.extend(found.sightings);
-            analysis.reaches.extend(found.reaches);
-            analysis.skipped.extend(found.skipped);
+            analysis.absorb(found);
         }
         if self.config.csharp_engine.follows_calls() {
             let found = csharp::analyze(CSharpRequest {
@@ -67,9 +61,7 @@ impl Scanner<'_> {
                 scope_of: &|path| self.scopes.code_scope_of(path),
                 selection,
             })?;
-            analysis.sightings.extend(found.sightings);
-            analysis.reaches.extend(found.reaches);
-            analysis.skipped.extend(found.skipped);
+            analysis.absorb(found);
         }
         if self.config.ruby_engine.follows_calls() {
             let found = ruby::analyze(RubyRequest {
@@ -79,9 +71,7 @@ impl Scanner<'_> {
                 scope_of: &|path| self.scopes.code_scope_of(path),
                 selection,
             })?;
-            analysis.sightings.extend(found.sightings);
-            analysis.reaches.extend(found.reaches);
-            analysis.skipped.extend(found.skipped);
+            analysis.absorb(found);
         }
         if self.config.rust_engine.follows_calls() {
             let found = rust::analyze(RustRequest {
@@ -91,9 +81,7 @@ impl Scanner<'_> {
                 scope_of: &|path| self.scopes.code_scope_of(path),
                 selection,
             })?;
-            analysis.sightings.extend(found.sightings);
-            analysis.reaches.extend(found.reaches);
-            analysis.skipped.extend(found.skipped);
+            analysis.absorb(found);
         }
         Ok(analysis)
     }

@@ -4,6 +4,27 @@ use super::syntax;
 use crate::code::SyntaxNode;
 use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
+const UNTRUSTED_SOURCES: &[&str] = &[
+    "request.args",
+    "request.form",
+    "request.values",
+    "request.json",
+    "request.get_json(",
+    "request.data",
+    "request.files",
+    "request.cookies",
+    "request.headers",
+    "request.GET",
+    "request.POST",
+    "request.query_params",
+    "Query(",
+    "Body(",
+    "Form(",
+    "Header(",
+    "Cookie(",
+];
+const SHELL_CALLEES: &[&str] = &["system", "popen", "getoutput", "getstatusoutput"];
+
 pub struct Python;
 
 impl Language for Python {
@@ -45,5 +66,13 @@ impl Language for Python {
 
     fn finds_members_by_type(&self) -> bool {
         false
+    }
+
+    fn untrusted_sources(&self) -> &'static [&'static str] {
+        UNTRUSTED_SOURCES
+    }
+
+    fn shell_callees(&self) -> &'static [&'static str] {
+        SHELL_CALLEES
     }
 }
