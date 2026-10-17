@@ -42,6 +42,7 @@ mod python_index;
 mod python_skips;
 mod python_types;
 mod report;
+mod report_summary;
 mod review;
 mod risk_classes;
 mod risk_reports;

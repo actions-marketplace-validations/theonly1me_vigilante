@@ -70,7 +70,14 @@ fn diff_exits_1_until_the_lock_is_committed_and_then_exits_0() {
         "{}",
         after.stdout
     );
-    assert!(after.stdout.ends_with("**Result: pass.**\n"));
+    assert_eq!(
+        after.stdout.lines().nth(2),
+        Some(
+            "**Result: pass.** 3 new powers are in vigilante.lock. A code owner of vigilante.lock must approve this pull request."
+        ),
+        "{}",
+        after.stdout
+    );
 }
 
 #[test]

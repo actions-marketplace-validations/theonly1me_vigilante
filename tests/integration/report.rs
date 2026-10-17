@@ -1,7 +1,5 @@
 use serde_json::Value;
-use vigilante::{
-    Coverage, Format, Lock, PolicyMode, Review, ReviewMode, ScanRequest, Skip, Source,
-};
+use vigilante::{Coverage, Format, Lock, PolicyMode, Review, ReviewMode, Skip};
 
 use crate::support::{Branches, TestRepository};
 
@@ -46,9 +44,12 @@ fn markdown_lists_each_new_power_and_the_fix() {
     assert!(markdown.contains(
         "| HIGH | `services` (code) | `exec` | Can run other programs | `services/billing/export.py:1 via export.init → subprocess.run` | **not in lock** |"
     ));
-    assert!(markdown.ends_with(
-        "**Result: fail.** 2 powers are not in vigilante.lock. Run `vigilante lock` and commit the file.\n"
-    ));
+    assert_eq!(
+        markdown.lines().nth(2),
+        Some(
+            "**Result: fail.** 2 powers are not in vigilante.lock. Run `vigilante lock` and commit the file."
+        )
+    );
 }
 
 #[test]
@@ -66,40 +67,6 @@ fn markdown_keeps_hostile_names_inside_one_table_cell() {
         row.contains("| `mcp_server:x](https://evil.example) @org/team \\| y: npx` |"),
         "{row}"
     );
-}
-
-#[test]
-fn markdown_hides_locked_system_state_reads_but_counts_them() {
-    let repository = TestRepository::new();
-    repository.write(&[
-        ("README.md", "# app\n"),
-        ("vigilante.toml", PYTHON_PATTERNS),
-    ]);
-    repository.commit("base");
-    repository.git(&["checkout", "--quiet", "-b", "feature"]);
-    repository.write(&[(
-        "services/run.py",
-        "import os\nimport subprocess\nvalue = os.environ['A']\n",
-    )]);
-    let map = vigilante::scan(ScanRequest {
-        repository: repository.directory.path().to_path_buf(),
-        source: Source::WorkingDirectory,
-    })
-    .expect("scan");
-    repository.write(&[(Lock::FILE, &Lock::of(&map).render())]);
-    repository.commit("feature");
-
-    let markdown = repository.diff(MAIN_AND_FEATURE).render(Format::Markdown);
-
-    assert!(markdown.contains("| `exec` |"), "{markdown}");
-    assert!(!markdown.contains("| `read_system_state` |"), "{markdown}");
-    assert!(
-        markdown.contains(
-            "Hidden low-signal findings: 1 (read_system_state). They stay in vigilante.lock."
-        ),
-        "{markdown}"
-    );
-    assert!(markdown.ends_with("**Result: pass.**\n"));
 }
 
 #[test]

@@ -11,7 +11,12 @@ const MAXIMUM_CELL_LENGTH: usize = 120;
 
 pub fn render(review: &Review) -> String {
     let shown: Vec<&Finding> = review.shown_findings().collect();
-    let mut lines = vec![format!("## Vigilante: {}", title(review)), String::new()];
+    let mut lines = vec![
+        format!("## Vigilante: {}", title(review)),
+        String::new(),
+        result(review),
+        String::new(),
+    ];
     if !shown.is_empty() {
         lines.push("| Severity | Scope | Power | What it means | Evidence | Status |".to_string());
         lines.push("| --- | --- | --- | --- | --- | --- |".to_string());
@@ -50,17 +55,33 @@ pub fn render(review: &Review) -> String {
         }));
         lines.push(String::new());
     }
-    lines.push(result(review));
+    while lines.last().is_some_and(String::is_empty) {
+        lines.pop();
+    }
     lines.join("\n") + "\n"
 }
 
 fn title(review: &Review) -> String {
-    match (&review.mode, review.findings.len()) {
-        (ReviewMode::Diff { .. }, 0) => "this pull request adds no new powers".to_string(),
-        (ReviewMode::Diff { .. }, 1) => "this pull request adds 1 new power".to_string(),
-        (ReviewMode::Diff { .. }, count) => format!("this pull request adds {count} new powers"),
-        (ReviewMode::Check, 0) if review.passed() => format!("{} is current", Lock::FILE),
-        (ReviewMode::Check, _) => format!("{} needs an update", Lock::FILE),
+    let risks = match review.risks.len() {
+        0 => None,
+        1 => Some("changes 1 risk".to_string()),
+        count => Some(format!("changes {count} risks")),
+    };
+    let powers = match review.findings.len() {
+        0 => None,
+        1 => Some("adds 1 new power".to_string()),
+        count => Some(format!("adds {count} new powers")),
+    };
+    match (&review.mode, powers, risks) {
+        (ReviewMode::Diff { .. }, None, None) => "this pull request adds no new powers".to_string(),
+        (ReviewMode::Diff { .. }, Some(powers), Some(risks)) => {
+            format!("this pull request {powers} and {risks}")
+        }
+        (ReviewMode::Diff { .. }, powers, risks) => {
+            format!("this pull request {}", powers.or(risks).unwrap_or_default())
+        }
+        (ReviewMode::Check, ..) if review.passed() => format!("{} is current", Lock::FILE),
+        (ReviewMode::Check, ..) => format!("{} needs an update", Lock::FILE),
     }
 }
 
