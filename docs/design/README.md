@@ -15,3 +15,4 @@ To start a record, copy the [template](template.md). Keep only the sections that
 | [007: Repository guardrails](007-repository-guardrails.md) | CI checks, the repository test, the ruleset, and the agent files |
 | [008: Risks](008-risks.md) | Report each changed call with untrusted input or a shell, also when the scope already has the power |
 | [009: CI and agent risks](009-ci-and-agent-risks.md) | Script injection, checkout of the pull request head, action pins, downloaded scripts, skills, and deny rules |
+| [010: Approval guarantees](010-approval-guarantees.md) | The result first, `vigilante doctor`, and an opt-in pull request comment |

@@ -28,6 +28,8 @@ An agent opens a pull request that exports invoices. Vigilante gives this report
 
 > ## Vigilante: this pull request adds 6 new powers
 >
+> **Result: fail.** 6 powers are not in vigilante.lock. Run `vigilante lock` and commit the file.
+>
 > | Severity | Scope | Power | What it means | Evidence | Status |
 > | --- | --- | --- | --- | --- | --- |
 > | HIGH | `services/billing` (code) | `exec` | Can run other programs | `services/billing/billing/export.py:5 via export.export → subprocess.run` | **not in lock** |
@@ -36,8 +38,6 @@ An agent opens a pull request that exports invoices. Vigilante gives this report
 > | MEDIUM | `.github/workflows/release.yml` (ci) | `token_write:contents` | The CI token can write to the repository | `.github/workflows/release.yml:6` | **not in lock** |
 > | MEDIUM | `.github/workflows/release.yml` (ci) | `secret:PYPI_TOKEN` | The workflow reads a secret | `.github/workflows/release.yml:14` | **not in lock** |
 > | MEDIUM | `.claude/settings.json` (agent) | `tool_allow:Bash(curl:*)` | The agent can use a tool without asking | `.claude/settings.json:3` | **not in lock** |
->
-> **Result: fail.** 6 powers are not in vigilante.lock. Run `vigilante lock` and commit the file.
 
 The same pull request also added a second network call to `services/billing`, the allow rules `Bash(pytest:*)` and `Read`, and a call to `actions/checkout`. Vigilante does not report them, for these reasons:
 
@@ -96,6 +96,7 @@ Run these commands in the root of your repository.
 | `vigilante lock` | Writes `vigilante.lock`. Commit this file. |
 | `vigilante diff --base origin/main` | Shows the powers that your branch adds, compared with its merge base. |
 | `vigilante check` | Fails if `vigilante.lock` does not agree with the repository. |
+| `vigilante doctor` | Checks that `CODEOWNERS` and the branch rules on GitHub protect `vigilante.lock`. It uses `gh`. |
 
 `diff` and `check` write Markdown. For other tools, add `--format json` or `--format sarif`.
 
@@ -130,7 +131,7 @@ jobs:
 ```
 <!-- x-release-please-end -->
 
-On a pull request, the action runs `vigilante diff` against the base branch. On a push, it runs `vigilante check`. The action writes the report to the job summary. The job needs no secrets, so it also works on pull requests from forks.
+On a pull request, the action runs `vigilante diff` against the base branch. On a push, it runs `vigilante check`. The action writes the report to the job summary. The job needs no secrets, so it also works on pull requests from forks. To also write the report as a comment on the pull request, set `comment: true` and give the job the permission `pull-requests: write`.
 
 Then make your security team the owner of the lock in `CODEOWNERS`. Also turn on "Require review from Code Owners".
 
@@ -140,7 +141,7 @@ vigilante.toml      @your-org/security
 .github/            @your-org/security
 ```
 
-After this change, each pull request that adds a power must change `vigilante.lock`. The security team must approve that change. [docs/github-action.md](docs/github-action.md) gives the full setup. It also tells you how to protect the check and how to use Vigilante in other CI systems.
+After this change, each pull request that adds a power must change `vigilante.lock`. The security team must approve that change. Run `vigilante doctor` to make sure that GitHub enforces these rules. [docs/github-action.md](docs/github-action.md) gives the full setup. It also tells you how to protect the check and how to use Vigilante in other CI systems.
 
 ## Use it with AI agents
 

@@ -32,7 +32,7 @@ jobs:
 3. It verifies the build attestation of the archive with `gh attestation verify`. The attestation must come from `.github/workflows/release.yml` in `theonly1me/vigilante`, on the `main` branch, at the commit of the version tag, on a GitHub-hosted runner. If the check fails, the job stops before Vigilante runs.
 4. It restores the package cache (`actions/cache`). The key is the runner OS and the hash of the lockfiles and project files. So a new lock gets a new cache.
 5. On a `pull_request` event, it runs `vigilante diff --base <base commit> --head <head commit>`. On all other events, it runs `vigilante check`.
-6. It writes the report to the job log and to the job summary.
+6. It writes the report to the job log and to the job summary. If `comment` is `true`, it also writes the report as one comment on the pull request. It updates the same comment on each run.
 7. The job fails with exit code 1 if a power is not in the lock, the lock is not current, or a `deny` rule matches. It fails with exit code 2 if an error occurs.
 
 ### Inputs
@@ -40,6 +40,7 @@ jobs:
 | Input | Default | Description |
 | --- | --- | --- |
 | `version` | The version of the action | The Vigilante version to download |
+| `comment` | `false` | If `true`, write the report as a comment on the pull request. A pull request with no new powers and no earlier comment gets no comment. |
 
 ### Requirements
 
@@ -53,6 +54,8 @@ jobs:
 ### Permissions and forks
 
 The job needs only `contents: read`, and it needs no secrets. It works on pull requests from forks with the `pull_request` event. Do not use `pull_request_target` for Vigilante. Vigilante does not need secrets or write access.
+
+The `comment` input needs `pull-requests: write`. Only the comment step gets the token. On a pull request from a fork, GitHub gives a token that cannot write. The step then writes a warning, and the job result does not change.
 
 ### Pin the action
 
@@ -81,6 +84,8 @@ On a `pull_request` event, GitHub runs the workflow file from the pull request. 
 
 2. In the branch protection rule or ruleset for `main`, turn on "Require review from Code Owners".
 3. In the same rule, make the `vigilante` check required.
+
+To check these rules, run `vigilante doctor` with `gh` signed in. It reads `CODEOWNERS` from the working directory and the rules of the default branch from GitHub. It exits with code 1 when a rule is missing. If your required check has another name, add `--check <name>`. Classic branch protection needs a token with admin access. Rulesets do not.
 
 Vigilante also helps here. In a pull request, it reads `vigilante.toml` from the merge base. So a pull request cannot exclude its own files or turn off the lock. If a change to a workflow adds a power, the report shows it.
 

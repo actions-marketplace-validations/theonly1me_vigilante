@@ -48,6 +48,7 @@ flowchart LR
 | `src/container/`, `src/process/` | Runs Docker builds with no network, and child processes with a time limit. |
 | `src/go/` | Runs Capslock and maps its capabilities to powers. |
 | `src/review/`, `src/report/` | Compares the two commits, applies the lock, and writes the report. |
+| `src/doctor/` | Reads `CODEOWNERS` and, through `gh`, the branch rules that protect the lock. |
 
 ## Trust boundaries
 
