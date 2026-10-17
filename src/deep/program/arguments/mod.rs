@@ -1,9 +1,12 @@
+mod sites;
 mod syntax;
 
 use std::collections::HashMap;
 
 use super::{FileIndex, Language};
 use crate::code::SyntaxNode;
+pub use sites::CallFacts;
+use sites::CallSite;
 use syntax::{
     assignments, callee_text, contains_source, identifiers, input_arguments, is_call, is_literal,
     parameter_names,
@@ -24,7 +27,7 @@ const SHELL_FLAGS: &[&str] = &["-c", "/c", "-Command"];
 const SHELL_OPTIONS: &[&str] = &["shell=True", "shell: true", "shell:true"];
 const EXPANSION_DEPTH: usize = 3;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ArgumentFacts {
     pub constant: bool,
     pub shell: bool,
@@ -55,7 +58,7 @@ struct FunctionFacts {
     assignments: Vec<(String, String, usize)>,
 }
 
-pub fn call_facts(input: FactsInput) -> HashMap<usize, ArgumentFacts> {
+pub fn call_facts(input: FactsInput) -> CallFacts {
     let FactsInput {
         root,
         language,
@@ -63,7 +66,7 @@ pub fn call_facts(input: FactsInput) -> HashMap<usize, ArgumentFacts> {
     } = input;
     let sources = language.untrusted_sources();
     let mut functions: HashMap<usize, FunctionFacts> = HashMap::new();
-    let mut facts: HashMap<usize, ArgumentFacts> = HashMap::new();
+    let mut facts = CallFacts::default();
     for call in root.dfs().filter(is_call) {
         let Some(arguments) = call.field("arguments") else {
             continue;
@@ -108,9 +111,11 @@ pub fn call_facts(input: FactsInput) -> HashMap<usize, ArgumentFacts> {
                 || (function.parameters_are_sources && from_parameters),
             from_parameters,
         };
-        let line = call.start_pos().line() + 1;
-        let merged = facts.get(&line).map_or(found, |known| known.merged(found));
-        facts.insert(line, merged);
+        facts.push(CallSite {
+            range: call.range(),
+            arguments: arguments.range(),
+            facts: found,
+        });
     }
     facts
 }

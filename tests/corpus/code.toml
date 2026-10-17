@@ -472,3 +472,31 @@ import subprocess
 def report(request):
     return subprocess.run(["/usr/bin/date"], cwd=request.args["directory"])
 ''' }
+
+[[case]]
+name = "python: request input in a nested call in the working folder of a fixed command"
+group = "python"
+base = { "app.py" = '''
+import os
+import subprocess
+
+
+def report(request):
+    return subprocess.run(["/usr/bin/date"])
+''' }
+unsafe = { "app.py" = '''
+import os
+import subprocess
+
+
+def report(request):
+    return subprocess.run(["/usr/bin/date", os.path.basename(request.args["format"])])
+''' }
+safe = { "app.py" = '''
+import os
+import subprocess
+
+
+def report(request):
+    return subprocess.run(["/usr/bin/date"], cwd=os.path.abspath(request.args["directory"]))
+''' }

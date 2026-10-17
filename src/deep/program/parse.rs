@@ -135,6 +135,7 @@ fn parse(input: SourceRules) -> Parsed {
             sites.push(SiteSink {
                 definition: index.innermost(found.node.range().start),
                 line: found.node.start_pos().line() + 1,
+                start: found.node.range().start,
                 name: sink_name(&found.node),
                 privilege,
             });

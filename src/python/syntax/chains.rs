@@ -8,6 +8,7 @@ const THIS: &str = "this";
 pub struct Chain {
     pub definition: usize,
     pub line: usize,
+    pub start: usize,
     pub parts: Vec<String>,
     pub call: bool,
     pub skipped_child: Option<usize>,
@@ -36,6 +37,7 @@ pub fn chain_of(attribute: &SyntaxNode) -> Option<Chain> {
     Some(Chain {
         definition: 0,
         line: 0,
+        start: 0,
         parts,
         call: is_called(attribute),
         skipped_child: attribute.field("object").map(|object| object.node_id()),
@@ -62,6 +64,7 @@ pub fn resolve_chains(uses: ChainUses) {
         let uses = &mut index.definitions[chain.definition].uses;
         uses.extend(targets.into_iter().map(|target| Use {
             line: chain.line,
+            start: chain.start,
             target,
         }));
     }

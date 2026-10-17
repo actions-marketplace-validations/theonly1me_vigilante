@@ -90,6 +90,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     chains.push(Chain {
                         definition,
                         line: line_of(node),
+                        start: node.range().start,
                         ..chain
                     });
                 } else if references::is_called(node)
@@ -97,6 +98,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                 {
                     index.definitions[definition].uses.push(Use {
                         line: line_of(node),
+                        start: node.range().start,
                         target: UseTarget::Method(method.text().to_string()),
                     });
                 }
@@ -105,6 +107,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
             "identifier" if is_reference(node) => {
                 index.definitions[definition].uses.push(Use {
                     line: line_of(node),
+                    start: node.range().start,
                     target: UseTarget::Name(node.text().to_string()),
                 });
             }

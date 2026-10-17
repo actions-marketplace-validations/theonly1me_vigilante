@@ -1,8 +1,8 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashSet};
 
 use super::link::{LinkInput, link};
 use super::typed::TypeCheck;
-use super::{ArgumentFacts, Program, Root};
+use super::{Program, Root};
 use crate::deep::{Analysis, RisksInput, Skip, risks};
 
 pub struct AnalyzeInput<'p> {
@@ -88,23 +88,10 @@ impl Program<'_> {
 }
 
 fn analyzed(input: LinkInput) -> Analysis {
-    let program = input.program;
     let linked = link(input);
     let mut analysis = linked.graph.analyze(&linked.scopes);
-    let facts: HashMap<&str, &HashMap<usize, ArgumentFacts>> = program
-        .files
-        .iter()
-        .filter(|file| file.key.root == Root::Repository)
-        .map(|file| (file.display.as_str(), &file.index.call_facts))
-        .collect();
     analysis.risks = risks(RisksInput {
         graph: &linked.graph,
-        facts: &|path, line| {
-            facts
-                .get(path)
-                .and_then(|by_line| by_line.get(&line))
-                .copied()
-        },
     });
     analysis
 }

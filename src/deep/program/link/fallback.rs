@@ -24,6 +24,7 @@ impl Linker<'_> {
                 from: id,
                 line: 1,
                 target: Target::Function(member),
+                facts: None,
             });
         }
         self.fallbacks.insert(package, id);

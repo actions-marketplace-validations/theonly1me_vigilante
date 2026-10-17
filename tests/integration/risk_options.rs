@@ -61,6 +61,43 @@ fn a_request_value_in_a_keyword_option_does_not_make_a_constant_command_untruste
 }
 
 #[test]
+fn a_request_value_in_a_nested_call_in_a_keyword_option_does_not_make_a_constant_command_untrusted()
+{
+    assert_eq!(
+        python_lines(
+            "subprocess.run([\"/usr/bin/date\"], cwd=os.path.abspath(request.args[\"directory\"]))"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn a_request_value_in_an_outer_call_does_not_make_a_nested_constant_command_untrusted() {
+    assert_eq!(
+        python_lines("print(subprocess.run([\"make\"], cwd=request.args[\"directory\"]))"),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn a_request_value_in_a_nested_call_in_the_command_still_blocks() {
+    assert_eq!(
+        python_lines(
+            "subprocess.run([\"/usr/bin/date\", os.path.basename(request.args[\"format\"])])"
+        ),
+        vec![". exec:app.build:subprocess.run:untrusted blocks=true approved=false"]
+    );
+}
+
+#[test]
+fn a_request_value_in_a_nested_call_in_an_options_object_does_not_make_a_constant_command_untrusted()
+ {
+    let head = "const { exec, execSync } = require(\"child_process\");\nconst path = require(\"path\");\nexports.build = (req) => execSync(\"npm run build\", { cwd: path.resolve(req.query.folder) });\n";
+
+    assert_eq!(javascript_lines(head), Vec::<String>::new());
+}
+
+#[test]
 fn a_request_value_in_an_options_object_does_not_make_a_constant_command_untrusted() {
     let head = "const { exec, execSync } = require(\"child_process\");\nexports.build = (req) => execSync(\"npm run build\", { cwd: req.query.folder });\n";
 
@@ -102,4 +139,22 @@ fn a_leading_request_object_of_literals_is_constant() {
     );
 
     assert_eq!(risk_lines(&review), Vec::<String>::new());
+}
+
+#[test]
+fn a_request_value_in_a_call_chained_on_a_module_load_still_blocks() {
+    let head = "const { exec, execSync } = require(\"child_process\");\nexports.build = (req) => require(\"child_process\").execSync(req.query.command);\n";
+
+    assert_eq!(
+        javascript_lines(head),
+        vec![". exec:index.build:child_process:untrusted blocks=true approved=false"]
+    );
+}
+
+#[test]
+fn a_privileged_function_passed_as_a_value_reads_the_call_that_receives_it() {
+    assert_eq!(
+        python_lines("list(map(subprocess.run, request.args.getlist(\"command\")))"),
+        vec![". exec:app.build:subprocess.run:untrusted blocks=true approved=false"]
+    );
 }

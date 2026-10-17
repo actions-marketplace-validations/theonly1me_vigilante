@@ -38,6 +38,7 @@ struct Visit<'r> {
 struct Found {
     definition: usize,
     line: usize,
+    start: usize,
     pending: Pending,
 }
 
@@ -157,6 +158,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     found.push(Found {
                         definition,
                         line,
+                        start: node.range().start,
                         pending,
                     });
                 }
@@ -187,6 +189,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
         if let Some(target) = target {
             index.definitions[item.definition].uses.push(Use {
                 line: item.line,
+                start: item.start,
                 target,
             });
         }
