@@ -1,0 +1,408 @@
+[[case]]
+name = "python: request input reaches a shell"
+group = "python"
+base = { "app.py" = '''
+import subprocess
+
+
+def export(request):
+    return subprocess.run(["date"])
+''' }
+unsafe = { "app.py" = '''
+import subprocess
+
+
+def export(request):
+    return subprocess.run(request.args["day"], shell=True)
+''' }
+safe = { "app.py" = '''
+import subprocess
+
+
+def export(request):
+    return subprocess.run(["date", "-u"])
+''' }
+
+[[case]]
+name = "python: first network call in a package"
+group = "python"
+base = { "app.py" = '''
+def total(items):
+    return sum(items)
+''' }
+unsafe = { "app.py" = '''
+import urllib.request
+
+
+def fetch(url):
+    return urllib.request.urlopen(url)
+''' }
+safe = { "app.py" = '''
+import json
+
+
+def load(text):
+    return json.loads(text)
+''' }
+
+[[case]]
+name = "python: an alias of os.system, and a local function with the same name"
+group = "python"
+base = { "app.py" = '''
+def start(name):
+    return name
+''' }
+unsafe = { "app.py" = '''
+from os import system as run_command
+
+
+def start(name):
+    return run_command(name)
+''' }
+safe = { "app.py" = '''
+def system(name):
+    return name.upper()
+
+
+def start(name):
+    return system(name)
+''' }
+
+[[case]]
+name = "python: eval of request input"
+group = "python"
+base = { "app.py" = '''
+def calculate(request):
+    return 0
+''' }
+unsafe = { "app.py" = '''
+def calculate(request):
+    return eval(request.args["expression"])
+''' }
+safe = { "app.py" = '''
+def calculate(request):
+    return int(request.args["value"])
+''' }
+
+[[case]]
+name = "python: a shell command built from a parameter"
+group = "python"
+base = { "app.py" = '''
+import subprocess
+
+
+def stamp(day):
+    return subprocess.run(["date"])
+''' }
+unsafe = { "app.py" = '''
+import subprocess
+
+
+def stamp(day):
+    return subprocess.run(f"date {day}", shell=True)
+''' }
+safe = { "app.py" = '''
+import subprocess
+
+
+def stamp(day):
+    return subprocess.run("date -u", shell=True)
+''' }
+
+[[case]]
+name = "python: request input that an object field carries to a command"
+group = "python"
+unsafe_result = "passes"
+reason = "Known limit: the engine does not follow data through object fields."
+base = { "app.py" = '''
+import subprocess
+
+
+class Job:
+    def __init__(self, request):
+        self.command = "date"
+
+    def run(self):
+        return subprocess.run([self.command])
+''' }
+unsafe = { "app.py" = '''
+import subprocess
+
+
+class Job:
+    def __init__(self, request):
+        self.command = request.args["command"]
+
+    def run(self):
+        return subprocess.run([self.command, self.command])
+''' }
+safe = { "app.py" = '''
+import subprocess
+
+
+class Job:
+    def __init__(self, request):
+        self.command = "date"
+
+    def run(self):
+        return subprocess.run([self.command, "-u"])
+''' }
+
+[[case]]
+name = "javascript: query input reaches exec"
+group = "javascript"
+base = { "package.json" = '{"name": "app"}', "index.js" = '''
+const { exec } = require("child_process");
+exports.list = (req, res) => exec("ls -l");
+''' }
+unsafe = { "index.js" = '''
+const { exec } = require("child_process");
+exports.list = (req, res) => exec("ls " + req.query.folder);
+''' }
+safe = { "index.js" = '''
+const { exec } = require("child_process");
+exports.list = (req, res) => exec("ls -la");
+''' }
+
+[[case]]
+name = "javascript: globalThis.fetch, and a local fetch function"
+group = "javascript"
+base = { "package.json" = '{"name": "app"}', "index.js" = '''
+exports.add = (a, b) => a + b;
+''' }
+unsafe = { "index.js" = '''
+exports.send = (url) => globalThis.fetch(url);
+''' }
+safe = { "index.js" = '''
+function fetch(value) {
+  return value;
+}
+exports.send = (url) => fetch(url);
+''' }
+
+[[case]]
+name = "javascript: new Function with body input"
+group = "javascript"
+base = { "package.json" = '{"name": "app"}', "index.js" = '''
+exports.calculate = (req) => 0;
+''' }
+unsafe = { "index.js" = '''
+exports.calculate = (req) => new Function(req.body.code)();
+''' }
+safe = { "index.js" = '''
+exports.calculate = (req) => Number(req.body.value);
+''' }
+
+[[case]]
+name = "java: a fully qualified socket"
+group = "java"
+base = { "App.java" = '''
+class App {
+    int add(int first, int second) { return first + second; }
+}
+''' }
+unsafe = { "App.java" = '''
+class App {
+    void open() throws Exception { new java.net.Socket("example.com", 80); }
+}
+''' }
+safe = { "App.java" = '''
+class App {
+    String host() { return "example.com"; }
+}
+''' }
+
+[[case]]
+name = "java: a request parameter reaches Runtime.exec"
+group = "java"
+base = { "App.java" = '''
+class App {
+    void run(javax.servlet.http.HttpServletRequest request) throws Exception {
+        Runtime.getRuntime().exec("date");
+    }
+}
+''' }
+unsafe = { "App.java" = '''
+class App {
+    void run(javax.servlet.http.HttpServletRequest request) throws Exception {
+        Runtime.getRuntime().exec(request.getParameter("command"));
+    }
+}
+''' }
+safe = { "App.java" = '''
+class App {
+    void run(javax.servlet.http.HttpServletRequest request) throws Exception {
+        Runtime.getRuntime().exec("date -u");
+    }
+}
+''' }
+
+[[case]]
+name = "rust: a module alias for std::process"
+group = "rust"
+base = { "Cargo.toml" = '''
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+''', "Cargo.lock" = '''
+version = 4
+
+[[package]]
+name = "app"
+version = "0.1.0"
+''', "src/lib.rs" = '''
+pub fn add(first: i32, second: i32) -> i32 {
+    first + second
+}
+''' }
+unsafe = { "src/lib.rs" = '''
+use std::process as p;
+
+pub fn run() {
+    p::Command::new("date").status().ok();
+}
+''' }
+safe = { "src/lib.rs" = '''
+pub fn name() -> &'static str {
+    "date"
+}
+''' }
+
+[[case]]
+name = "rust: a command that becomes dynamic"
+group = "rust"
+unsafe_result = "shows"
+reason = "A dynamic command is shown, and it does not block."
+base = { "Cargo.toml" = '''
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+''', "Cargo.lock" = '''
+version = 4
+
+[[package]]
+name = "app"
+version = "0.1.0"
+''', "src/lib.rs" = '''
+use std::process::Command;
+
+pub fn run(program: &str) {
+    Command::new("date").status().ok();
+}
+''' }
+unsafe = { "src/lib.rs" = '''
+use std::process::Command;
+
+pub fn run(program: &str) {
+    Command::new(program).status().ok();
+}
+''' }
+safe = { "src/lib.rs" = '''
+use std::process::Command;
+
+pub fn run(program: &str) {
+    Command::new("date").arg("-u").status().ok();
+}
+''' }
+
+[[case]]
+name = "csharp: query input reaches Process.Start"
+group = "csharp"
+base = { "App.cs" = '''
+using System.Diagnostics;
+
+class App
+{
+    void Run([FromQuery] string name) { Process.Start("date"); }
+}
+''' }
+unsafe = { "App.cs" = '''
+using System.Diagnostics;
+
+class App
+{
+    void Run([FromQuery] string name) { Process.Start(name); }
+}
+''' }
+safe = { "App.cs" = '''
+using System.Diagnostics;
+
+class App
+{
+    void Run([FromQuery] string name) { Process.Start("date", "-u"); }
+}
+''' }
+
+[[case]]
+name = "csharp: first HttpClient in a project"
+group = "csharp"
+base = { "App.cs" = '''
+class App
+{
+    int Add(int first, int second) => first + second;
+}
+''' }
+unsafe = { "App.cs" = '''
+using System.Net.Http;
+
+class App
+{
+    async void Get() { await new HttpClient().GetStringAsync("https://example.com"); }
+}
+''' }
+safe = { "App.cs" = '''
+class App
+{
+    string Address() => "https://example.com";
+}
+''' }
+
+[[case]]
+name = "ruby: params in a shell command"
+group = "ruby"
+base = { "runner.rb" = '''
+class Runner
+  def run(params)
+    system("date")
+  end
+end
+''' }
+unsafe = { "runner.rb" = '''
+class Runner
+  def run(params)
+    system("date #{params[:day]}")
+  end
+end
+''' }
+safe = { "runner.rb" = '''
+class Runner
+  def run(params)
+    system("date", "-u")
+  end
+end
+''' }
+
+[[case]]
+name = "ruby: first network call"
+group = "ruby"
+base = { "client.rb" = '''
+def add(first, second)
+  first + second
+end
+''' }
+unsafe = { "client.rb" = '''
+require "net/http"
+
+def fetch(address)
+  Net::HTTP.get(URI(address))
+end
+''' }
+safe = { "client.rb" = '''
+require "json"
+
+def parse(text)
+  JSON.parse(text)
+end
+''' }

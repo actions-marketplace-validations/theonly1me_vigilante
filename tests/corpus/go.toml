@@ -1,0 +1,156 @@
+[[case]]
+name = "go: first exec in a package"
+group = "go"
+base = { "go.mod" = '''
+module example.com/app
+
+go 1.22
+''', "app.go" = '''
+package app
+
+func Add(first, second int) int { return first + second }
+''' }
+unsafe = { "app.go" = '''
+package app
+
+import "os/exec"
+
+func Run() error { return exec.Command("date").Run() }
+''' }
+safe = { "app.go" = '''
+package app
+
+import "strings"
+
+func Loud(text string) string { return strings.ToUpper(text) }
+''' }
+
+[[case]]
+name = "go: first network call in a package"
+group = "go"
+base = { "go.mod" = '''
+module example.com/app
+
+go 1.22
+''', "app.go" = '''
+package app
+
+func Add(first, second int) int { return first + second }
+''' }
+unsafe = { "app.go" = '''
+package app
+
+import "net/http"
+
+func Get(address string) error {
+	_, err := http.Get(address)
+	return err
+}
+''' }
+safe = { "app.go" = '''
+package app
+
+import "encoding/hex"
+
+func Encode(data []byte) string { return hex.EncodeToString(data) }
+''' }
+
+[[case]]
+name = "go: an import alias for os/exec"
+group = "go"
+base = { "go.mod" = '''
+module example.com/app
+
+go 1.22
+''', "app.go" = '''
+package app
+
+func Add(first, second int) int { return first + second }
+''' }
+unsafe = { "app.go" = '''
+package app
+
+import run "os/exec"
+
+func Start(name string) error { return run.Command(name).Run() }
+''' }
+safe = { "app.go" = '''
+package app
+
+import text "strings"
+
+func Start(name string) string { return text.TrimSpace(name) }
+''' }
+
+[[case]]
+name = "go: an unsafe pointer conversion"
+group = "go"
+base = { "go.mod" = '''
+module example.com/app
+
+go 1.22
+''', "app.go" = '''
+package app
+
+func Text(data []byte) string { return string(data) }
+''' }
+unsafe = { "app.go" = '''
+package app
+
+import "unsafe"
+
+func Text(data []byte) string { return *(*string)(unsafe.Pointer(&data)) }
+''' }
+safe = { "app.go" = '''
+package app
+
+import "bytes"
+
+func Text(data []byte) string { return bytes.NewBuffer(data).String() }
+''' }
+
+[[case]]
+name = "go: input that reaches a command in a package that already runs commands"
+group = "go"
+unsafe_result = "passes"
+reason = "Known limit: Capslock gives no facts about arguments, so Go has no risks."
+base = { "go.mod" = '''
+module example.com/app
+
+go 1.22
+''', "app.go" = '''
+package app
+
+import (
+	"net/http"
+	"os/exec"
+)
+
+func Handle(writer http.ResponseWriter, request *http.Request) {
+	exec.Command("date").Run()
+}
+''' }
+unsafe = { "app.go" = '''
+package app
+
+import (
+	"net/http"
+	"os/exec"
+)
+
+func Handle(writer http.ResponseWriter, request *http.Request) {
+	exec.Command("sh", "-c", request.URL.Query().Get("command")).Run()
+}
+''' }
+safe = { "app.go" = '''
+package app
+
+import (
+	"net/http"
+	"os/exec"
+)
+
+func Handle(writer http.ResponseWriter, request *http.Request) {
+	exec.Command("date", "-u").Run()
+}
+''' }
