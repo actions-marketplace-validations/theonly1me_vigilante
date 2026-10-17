@@ -44,10 +44,11 @@ fn run_doctor(doctor: Doctor) -> Run {
     if let Some(protection) = doctor.protection {
         fs::write(tools.path().join("protection.json"), protection).expect("protection");
     }
+    let empty = TempDir::new().expect("temporary folder");
     let search_path = if doctor.has_gh {
         format!("{}:{SYSTEM_PATH}", tools.path().display())
     } else {
-        SYSTEM_PATH.to_string()
+        empty.path().display().to_string()
     };
     let output = Command::new(env!("CARGO_BIN_EXE_vigilante"))
         .arg("--repository")
