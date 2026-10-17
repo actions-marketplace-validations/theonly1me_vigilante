@@ -17,7 +17,9 @@ flowchart LR
   Patterns --> Map
   Engine --> Map
   Go --> Map
-  Map --> Review[Review: new powers, lock, deny rules]
+  Engine --> Risks[Risks: calls and their input]
+  Risks --> Review
+  Map --> Review[Review: new powers, risks, lock, deny rules]
   Review --> Report[Markdown, JSON, SARIF, exit code]
 ```
 
@@ -28,7 +30,7 @@ flowchart LR
    - The pattern rules match privileged calls and imports in code.
    - The call graph engine follows calls into the locked packages.
    - The Go engine runs Capslock.
-4. The review keeps the powers that the head has and the merge base does not have. It compares them with `vigilante.lock` and the `deny` rules.
+4. The review keeps the powers and the risks that the head has and the merge base does not have. It compares them with `vigilante.lock` and the `deny` rules.
 5. The report gives the findings, the notes, the lines under "Not analyzed", and the exit code.
 
 ## Modules

@@ -98,11 +98,17 @@ powers = [
 
 [agent.".mcp.json"]
 powers = ["mcp_server:fs-tools: npx -y fs-tools-mcp"]
+
+[code."services/web"]
+powers = ["exec"]
+risks = ["exec:web.export:subprocess.run:untrusted"]
 ```
 
 Each table is a surface (`code`, `ci`, `agent`, or `build`) and a scope. Each power is a name. For most powers, a detail comes after the colon, for example the name of a secret. Do not edit the file by hand. Run `vigilante lock` again.
 
-`vigilante check` also fails if the lock has a power that the repository does not have now. To remove it, run `vigilante lock`.
+`risks` lists the [risks](powers.md#risks) that you approved. `vigilante lock` writes each risk that blocks. An approved risk does not make the check fail.
+
+`vigilante check` also fails if the lock has a power or a risk that the repository does not have now. To remove it, run `vigilante lock`.
 
 ## Your own rules
 
