@@ -14,7 +14,7 @@ The CI and agent readers looked for a power only. They did not see these changes
 ## Decision
 
 1. The surface readers give risks, in the same model as code risks ([008](008-risks.md)). A CI risk has the scope of its file. A pin risk has the scope `.github/workflows`, the same as the action.
-2. Two CI risks block: untrusted text in a script, and a checkout of the head of the pull request in a workflow that runs on `pull_request_target`, `workflow_run`, or `issue_comment`. `vigilante lock` approves them.
+2. Two CI risks block. The first is text from an untrusted source in a script. The second is a checkout of the head of the pull request in a workflow that runs on `pull_request_target`, `workflow_run`, or `issue_comment`. `vigilante lock` approves them.
 3. A pin risk does not block. A diff shows it when the pin changes from a commit SHA to a branch or a tag. Its identity has no tag, so a tag update is not a change.
 4. A download that a shell or an interpreter runs is the power `remote_script`, with the host as the detail. A download that a program reads as data is not.
 5. A deny rule for the same tool is part of the detail of an allow rule. So a change to the deny rules changes the power.

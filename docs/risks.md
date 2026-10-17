@@ -45,7 +45,7 @@ Vigilante finds these risks in workflows and in composite actions (`action.yml` 
 | A workflow that runs on `pull_request_target`, `workflow_run`, or `issue_comment` checks out the head of the pull request with `actions/checkout` | `exec:<job>:actions/checkout:untrusted` | Yes |
 | A third-party action uses a branch or a tag, not a full commit SHA | `third_party_action:<action>:unpinned` | No |
 
-These fields are untrusted: `github.head_ref`, and each `github.event` field that ends with `.title`, `.body`, `.message`, `.author.name`, `.author.email`, `.head.ref`, `.head.label`, `.head.repo.default_branch`, `.page_name`, or `.head_branch`. A number or a SHA is not untrusted.
+Vigilante treats these fields as untrusted: `github.head_ref`, and each `github.event` field that ends with `.title`, `.body`, `.message`, `.author.name`, `.author.email`, `.head.ref`, `.head.label`, `.head.repo.default_branch`, `.page_name`, or `.head_branch`. It treats a number or a SHA as trusted.
 
 To use untrusted text in a script, put it in an environment variable with `env:`, and read the variable in the script. Then the shell does not read the text as code.
 
