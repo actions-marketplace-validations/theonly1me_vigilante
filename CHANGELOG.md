@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/theonly1me/vigilante/compare/v0.2.1...v0.3.0) (2026-10-17)
+
+
+### Features
+
+* **javascript:** read bun.lock ([80c302f](https://github.com/theonly1me/vigilante/commit/80c302ff4e06f5d350572a8d4ba3659962c6ecb5))
+* **javascript:** read bun.lock ([7e333d8](https://github.com/theonly1me/vigilante/commit/7e333d8fac16c30eae4be0ba752734e4620bffa5))
+
 ## [0.2.1](https://github.com/theonly1me/vigilante/compare/v0.2.0...v0.2.1) (2026-10-16)
 
 
