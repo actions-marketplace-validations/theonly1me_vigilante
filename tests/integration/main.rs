@@ -2,6 +2,7 @@ mod agent;
 mod check;
 mod ci;
 mod cli;
+mod coverage;
 mod csharp_code;
 mod csharp_fixtures;
 mod csharp_packages;

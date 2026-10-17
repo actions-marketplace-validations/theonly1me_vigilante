@@ -98,7 +98,14 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
         findings,
         notes,
         stale: Vec::new(),
+        new_gaps: head_scan
+            .skipped
+            .iter()
+            .filter(|gap| !base_scan.skipped.contains(gap))
+            .cloned()
+            .collect(),
         skipped: head_scan.skipped,
+        coverage: config.coverage,
     })
 }
 
@@ -147,6 +154,8 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
         findings,
         notes: Vec::new(),
         stale,
+        new_gaps: scanned.skipped.clone(),
         skipped: scanned.skipped,
+        coverage: config.coverage,
     })
 }

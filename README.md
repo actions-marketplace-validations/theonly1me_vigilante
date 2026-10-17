@@ -92,7 +92,7 @@ Run these commands in the root of your repository.
 
 | Command | What it does |
 | --- | --- |
-| `vigilante scan` | Shows each power in the repository. |
+| `vigilante scan` | Shows each power in the repository, and the code that Vigilante could not read. |
 | `vigilante lock` | Writes `vigilante.lock`. Commit this file. |
 | `vigilante diff --base origin/main` | Shows the powers that your branch adds, compared with its merge base. |
 | `vigilante check` | Fails if `vigilante.lock` does not agree with the repository. |

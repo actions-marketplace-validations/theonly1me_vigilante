@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use super::notes::{evidence_text, markdown_section, skipped_section};
 use super::summary;
-use crate::{Finding, Lock, Review, ReviewMode};
+use crate::{Coverage, Finding, Lock, Review, ReviewMode};
 
 const MAXIMUM_CELL_LENGTH: usize = 120;
 
@@ -134,6 +134,17 @@ fn result(review: &Review) -> String {
                 count: stale,
                 one: "it",
                 many: "them"
+            })
+        ));
+    }
+    let gaps = review.new_gaps.len();
+    if review.coverage == Coverage::Block && gaps > 0 {
+        reasons.push(format!(
+            "{gaps} new {} not analyzed.",
+            plural(Plural {
+                count: gaps,
+                one: "source is",
+                many: "sources are"
             })
         ));
     }

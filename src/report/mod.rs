@@ -4,7 +4,7 @@ mod notes;
 mod sarif;
 mod text;
 
-pub use text::{power_map_json, power_map_text};
+pub use text::{scan_json, scan_text};
 
 use crate::{Capability, Review};
 

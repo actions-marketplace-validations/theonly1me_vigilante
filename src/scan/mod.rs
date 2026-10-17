@@ -23,16 +23,28 @@ pub struct ScanRequest {
 }
 
 pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
+    scan_report(request).map(|report| report.map)
+}
+
+pub struct ScanReport {
+    pub map: PowerMap,
+    pub not_analyzed: Vec<Skip>,
+}
+
+pub fn scan_report(request: ScanRequest) -> Result<ScanReport, Error> {
     let located = request.source.locate(&request.repository)?;
     let config = Config::load(located.tree.as_ref())?;
-    Scanner::new(ScannerInput {
+    let scanned = Scanner::new(ScannerInput {
         tree: located.tree.as_ref(),
         rules_tree: located.tree.as_ref(),
         config: &config,
         location: located.location(),
     })?
-    .scan(&Selection::Everything)
-    .map(|scanned| scanned.map)
+    .scan(&Selection::Everything)?;
+    Ok(ScanReport {
+        map: scanned.map,
+        not_analyzed: scanned.skipped,
+    })
 }
 
 pub struct Scanned {

@@ -1,10 +1,10 @@
 use serde_json::{Value, json};
 
-use crate::PowerMap;
+use crate::ScanReport;
 
-pub fn power_map_text(map: &PowerMap) -> String {
+pub fn scan_text(report: &ScanReport) -> String {
     let mut lines = Vec::new();
-    for (scope, powers) in &map.scopes {
+    for (scope, powers) in &report.map.scopes {
         for (power, evidence) in powers {
             let location = evidence
                 .first()
@@ -19,13 +19,20 @@ pub fn power_map_text(map: &PowerMap) -> String {
         }
     }
     if lines.is_empty() {
-        return "No powers found.\n".to_string();
+        lines.push("No powers found.".to_string());
     }
+    lines.extend(
+        report
+            .not_analyzed
+            .iter()
+            .map(|gap| format!("not analyzed: {}: {}", gap.source, gap.reason)),
+    );
     lines.join("\n") + "\n"
 }
 
-pub fn power_map_json(map: &PowerMap) -> String {
-    let scopes: Vec<Value> = map
+pub fn scan_json(report: &ScanReport) -> String {
+    let scopes: Vec<Value> = report
+        .map
         .scopes
         .iter()
         .map(|(scope, powers)| {
@@ -36,5 +43,6 @@ pub fn power_map_json(map: &PowerMap) -> String {
             json!({ "surface": scope.surface, "scope": scope.path, "powers": powers })
         })
         .collect();
-    serde_json::to_string_pretty(&scopes).unwrap_or_default() + "\n"
+    let output = json!({ "powers": scopes, "not_analyzed": report.not_analyzed });
+    serde_json::to_string_pretty(&output).unwrap_or_default() + "\n"
 }

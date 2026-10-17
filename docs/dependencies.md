@@ -80,7 +80,9 @@ The report lists the code and the packages that Vigilante did not read. Some rea
 - a package is larger than 256 MiB;
 - a type check did not complete.
 
-The Markdown report shows 10 lines and a count. The JSON report has all of them.
+The Markdown report shows 10 lines and a count, and it marks each line that the pull request adds as new. The JSON report has all of them. The SARIF report lists them as tool notifications, and `vigilante scan --format json` lists them under `not_analyzed`.
+
+By default, these lines do not make the check fail. To fail a pull request that adds a new line, set `[policy] coverage = "block"`.
 
 ## Calls resolved by type
 

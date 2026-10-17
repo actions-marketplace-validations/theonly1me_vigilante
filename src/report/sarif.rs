@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 
 use super::notes::call_path_text;
 use super::summary;
-use crate::{Capability, Finding, Review};
+use crate::{Capability, Coverage, Finding, Review};
 
 const SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const INFORMATION_URI: &str = "https://github.com/theonly1me/vigilante";
@@ -49,6 +49,29 @@ pub fn render(review: &Review) -> String {
             })
         })
         .collect();
+    let gap_level = if review.coverage == Coverage::Block {
+        "error"
+    } else {
+        "warning"
+    };
+    let notifications: Vec<Value> = review
+        .skipped
+        .iter()
+        .map(|gap| {
+            let level = if review.new_gaps.contains(gap) {
+                gap_level
+            } else {
+                "note"
+            };
+            json!({
+                "level": level,
+                "message": { "text": format!("{}: {}", gap.source, gap.reason) },
+                "locations": [{
+                    "physicalLocation": { "artifactLocation": { "uri": gap.source } },
+                }],
+            })
+        })
+        .collect();
     let report = json!({
         "$schema": SCHEMA,
         "version": "2.1.0",
@@ -62,6 +85,10 @@ pub fn render(review: &Review) -> String {
                 },
             },
             "results": results,
+            "invocations": [{
+                "executionSuccessful": true,
+                "toolExecutionNotifications": notifications,
+            }],
         }],
     });
     serde_json::to_string_pretty(&report).unwrap_or_default() + "\n"

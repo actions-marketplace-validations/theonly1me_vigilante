@@ -27,13 +27,13 @@ mod surfaces;
 mod tree;
 mod xml;
 
-pub use config::Mode as PolicyMode;
+pub use config::{Coverage, Mode as PolicyMode};
 pub use error::Error;
 pub use lock::{Granted, Lock};
 pub use model::{
     Capability, Detection, Evidence, Power, PowerMap, PowersByScope, Scope, Severity, Sighting,
     SourceFile, Surface,
 };
-pub use report::{Format, power_map_json, power_map_text, summary};
+pub use report::{Format, scan_json, scan_text, summary};
 pub use review::{Finding, LockEntry, Note, Review, ReviewMode, ReviewRequest, Skip, review};
-pub use scan::{ScanRequest, Source, scan};
+pub use scan::{ScanReport, ScanRequest, Source, scan, scan_report};

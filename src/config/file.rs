@@ -29,6 +29,15 @@ pub struct ScanSection {
 pub struct PolicySection {
     pub mode: Mode,
     pub deny: Vec<DenyEntry>,
+    pub coverage: Coverage,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Coverage {
+    #[default]
+    Warn,
+    Block,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
