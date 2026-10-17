@@ -7,6 +7,7 @@ To install Vigilante and run it, start with the [README](../README.md).
 - [Run Vigilante in CI](github-action.md): the GitHub Action, how to protect the check, and other CI systems.
 - [Configuration](configuration.md): each key in `vigilante.toml`, the lock format, and your own rules.
 - [Powers](powers.md): each power, the scopes, and the rules that keep the report short.
+- [Risks](risks.md): the changed uses of a power that the report shows, and the ones that block.
 - [Dependencies and call paths](dependencies.md): how Vigilante reads packages, resolves calls, and uses the network.
 
 ## Understand and contribute

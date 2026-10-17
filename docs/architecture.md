@@ -26,7 +26,7 @@ flowchart LR
 1. `vigilante diff` finds the merge base of the base and the head. It reads `vigilante.toml` from the merge base.
 2. It lists the changed files and the scopes that they are in.
 3. For each commit, it finds the powers in those scopes:
-   - The surface readers parse workflows, agent config, and install hooks.
+   - The surface readers parse workflows, composite actions, agent config, skill and command frontmatter, and install hooks. They also give the CI risks, such as untrusted text in a script.
    - The pattern rules match privileged calls and imports in code.
    - The call graph engine follows calls into the locked packages.
    - The Go engine runs Capslock.

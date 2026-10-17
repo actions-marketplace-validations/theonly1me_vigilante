@@ -52,11 +52,11 @@ The same pull request also added a second network call to `services/billing`, th
 | --- | --- | --- |
 | Code | Rust, JavaScript, TypeScript, Python, Ruby, C#, Java, and Go | `exec`, `network`, `files`, `native`, `dynamic_code`, `read_system_state`, `modify_system_state`, `system_calls` |
 | Code, through dependencies | Go with [Capslock](https://github.com/google/capslock). JavaScript, TypeScript, Python, Java, Rust, C#, and Ruby with the call graph of Vigilante over the locked packages. Calls resolve by type in JavaScript, TypeScript, and Python, and through the class hierarchy in Java and C#. | Each code power, with the call path. For Go, all 13 Capslock capabilities, for example `operating_system`, `runtime`, `arbitrary_execution`, and `unanalyzed`. |
-| CI | `.github/workflows/*.yml` | `token_write`, `oidc`, `untrusted_trigger`, `third_party_action`, `secret` |
-| AI agents | `.claude/settings.json`, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
+| CI | `.github/workflows/*.yml`, composite actions (`action.yml`) | `token_write`, `oidc`, `untrusted_trigger`, `third_party_action`, `secret`, `remote_script` |
+| AI agents | `.claude/settings.json`, Claude Code skills and commands, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
 | Build | `package.json` install scripts, `build.rs`, `setup.py`, `.husky/`, `.pre-commit-config.yaml` | `install_hook`, `git_hook` |
 
-Vigilante reports a power the first time that it appears in a scope. After that, it reports each changed risk. A call that gets untrusted input, or a shell command that changes, blocks until `vigilante.lock` approves it. See [risks](docs/powers.md#risks). For code, a scope is the nearest package root. For Go, a scope is the Go package. Vigilante skips vendored code. It reports tests and fixtures as test code, apart from the findings. See [docs/powers.md](docs/powers.md) for each power and for the rules that keep the report short.
+Vigilante reports a power the first time that it appears in a scope. After that, it reports each changed risk. Some risks block until `vigilante.lock` approves them. Examples are a call with untrusted input, and a workflow script that reads the title of a pull request. See [docs/risks.md](docs/risks.md). For code, a scope is the nearest package root. For Go, a scope is the Go package. Vigilante skips vendored code. It reports tests and fixtures as test code, apart from the findings. See [docs/powers.md](docs/powers.md) for each power and for the rules that keep the report short.
 
 A finding is `exec`, `network`, or `native` that your package reaches through its own code. This rule is the same in each language. All other results are notes:
 

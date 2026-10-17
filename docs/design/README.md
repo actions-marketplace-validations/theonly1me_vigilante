@@ -14,3 +14,4 @@ To start a record, copy the [template](template.md). Keep only the sections that
 | [006: Release and distribution](006-release-and-distribution.md) | One build for six channels, Release Please, attestations, and trusted publishing |
 | [007: Repository guardrails](007-repository-guardrails.md) | CI checks, the repository test, the ruleset, and the agent files |
 | [008: Risks](008-risks.md) | Report each changed call with untrusted input or a shell, also when the scope already has the power |
+| [009: CI and agent risks](009-ci-and-agent-risks.md) | Script injection, checkout of the pull request head, action pins, downloaded scripts, skills, and deny rules |
