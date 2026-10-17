@@ -81,6 +81,7 @@ pub fn detect_package_manifest(manifest: &Node) -> Vec<Detection> {
             let is_plain = command::is_plain(LocalCommand {
                 command,
                 package_scripts: Some(&scripts),
+                unknown_programs_run_code: true,
             });
             (!is_plain).then(|| {
                 detection(Found {
@@ -143,6 +144,7 @@ fn runs_only_local_code(local: LocalHook) -> bool {
         && command::is_plain(LocalCommand {
             command: local.entry,
             package_scripts: None,
+            unknown_programs_run_code: false,
         })
 }
 
