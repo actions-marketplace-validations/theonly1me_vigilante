@@ -30,6 +30,7 @@ mod lock;
 mod lockfile_writers;
 mod npm_registry;
 mod packs;
+mod policy_trust;
 mod python_code;
 mod python_fixtures;
 mod python_index;

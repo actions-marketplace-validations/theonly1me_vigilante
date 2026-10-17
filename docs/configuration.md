@@ -63,13 +63,13 @@ Globs use `/` between folders. `*` matches in one folder, and `**` matches any n
 
 ## Which files each command reads
 
-| Command | `vigilante.toml` | `vigilante.lock` |
+| Command | `vigilante.toml` and the rule files in `rules.paths` | `vigilante.lock` |
 | --- | --- | --- |
 | `vigilante diff --base <base> --head <head>` | From the merge base of base and head | From head |
 | `vigilante check` | From the working directory, or from `--commit` | From the same place |
 | `vigilante lock` | From the working directory | Writes it in the working directory |
 
-In a pull request, the configuration comes from the merge base. So a pull request cannot exclude its own files, change to report mode, or remove a `deny` rule.
+In a pull request, the configuration and the custom rules come from the merge base. So a pull request cannot exclude its own files, change to report mode, remove a `deny` rule, or weaken a custom rule.
 
 ## vigilante.lock
 

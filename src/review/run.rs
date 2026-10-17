@@ -37,6 +37,7 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     let lock = Lock::load(&head_tree)?;
     let base_scanner = Scanner::new(ScannerInput {
         tree: &base_tree,
+        rules_tree: &base_tree,
         config: &config,
         location: Location::Commit {
             repository: request.repository,
@@ -45,6 +46,7 @@ pub fn diff(request: DiffRequest) -> Result<Review, Error> {
     })?;
     let head_scanner = Scanner::new(ScannerInput {
         tree: &head_tree,
+        rules_tree: &base_tree,
         config: &config,
         location: Location::Commit {
             repository: request.repository,
@@ -107,6 +109,7 @@ pub fn check(request: CheckRequest) -> Result<Review, Error> {
     let lock = Lock::load(tree)?;
     let scanned = Scanner::new(ScannerInput {
         tree,
+        rules_tree: tree,
         config: &config,
         location: located.location(),
     })?
