@@ -1,4 +1,4 @@
-name: Vigilante
+name: vigilante-scan
 description: Show the new powers that a pull request gives to code, CI, build, and AI agents
 author: theonly1me
 branding:
