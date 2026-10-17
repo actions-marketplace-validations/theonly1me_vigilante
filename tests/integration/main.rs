@@ -15,6 +15,7 @@ mod doctor_paths;
 mod file_server;
 mod go_blocking;
 mod go_capslock;
+mod go_empty_modules;
 mod go_engine;
 mod go_fixtures;
 mod go_notes;

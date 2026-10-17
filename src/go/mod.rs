@@ -58,8 +58,24 @@ impl GoModules {
                     .to_string();
                 Ok(Module { folder, path })
             })
-            .collect::<Result<_, Error>>()?;
-        Ok(Self { modules })
+            .collect::<Result<Vec<Module>, Error>>()?;
+        let mut discovered = Self { modules };
+        let go_files: Vec<&str> = input
+            .tree
+            .paths()
+            .iter()
+            .map(String::as_str)
+            .filter(|path| path.ends_with(".go") && !input.config.is_outside_analysis(path))
+            .collect();
+        let with_go_files: BTreeSet<String> = go_files
+            .into_iter()
+            .filter_map(|path| discovered.containing(path))
+            .map(|module| module.folder.clone())
+            .collect();
+        discovered
+            .modules
+            .retain(|module| with_go_files.contains(&module.folder));
+        Ok(discovered)
     }
 
     pub fn owns(&self, path: &str) -> bool {
