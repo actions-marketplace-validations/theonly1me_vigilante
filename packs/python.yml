@@ -3,6 +3,7 @@ language: python
 message: Imports a module that runs other programs
 metadata:
   capability: exec
+  inert: [list2cmdline, CompletedProcess, CalledProcessError, TimeoutExpired, SubprocessError, PIPE, DEVNULL, STDOUT]
 rule:
   kind: dotted_name
   regex: ^(subprocess|pty)(\.|$)

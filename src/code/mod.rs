@@ -35,6 +35,7 @@ pub struct Rules {
 struct Rule {
     id: String,
     capability: Capability,
+    inert: Vec<String>,
     language: SupportLang,
     files: FileFilter,
     config: RuleConfig<SupportLang>,
@@ -64,6 +65,8 @@ impl Rules {
             }
             let capability =
                 capability_of(&serializable).map_err(|error| invalid(error.to_string()))?;
+            let inert =
+                inert_members_of(&serializable).map_err(|error| invalid(error.to_string()))?;
             let id = serializable.id.clone();
             let files = FileFilter::new(RuleGlobs {
                 files: &serializable.files,
@@ -78,6 +81,7 @@ impl Rules {
             self.rules.push(Rule {
                 id,
                 capability,
+                inert,
                 language,
                 files,
                 config,
@@ -116,6 +120,16 @@ impl Rules {
             })
             .collect()
     }
+}
+
+fn inert_members_of(rule: &SerializableRuleConfig<SupportLang>) -> Result<Vec<String>, Error> {
+    let metadata = serde_json::to_value(&rule.metadata)
+        .map_err(|error| Error::new(format!("{}: {error}", rule.id)))?;
+    let Some(inert) = metadata.get("inert") else {
+        return Ok(Vec::new());
+    };
+    serde_json::from_value(inert.clone())
+        .map_err(|error| Error::new(format!("{}: metadata.inert: {error}", rule.id)))
 }
 
 fn capability_of(rule: &SerializableRuleConfig<SupportLang>) -> Result<Capability, Error> {

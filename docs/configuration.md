@@ -124,6 +124,7 @@ rule:
 - `metadata.capability` is the power that the rule finds. It must be a code power from [powers.md](powers.md), for example `exec`, `network`, `files`, or `modify_system_state`.
 - `language` is `rust`, `tsx`, `python`, `ruby`, `csharp`, `java`, or `go`. Vigilante reads each JavaScript and TypeScript file with the `tsx` grammar, so use `tsx` for both.
 - `files` and `ignores` limit the rule to some paths, as in ast-grep.
+- `metadata.inert` lists the members of an imported module that do not have the power. Calls to these members are not sinks.
 - A file can have more than one rule. Put `---` between the rules. Each `id` must be unique, also across the built-in rules.
 
 The built-in rules are in [packs/](../packs). Before you add a rule, you can test it with `ast-grep scan` and `ast-grep test`.

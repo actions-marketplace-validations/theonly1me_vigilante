@@ -119,6 +119,7 @@ fn parse(input: SourceRules) -> Parsed {
         let privilege = Privilege {
             capability: found.capability,
             rule: found.rule.clone(),
+            inert: found.inert.clone(),
         };
         if specifiers.is_empty() {
             sites.push(SiteSink {

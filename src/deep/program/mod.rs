@@ -38,6 +38,7 @@ pub struct FileKey {
 pub struct Privilege {
     pub capability: Capability,
     pub rule: String,
+    pub inert: Vec<String>,
 }
 
 pub struct SiteSink {

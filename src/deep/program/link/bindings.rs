@@ -20,6 +20,7 @@ pub struct BindingUse<'a> {
 pub struct PrivilegedUse<'a> {
     pub file: usize,
     pub specifier: &'a str,
+    pub member: Option<&'a str>,
     pub sink_name: String,
 }
 
@@ -45,9 +46,14 @@ impl Linker<'_> {
             (Imported::Module, Some(member)) => format!("{module}.{member}"),
             (Imported::Named(name), _) => format!("{module}.{name}"),
         };
+        let used_member = match (&binding.imported, member) {
+            (Imported::Named(name), _) => Some(name.as_str()),
+            (Imported::Module, member) => member,
+        };
         let privileged = self.privileged(PrivilegedUse {
             file,
             specifier: &binding.specifier,
+            member: used_member,
             sink_name,
         });
         if !privileged.is_empty() {
@@ -117,6 +123,7 @@ impl Linker<'_> {
         let PrivilegedUse {
             file,
             specifier,
+            member,
             sink_name: name,
         } = wanted;
         let Some(privileges) = self.files[file].privileged.get(specifier) else {
@@ -124,6 +131,9 @@ impl Linker<'_> {
         };
         privileges
             .iter()
+            .filter(|privilege| {
+                !member.is_some_and(|member| privilege.inert.iter().any(|inert| inert == member))
+            })
             .map(|privilege| Sink {
                 name: name.clone(),
                 power: Power::new(privilege.capability),

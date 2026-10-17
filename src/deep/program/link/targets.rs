@@ -61,6 +61,7 @@ impl Linker<'_> {
             UseTarget::Load(specifier) => self.privileged(PrivilegedUse {
                 file,
                 specifier,
+                member: None,
                 sink_name: specifier_module(specifier),
             }),
         }
