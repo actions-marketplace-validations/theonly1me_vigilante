@@ -30,8 +30,9 @@ review() {
   local folder="$1" base="$2" head="$3"
   summary="$(mktemp)"
   review_status=0
+  saved_report="$summary.report"
   (cd "$folder" && BASE_SHA="$base" HEAD_SHA="$head" GITHUB_STEP_SUMMARY="$summary" \
-    "$action_folder/review.sh" > /dev/null 2>&1) || review_status=$?
+    REPORT_FILE="$saved_report" "$action_folder/review.sh" > /dev/null 2>&1) || review_status=$?
 }
 
 repository="$scratch/repository"
@@ -45,6 +46,7 @@ head="$(commit_all "add a workflow that can push")"
 review "$repository" "$base" "$head"
 check "diff mode fails on a power that is not in the lock" test "$review_status" -eq 1
 check "diff mode writes the pull request report" grep -q "this pull request adds 1 new power" "$summary"
+check "the review saves the report for the comment step" grep -q "this pull request adds 1 new power" "$saved_report"
 
 vigilante lock --repository "$repository" > /dev/null
 locked_head="$(commit_all "lock the new power")"

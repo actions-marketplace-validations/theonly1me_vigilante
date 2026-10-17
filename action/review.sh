@@ -18,6 +18,9 @@ fi
 
 cat "$report"
 cat "$errors" >&2
+if [ -n "${REPORT_FILE:-}" ]; then
+  cp "$report" "$REPORT_FILE"
+fi
 {
   cat "$report"
   if [ -s "$errors" ]; then
