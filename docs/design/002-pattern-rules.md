@@ -14,7 +14,7 @@ Each language has its own calls and imports for each power. A rule set in code w
    - An install script or a local git hook is not a power if it is one plain local command.
    - A third-party action has one scope for all workflows, so an action that one workflow uses is not new in another.
    - `[ci] trusted_owners` makes the actions of an organization first party.
-   - Vigilante does not scan tests, fixtures, or vendored code.
+   - Vigilante skips vendored code. It reports tests and fixtures as test code, apart from the findings.
    - In Rust, `unsafe impl Send`, `unsafe impl Sync`, and `#[wasm_bindgen]` imports are not `native`.
 
 ## Consequences

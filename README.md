@@ -56,7 +56,7 @@ The same pull request also added a second network call to `services/billing`, th
 | AI agents | `.claude/settings.json`, `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml`, `.gemini/settings.json` | `tool_allow`, `hook`, `mcp_server`, `skip_permissions` |
 | Build | `package.json` install scripts, `build.rs`, `setup.py`, `.husky/`, `.pre-commit-config.yaml` | `install_hook`, `git_hook` |
 
-Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root. For Go, a scope is the Go package. Vigilante skips tests, fixtures, and vendored code. [docs/powers.md](docs/powers.md) tells you about each power and the rules that keep the report short.
+Vigilante reports a power only the first time that it appears in a scope. For code, a scope is the nearest package root. For Go, a scope is the Go package. Vigilante skips vendored code. It reports tests and fixtures as test code, apart from the findings. See [docs/powers.md](docs/powers.md) for each power and for the rules that keep the report short.
 
 A finding is `exec`, `network`, or `native` that your package reaches through its own code. This rule is the same in each language. All other results are notes:
 

@@ -30,6 +30,15 @@ pub struct PolicySection {
     pub mode: Mode,
     pub deny: Vec<DenyEntry>,
     pub coverage: Coverage,
+    pub tests: TestPolicy,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TestPolicy {
+    #[default]
+    Report,
+    Lock,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]

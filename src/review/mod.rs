@@ -27,6 +27,7 @@ pub struct Review {
     pub skipped: Vec<Skip>,
     pub coverage: Coverage,
     pub new_gaps: Vec<Skip>,
+    pub tests: Vec<Finding>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -81,7 +82,10 @@ impl Review {
     pub fn passed(&self) -> bool {
         let lock_is_current = self.policy == Mode::Report || self.stale.is_empty();
         let gaps_allowed = self.coverage == Coverage::Warn || self.new_gaps.is_empty();
-        lock_is_current && gaps_allowed && !self.findings.iter().any(|finding| self.blocks(finding))
+        lock_is_current
+            && gaps_allowed
+            && !self.findings.iter().any(|finding| self.blocks(finding))
+            && !self.tests.iter().any(|finding| finding.denied)
     }
 
     pub fn blocks(&self, finding: &Finding) -> bool {

@@ -2,6 +2,7 @@ mod json;
 mod markdown;
 mod notes;
 mod sarif;
+mod test_code;
 mod text;
 
 pub use text::{scan_json, scan_text};

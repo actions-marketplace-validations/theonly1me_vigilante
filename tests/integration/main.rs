@@ -50,6 +50,7 @@ mod rust_skips;
 mod rust_types;
 mod slow_tools;
 mod support;
+mod test_code;
 mod type_check_limits;
 mod typescript_types;
 mod yaml;

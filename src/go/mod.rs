@@ -40,7 +40,8 @@ impl GoModules {
             .iter()
             .map(String::as_str)
             .filter(|path| {
-                path.rsplit('/').next() == Some(MODULE_FILE) && !input.config.is_excluded(path)
+                path.rsplit('/').next() == Some(MODULE_FILE)
+                    && !input.config.is_outside_analysis(path)
             })
             .collect();
         let modules = input

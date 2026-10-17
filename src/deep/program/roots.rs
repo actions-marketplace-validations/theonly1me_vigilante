@@ -41,7 +41,7 @@ pub fn selected_roots(input: RootsInput) -> BTreeSet<String> {
         .paths()
         .iter()
         .filter(|path| {
-            (input.is_code)(path) && !input.config.is_excluded(path) && is_selected(path)
+            (input.is_code)(path) && !input.config.is_outside_analysis(path) && is_selected(path)
         })
         .cloned()
         .collect()
