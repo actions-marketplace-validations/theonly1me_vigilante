@@ -92,6 +92,7 @@ fn sink_of(parts: SinkParts) -> CanonicalSink {
         site: SiteSink {
             definition: index.innermost(original.range().start),
             line: original.start_pos().line() + 1,
+            start: original.range().start,
             name: super::parse::sink_name(original),
             privilege: privilege.clone(),
         },

@@ -57,6 +57,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
         let mut class = visit.class.clone();
         let mut nesting = visit.nesting.clone();
         let line = node.start_pos().line() + 1;
+        let start = node.range().start;
         match node.kind().as_ref() {
             "module" | "class" => {
                 if let Some(name) = node.field("name") {
@@ -105,6 +106,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     });
                     index.definitions[definition].uses.push(Use {
                         line,
+                        start,
                         target: UseTarget::Load(specifier),
                     });
                 } else if let Some(target) = call_target(CallSite {
@@ -117,9 +119,11 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     {
                         constants.insert(object.clone(), nesting.clone());
                     }
-                    index.definitions[definition]
-                        .uses
-                        .push(Use { line, target });
+                    index.definitions[definition].uses.push(Use {
+                        line,
+                        start,
+                        target,
+                    });
                 }
             }
             "identifier"
@@ -130,6 +134,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
             {
                 index.definitions[definition].uses.push(Use {
                     line,
+                    start,
                     target: own_call(OwnCall {
                         class: class.as_deref(),
                         method: node.text().to_string(),

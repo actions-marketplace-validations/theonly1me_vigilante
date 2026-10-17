@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use ast_grep_language::SupportLang;
 
 pub use analyze::AnalyzeInput;
-pub use arguments::ArgumentFacts;
+pub use arguments::{ArgumentFacts, CallFacts};
 pub use canonical_call::CanonicalCall;
 pub use index::{
     Binding, Definition, Export, FileIndex, INIT, Imported, Load, Supertypes, Use, UseTarget,
@@ -49,6 +49,7 @@ pub struct Privilege {
 pub struct SiteSink {
     pub definition: usize,
     pub line: usize,
+    pub start: usize,
     pub name: String,
     pub privilege: Privilege,
 }

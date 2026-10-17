@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use super::graph::{FunctionId, Graph, Owner, Target};
 use super::program::ArgumentFacts;
@@ -14,39 +14,35 @@ const RISK_CAPABILITIES: [Capability; 5] = [
 ];
 const TAINT_ROUNDS: usize = 8;
 
+const NO_FACTS: ArgumentFacts = ArgumentFacts {
+    constant: true,
+    shell: false,
+    untrusted: false,
+    from_parameters: false,
+};
+
 pub struct RisksInput<'a> {
     pub graph: &'a Graph,
-    pub facts: &'a dyn Fn(&str, usize) -> Option<ArgumentFacts>,
 }
 
 struct Site {
     from: FunctionId,
     line: usize,
+    facts: ArgumentFacts,
     sink: String,
     power: Power,
     rule: String,
 }
 
 pub fn risks(input: RisksInput) -> Vec<Risk> {
-    let RisksInput { graph, facts } = input;
-    let facts_at = |function: FunctionId, line: usize| {
-        facts(&graph.function(function).path, line).unwrap_or(ArgumentFacts {
-            constant: true,
-            shell: false,
-            untrusted: false,
-            from_parameters: false,
-        })
-    };
-    let tainted = tainted_functions(TaintInput {
-        graph,
-        facts_at: &facts_at,
-    });
+    let RisksInput { graph } = input;
+    let tainted = tainted_functions(graph);
     let mut found: BTreeMap<(Scope, String), Risk> = BTreeMap::new();
     for site in sites(graph) {
         let Owner::Repository { scope } = &graph.function(site.from).owner else {
             continue;
         };
-        let facts = facts_at(site.from, site.line);
+        let facts = site.facts;
         let class = if facts.untrusted || (facts.from_parameters && tainted.contains(&site.from)) {
             RiskClass::Untrusted
         } else if facts.shell && !facts.constant {
@@ -99,6 +95,7 @@ fn sites(graph: &Graph) -> Vec<Site> {
                 .then(|| Site {
                     from: call.from,
                     line: call.line,
+                    facts: call.facts.unwrap_or(NO_FACTS),
                     sink: sink.name.clone(),
                     power: sink.power.clone(),
                     rule: sink.rule.clone(),
@@ -107,34 +104,23 @@ fn sites(graph: &Graph) -> Vec<Site> {
         .collect()
 }
 
-struct TaintInput<'a> {
-    graph: &'a Graph,
-    facts_at: &'a dyn Fn(FunctionId, usize) -> ArgumentFacts,
-}
-
-fn tainted_functions(input: TaintInput) -> HashSet<FunctionId> {
-    let TaintInput { graph, facts_at } = input;
-    let calls: Vec<(FunctionId, FunctionId, usize)> = graph
+fn tainted_functions(graph: &Graph) -> HashSet<FunctionId> {
+    let calls: Vec<(FunctionId, FunctionId, ArgumentFacts)> = graph
         .own_calls()
         .iter()
         .filter_map(|call| match call.target {
             Target::Function(callee)
                 if matches!(graph.function(callee).owner, Owner::Repository { .. }) =>
             {
-                Some((call.from, callee, call.line))
+                Some((call.from, callee, call.facts.unwrap_or(NO_FACTS)))
             }
             _ => None,
         })
         .collect();
-    let facts: HashMap<(FunctionId, usize), ArgumentFacts> = calls
-        .iter()
-        .map(|(from, _, line)| ((*from, *line), facts_at(*from, *line)))
-        .collect();
     let mut tainted = HashSet::new();
     for _ in 0..TAINT_ROUNDS {
         let before = tainted.len();
-        for (from, callee, line) in &calls {
-            let facts = facts[&(*from, *line)];
+        for (from, callee, facts) in &calls {
             if facts.untrusted || (facts.from_parameters && tainted.contains(from)) {
                 tainted.insert(*callee);
             }

@@ -125,6 +125,7 @@ impl Linker<'_> {
                         from,
                         line: item_use.line,
                         target,
+                        facts: loaded.index.call_facts.at(item_use.start),
                     });
                 }
             }
@@ -140,6 +141,7 @@ impl Linker<'_> {
                 from,
                 line: site.line,
                 target: Target::Sink(sink),
+                facts: loaded.index.call_facts.at(site.start),
             });
         }
         if !self.language.imports_run_code() {
@@ -159,6 +161,7 @@ impl Linker<'_> {
                 from: init,
                 line: load.line,
                 target: Target::Function(target_init),
+                facts: None,
             });
         }
     }

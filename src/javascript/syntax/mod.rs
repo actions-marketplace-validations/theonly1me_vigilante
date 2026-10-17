@@ -69,6 +69,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
             "identifier" if is_reference(node) => {
                 index.definitions[definition].uses.push(Use {
                     line: line_of(node),
+                    start: node.range().start,
                     target: UseTarget::Name(node.text().to_string()),
                 });
             }
@@ -77,6 +78,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     skipped = found.skipped_child;
                     index.definitions[definition].uses.push(Use {
                         line: line_of(node),
+                        start: node.range().start,
                         target: found.target,
                     });
                 }
@@ -91,6 +93,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                 if let Some(target) = outcome.load {
                     index.definitions[definition].uses.push(Use {
                         line: line_of(node),
+                        start: node.range().start,
                         target,
                     });
                 }

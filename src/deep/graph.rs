@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use super::program::ArgumentFacts;
 use crate::Power;
 
 pub type FunctionId = usize;
@@ -41,6 +42,7 @@ pub struct Call {
     pub from: FunctionId,
     pub line: usize,
     pub target: Target,
+    pub facts: Option<ArgumentFacts>,
 }
 
 #[derive(Default)]
@@ -51,7 +53,7 @@ pub struct Graph {
     sink_ids: HashMap<Sink, SinkId>,
     linked: HashSet<(FunctionId, Target)>,
     own_calls: Vec<Call>,
-    own_call_keys: HashSet<(FunctionId, Target, usize)>,
+    own_call_keys: HashSet<(FunctionId, Target, usize, Option<ArgumentFacts>)>,
 }
 
 impl Graph {
@@ -75,7 +77,7 @@ impl Graph {
         if is_own
             && self
                 .own_call_keys
-                .insert((call.from, call.target, call.line))
+                .insert((call.from, call.target, call.line, call.facts))
         {
             self.own_calls.push(call);
         }

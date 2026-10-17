@@ -20,10 +20,10 @@ These results come from a debug build on macOS (arm64). The slowest review inclu
 | go | 5 | 4 | 4 | 0 | 0 | 3279 ms |
 | java | 2 | 2 | 2 | 0 | 0 | 329 ms |
 | javascript | 5 | 5 | 5 | 0 | 0 | 379 ms |
-| python | 7 | 6 | 6 | 0 | 0 | 347 ms |
+| python | 8 | 7 | 7 | 0 | 0 | 347 ms |
 | ruby | 2 | 2 | 2 | 0 | 0 | 328 ms |
 | rust | 2 | 2 | 1 | 0 | 0 | 375 ms |
-| **All** | **37** | **35** | **33** | **0** | **0** | |
+| **All** | **38** | **36** | **34** | **0** | **0** | |
 
 Two unsafe changes are caught but do not block, by design. A command that becomes dynamic and an action pin that becomes a branch are shown as risks. See [risks.md](risks.md).
 

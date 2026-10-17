@@ -77,6 +77,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                     range: node.range(),
                     uses: vec![Use {
                         line: node.start_pos().line() + 1,
+                        start: node.range().start,
                         target: UseTarget::Name(INIT.to_string()),
                     }],
                 });
@@ -91,6 +92,7 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                 }) {
                     index.definitions[definition].uses.push(Use {
                         line: node.start_pos().line() + 1,
+                        start: node.range().start,
                         target,
                     });
                 }
