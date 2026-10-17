@@ -9,6 +9,7 @@ mod coverage;
 mod csharp_code;
 mod csharp_fixtures;
 mod csharp_packages;
+mod doctor;
 mod file_server;
 mod go_blocking;
 mod go_capslock;
