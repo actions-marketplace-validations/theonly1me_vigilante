@@ -85,7 +85,7 @@ On a `pull_request` event, GitHub runs the workflow file from the pull request. 
 2. In the branch protection rule or ruleset for `main`, turn on "Require review from Code Owners".
 3. In the same rule, make the `vigilante` check required.
 
-To check these rules, run `vigilante doctor` with `gh` signed in. It reads `CODEOWNERS` from the working directory and the rules of the default branch from GitHub. It checks the rule folders in `[rules] paths` of `vigilante.toml`, and each file that is in a protected folder now. It exits with code 1 when a rule is missing. If your required check has another name, add `--check <name>`. Classic branch protection needs a token with admin access. Rulesets do not.
+To check these rules, run `vigilante doctor` with `gh` signed in. It reads `CODEOWNERS` from the working directory and the rules of the default branch from GitHub. It checks the rule folders in `[rules] paths` of `vigilante.toml`, and each file that is in a protected folder now. It exits with code 1 when a rule is missing. It also exits with code 1 when it cannot read a protected folder that exists. If your required check has another name, add `--check <name>`. Classic branch protection needs a token with admin access. Rulesets do not.
 
 Vigilante also helps here. In a pull request, it reads `vigilante.toml` from the merge base. So a pull request cannot exclude its own files or turn off the lock. If a change to a workflow adds a power, the report shows it.
 

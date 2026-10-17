@@ -20,7 +20,7 @@ pub fn owner_items(request: &DoctorRequest) -> Vec<Item> {
     entries.push(Protected {
         label: code_owners.path.to_string(),
         sample: code_owners.path.to_string(),
-        files: Vec::new(),
+        files: Ok(Vec::new()),
     });
     let mut items: Vec<Item> = entries
         .iter()
@@ -57,8 +57,19 @@ fn owner_item(query: &OwnerQuery) -> Item {
             ),
         };
     }
-    let unowned: Vec<&str> = entry
-        .files
+    let files = match &entry.files {
+        Ok(files) => files,
+        Err(unread) => {
+            return Item {
+                passed: false,
+                text: format!(
+                    "Vigilante cannot read `{}`, so it did not check each file in `{}`: {}.",
+                    unread.path, entry.label, unread.error
+                ),
+            };
+        }
+    };
+    let unowned: Vec<&str> = files
         .iter()
         .map(String::as_str)
         .filter(|file| code_owners.owners_of(file).is_empty())
@@ -75,7 +86,7 @@ fn owner_item(query: &OwnerQuery) -> Item {
         };
     }
     let mut owners: Vec<&str> = Vec::new();
-    for path in once(&entry.sample).chain(&entry.files) {
+    for path in once(&entry.sample).chain(files) {
         for owner in code_owners.owners_of(path) {
             if !owners.contains(&owner.as_str()) {
                 owners.push(owner);

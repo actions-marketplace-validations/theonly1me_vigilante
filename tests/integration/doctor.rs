@@ -32,6 +32,7 @@ pub struct Doctor<'a> {
     pub rules: &'a str,
     pub protection: Option<&'a str>,
     pub has_gh: bool,
+    pub unreadable: &'a [&'a str],
 }
 
 pub fn run_doctor(doctor: Doctor) -> Run {
@@ -52,6 +53,13 @@ pub fn run_doctor(doctor: Doctor) -> Run {
     } else {
         empty.path().display().to_string()
     };
+    let set_mode = |mode| {
+        for folder in doctor.unreadable {
+            let path = repository.directory.path().join(folder);
+            fs::set_permissions(path, fs::Permissions::from_mode(mode)).expect("folder mode");
+        }
+    };
+    set_mode(0o000);
     let output = Command::new(env!("CARGO_BIN_EXE_vigilante"))
         .arg("--repository")
         .arg(repository.directory.path())
@@ -59,6 +67,7 @@ pub fn run_doctor(doctor: Doctor) -> Run {
         .env("PATH", search_path)
         .output()
         .expect("vigilante runs");
+    set_mode(0o755);
     Run {
         code: output.status.code().unwrap_or(-1),
         stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
@@ -81,6 +90,7 @@ fn doctor_passes_when_code_owners_and_branch_rules_protect_the_lock() {
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: true,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 0, "{}{}", run.stdout, run.stderr);
@@ -101,6 +111,7 @@ fn doctor_lists_each_missing_protection() {
         rules: r#"[{"type":"pull_request","parameters":{"require_code_owner_review":false}},{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"test"}]}}]"#,
         protection: None,
         has_gh: true,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 1, "{}{}", run.stdout, run.stderr);
@@ -126,6 +137,7 @@ fn doctor_reads_classic_branch_protection() {
             r#"{"required_pull_request_reviews":{"require_code_owner_reviews":true},"required_status_checks":{"contexts":["Vigilante / vigilante"]}}"#,
         ),
         has_gh: true,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 0, "{}{}", run.stdout, run.stderr);
@@ -140,6 +152,7 @@ fn doctor_fails_when_it_cannot_read_the_branch_rules() {
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: false,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 1, "{}{}", run.stdout, run.stderr);
