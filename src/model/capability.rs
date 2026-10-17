@@ -26,6 +26,7 @@ pub enum Capability {
     UntrustedTrigger,
     ThirdPartyAction,
     Secret,
+    RemoteScript,
     ToolAllow,
     Hook,
     McpServer,
@@ -35,7 +36,7 @@ pub enum Capability {
 }
 
 impl Capability {
-    pub const ALL: [Capability; 23] = [
+    pub const ALL: [Capability; 24] = [
         Self::Exec,
         Self::Network,
         Self::Native,
@@ -53,6 +54,7 @@ impl Capability {
         Self::UntrustedTrigger,
         Self::ThirdPartyAction,
         Self::Secret,
+        Self::RemoteScript,
         Self::ToolAllow,
         Self::Hook,
         Self::McpServer,
@@ -80,6 +82,7 @@ impl Capability {
             Self::UntrustedTrigger => "untrusted_trigger",
             Self::ThirdPartyAction => "third_party_action",
             Self::Secret => "secret",
+            Self::RemoteScript => "remote_script",
             Self::ToolAllow => "tool_allow",
             Self::Hook => "hook",
             Self::McpServer => "mcp_server",
@@ -107,7 +110,8 @@ impl Capability {
             | Self::Oidc
             | Self::UntrustedTrigger
             | Self::ThirdPartyAction
-            | Self::Secret => Surface::Ci,
+            | Self::Secret
+            | Self::RemoteScript => Surface::Ci,
             Self::ToolAllow | Self::Hook | Self::McpServer | Self::SkipPermissions => {
                 Surface::Agent
             }
@@ -125,6 +129,7 @@ impl Capability {
             | Self::McpServer
             | Self::SkipPermissions
             | Self::InstallHook
+            | Self::RemoteScript
             | Self::SystemCalls
             | Self::ArbitraryExecution => Severity::High,
             Self::Network

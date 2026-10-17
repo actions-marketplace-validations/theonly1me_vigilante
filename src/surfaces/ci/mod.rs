@@ -1,13 +1,18 @@
 mod expressions;
+mod steps;
 
+use super::Detected;
 use crate::document::{Node, Value};
 use crate::{Capability, Detection, Power};
 pub use expressions::without_expression_braces;
 use expressions::{expressions, secrets};
+use steps::{StepInput, action_facts, step_facts};
 
 pub const WORKFLOWS: &str = ".github/workflows";
 const UNTRUSTED_TRIGGERS: &[&str] = &["pull_request_target", "workflow_run"];
-const FIRST_PARTY_OWNERS: &[&str] = &["actions/", "github/"];
+const PRIVILEGED_TRIGGERS: &[&str] = &["pull_request_target", "workflow_run", "issue_comment"];
+const ACTION_FILES: &[&str] = &["action.yml", "action.yaml"];
+const COMPOSITE_JOB: &str = "runs";
 
 pub fn is_workflow(path: &str) -> bool {
     path.strip_prefix(WORKFLOWS)
@@ -17,48 +22,78 @@ pub fn is_workflow(path: &str) -> bool {
         })
 }
 
+pub fn is_composite_action(path: &str) -> bool {
+    let name = path.rsplit('/').next().unwrap_or(path);
+    ACTION_FILES.contains(&name)
+}
+
 pub struct Workflow<'a> {
     pub document: &'a Node,
     pub text: &'a str,
 }
 
-pub fn detect(source: Workflow) -> Vec<Detection> {
+pub fn detect(source: Workflow) -> Detected {
     let workflow = source.document;
-    let mut detections = Vec::new();
+    let mut detected = Detected::default();
     let jobs = workflow.get("jobs").map(Node::entries).unwrap_or_default();
-    if let Some(triggers) = workflow.get("on") {
-        detections.extend(untrusted_triggers(triggers));
-    }
+    let triggers = workflow.get("on").map(trigger_names).unwrap_or_default();
+    let privileged = triggers
+        .iter()
+        .any(|(name, _)| PRIVILEGED_TRIGGERS.contains(name));
+    detected.detections.extend(untrusted_triggers(&triggers));
     let permission_blocks = workflow
         .get("permissions")
         .into_iter()
         .chain(jobs.iter().filter_map(|job| job.value.get("permissions")));
-    detections.extend(permission_blocks.flat_map(token_permissions));
-    let uses = jobs.iter().flat_map(|job| {
-        let steps = job.value.get("steps").map(Node::items).unwrap_or_default();
-        job.value
-            .get("uses")
-            .into_iter()
-            .chain(steps.iter().filter_map(|step| step.get("uses")))
-    });
-    detections.extend(uses.filter_map(third_party_action));
-    detections.extend(expressions(source.text).iter().flat_map(secrets));
-    detections.extend(
-        jobs.iter()
-            .filter_map(|job| job.value.get("secrets"))
-            .filter(|secrets| secrets.text() == Some("inherit"))
-            .map(|secrets| {
-                detection(Found {
-                    power: Power::new(Capability::Secret).with_detail("inherit"),
-                    line: secrets.line,
-                })
-            }),
-    );
-    detections
+    detected
+        .detections
+        .extend(permission_blocks.flat_map(token_permissions));
+    for job in jobs {
+        if let Some(uses) = job.value.get("uses") {
+            detected.extend(action_facts(uses));
+        }
+        for step in job.value.get("steps").map(Node::items).unwrap_or_default() {
+            detected.extend(step_facts(StepInput {
+                job: &job.key,
+                step,
+                privileged,
+            }));
+        }
+        if let Some(secrets) = job.value.get("secrets")
+            && secrets.text() == Some("inherit")
+        {
+            detected.detections.push(detection(Found {
+                power: Power::new(Capability::Secret).with_detail("inherit"),
+                line: secrets.line,
+            }));
+        }
+    }
+    detected
+        .detections
+        .extend(expressions(source.text).iter().flat_map(secrets));
+    detected
 }
 
-fn untrusted_triggers(triggers: &Node) -> Vec<Detection> {
-    let names: Vec<(&str, usize)> = match &triggers.value {
+pub fn detect_composite(source: Workflow) -> Detected {
+    let mut detected = Detected::default();
+    let steps = source
+        .document
+        .get("runs")
+        .and_then(|runs| runs.get("steps"))
+        .map(Node::items)
+        .unwrap_or_default();
+    for step in steps {
+        detected.extend(step_facts(StepInput {
+            job: COMPOSITE_JOB,
+            step,
+            privileged: false,
+        }));
+    }
+    detected
+}
+
+fn trigger_names(triggers: &Node) -> Vec<(&str, usize)> {
+    match &triggers.value {
         Value::Text(name) => vec![(name.as_str(), triggers.line)],
         Value::List(items) => items
             .iter()
@@ -69,14 +104,17 @@ fn untrusted_triggers(triggers: &Node) -> Vec<Detection> {
             .map(|entry| (entry.key.as_str(), entry.line))
             .collect(),
         Value::Empty => Vec::new(),
-    };
-    names
-        .into_iter()
+    }
+}
+
+fn untrusted_triggers(triggers: &[(&str, usize)]) -> Vec<Detection> {
+    triggers
+        .iter()
         .filter(|(name, _)| UNTRUSTED_TRIGGERS.contains(name))
         .map(|(name, line)| {
             detection(Found {
-                power: Power::new(Capability::UntrustedTrigger).with_detail(name),
-                line,
+                power: Power::new(Capability::UntrustedTrigger).with_detail(*name),
+                line: *line,
             })
         })
         .collect()
@@ -105,23 +143,6 @@ fn token_permissions(permissions: &Node) -> Vec<Detection> {
             })
         })
         .collect()
-}
-
-fn third_party_action(uses: &Node) -> Option<Detection> {
-    let reference = uses.text()?.trim();
-    let is_first_party = reference.starts_with("./")
-        || FIRST_PARTY_OWNERS
-            .iter()
-            .any(|owner| reference.starts_with(owner));
-    if is_first_party {
-        return None;
-    }
-    let action = reference.split('@').next().unwrap_or(reference);
-    let power = Power::new(Capability::ThirdPartyAction).with_detail(action);
-    Some(detection(Found {
-        power,
-        line: uses.line,
-    }))
 }
 
 struct Found {

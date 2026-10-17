@@ -38,6 +38,7 @@ pub enum RiskClass {
     Dynamic,
     Shell,
     Untrusted,
+    Unpinned,
 }
 
 impl Risk {
@@ -51,7 +52,7 @@ impl Risk {
             ]
             .contains(&capability),
             RiskClass::Shell => capability == Capability::Exec,
-            RiskClass::Constant | RiskClass::Dynamic => false,
+            RiskClass::Constant | RiskClass::Dynamic | RiskClass::Unpinned => false,
         }
     }
 }
@@ -72,6 +73,7 @@ impl RiskClass {
             Self::Dynamic => "dynamic",
             Self::Shell => "shell",
             Self::Untrusted => "untrusted",
+            Self::Unpinned => "unpinned",
         }
     }
 }

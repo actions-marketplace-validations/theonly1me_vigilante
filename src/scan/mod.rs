@@ -1,4 +1,5 @@
 mod deep;
+mod placing;
 mod report;
 mod rule_files;
 mod source;
@@ -12,9 +13,10 @@ use crate::config::{Config, GoEngine, TestPolicy};
 use crate::deep::{Reach, Risk, Skip};
 use crate::go::{DiscoverInput, GoModules};
 use crate::scope::{Scopes, ScopesInput};
-use crate::surfaces::{self, Placement, Surfaces};
+use crate::surfaces::Surfaces;
 use crate::tree::Tree;
-use crate::{Error, Evidence, PowerMap, Scope, Sighting, SourceFile, Surface};
+use crate::{Error, PowerMap, Sighting, SourceFile};
+use placing::Placing;
 pub use report::{ScanReport, scan_report};
 use rule_files::{RuleSources, rules_of};
 pub use source::{Location, Source};
@@ -118,6 +120,7 @@ impl<'a> Scanner<'a> {
             .collect();
         let mut map = PowerMap::default();
         let mut tests = Vec::new();
+        let mut risks = Vec::new();
         for file in self.tree.read(&wanted)? {
             let source = SourceFile {
                 path: &file.path,
@@ -135,49 +138,41 @@ impl<'a> Scanner<'a> {
                 }
                 continue;
             }
-            let detections = self.surfaces.detect(source)?;
+            let detected = self.surfaces.detect(source)?;
             let code = if self.deep_owns(&file.path) {
                 Vec::new()
             } else {
                 self.rules.detect(source)
             };
-            for detection in detections
+            let placing = Placing {
+                scopes: &self.scopes,
+                path: &file.path,
+            };
+            for detection in detected
+                .detections
                 .into_iter()
                 .chain(code)
                 .filter(|detection| !self.config.trusts(&detection.power))
             {
-                let surface = detection.power.capability.surface();
-                let scope_path = match surface {
-                    Surface::Code => self.scopes.code_scope_of(&file.path),
-                    _ => surfaces::scope_path_of(Placement {
-                        path: &file.path,
-                        capability: detection.power.capability,
-                    })
-                    .to_string(),
-                };
-                map.insert(Sighting {
-                    scope: Scope {
-                        surface,
-                        path: scope_path,
-                    },
-                    power: detection.power,
-                    evidence: Evidence {
-                        path: file.path.clone(),
-                        line: detection.line,
-                        rule: detection.rule,
-                        call_path: Vec::new(),
-                    },
-                });
+                map.insert(placing.sighting_of(detection));
             }
+            risks.extend(
+                detected
+                    .risks
+                    .into_iter()
+                    .filter(|risk| !self.config.trusts(&risk.power))
+                    .map(|risk| placing.risk_of(risk)),
+            );
         }
         let analysis = self.deep(selection)?;
         for sighting in analysis.sightings {
             map.insert(sighting);
         }
+        risks.extend(analysis.risks);
         Ok(Scanned {
             map,
             tests,
-            risks: analysis.risks,
+            risks,
             reaches: analysis.reaches,
             skipped: analysis.skipped,
         })

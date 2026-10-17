@@ -2,6 +2,8 @@ mod agent;
 mod api_identity;
 mod check;
 mod ci;
+mod ci_risks;
+mod ci_scripts;
 mod cli;
 mod coverage;
 mod csharp_code;
