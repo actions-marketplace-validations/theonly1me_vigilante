@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1](https://github.com/theonly1me/vigilante/compare/v0.3.0...v0.3.1) (2026-10-17)
+
+
+### Fixes
+
+* **deep:** read the argument facts of each call, not of each line ([fde300c](https://github.com/theonly1me/vigilante/commit/fde300c5a3aae41f64ca6d09f46472f554da8fa8))
+* **deep:** read the argument facts of each call, not of each line ([bc7030c](https://github.com/theonly1me/vigilante/commit/bc7030c79204d6547f8fdd8cceae25f3e92f4062))
+* **deps:** bump the crates group across 1 directory with 3 updates ([77773f2](https://github.com/theonly1me/vigilante/commit/77773f27958f9aad5a1fb519633f2a5ca7702aa2))
+* **deps:** bump the crates group across 1 directory with 3 updates ([063b20f](https://github.com/theonly1me/vigilante/commit/063b20f3221a2887ceeb07f26f487e38c873b11e))
+* **doctor:** fail when a protected folder cannot be read ([e0daf61](https://github.com/theonly1me/vigilante/commit/e0daf612795acd2a365b48a247ede8cbfd1f948b))
+* **doctor:** fail when a protected folder cannot be read ([cd1d9c7](https://github.com/theonly1me/vigilante/commit/cd1d9c788f1093c98003dce7f079654d9752bc76))
+
 ## [0.3.0](https://github.com/theonly1me/vigilante/compare/v0.2.1...v0.3.0) (2026-10-17)
 
 
