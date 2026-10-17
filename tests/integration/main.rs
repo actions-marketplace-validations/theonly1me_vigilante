@@ -1,5 +1,6 @@
 mod agent;
 mod api_identity;
+mod call_scale;
 mod check;
 mod ci;
 mod ci_risks;
