@@ -21,6 +21,7 @@ mod java_dispatch;
 mod java_packages;
 mod java_skips;
 mod javascript_fixtures;
+mod javascript_loads;
 mod javascript_modules;
 mod javascript_own_code;
 mod javascript_packages;

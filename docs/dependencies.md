@@ -78,7 +78,8 @@ The report lists the code and the packages that Vigilante did not read. Some rea
 - a git source is not on GitHub;
 - a package has no exact version or no checksum;
 - a package is larger than 256 MiB;
-- a type check did not complete.
+- a type check did not complete;
+- a `require` or `import()` in your JavaScript or TypeScript code names its module with an expression, not a literal string.
 
 The Markdown report shows 10 lines and a count, and it marks each line that the pull request adds as new. The JSON report has all of them. The SARIF report lists them as tool notifications, and `vigilante scan --format json` lists them under `not_analyzed`.
 

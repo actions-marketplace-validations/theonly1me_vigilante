@@ -1,7 +1,7 @@
 use super::nodes::NodeChildren;
 use super::nodes::{
-    arguments, bound_by_declaration, declared_names, is_anonymous, is_forwarded, literal,
-    loaded_specifier, plain, specifiers,
+    arguments, bound_by_declaration, declared_names, is_anonymous, is_forwarded, is_loader,
+    literal, loaded_specifier, plain, specifiers,
 };
 use super::{LoadSite, ModuleItems, Outcome};
 use crate::code::SyntaxNode;
@@ -81,6 +81,9 @@ impl ModuleItems {
     }
 
     pub(super) fn call(&mut self, node: &SyntaxNode) -> Outcome {
+        if is_loader(node) && loaded_specifier(node).is_none() {
+            self.unresolved(node);
+        }
         let callee = node.field("function");
         let callee_text = callee.as_ref().map(|callee| callee.text().to_string());
         if let Some(specifier) = loaded_specifier(node) {

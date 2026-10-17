@@ -3,17 +3,19 @@ use crate::code::SyntaxNode;
 pub const MODULE_EXPORTS: &str = "module.exports";
 const WRAPPERS: &[&str] = &["await_expression", "parenthesized_expression"];
 
+pub fn is_loader(node: &SyntaxNode) -> bool {
+    node.kind() == "call_expression"
+        && node
+            .field("function")
+            .is_some_and(|callee| match callee.kind().as_ref() {
+                "identifier" => callee.text() == "require",
+                "import" => true,
+                _ => false,
+            })
+}
+
 pub fn loaded_specifier(node: &SyntaxNode) -> Option<String> {
-    if node.kind() != "call_expression" {
-        return None;
-    }
-    let callee = node.field("function")?;
-    let is_loader = match callee.kind().as_ref() {
-        "identifier" => callee.text() == "require",
-        "import" => true,
-        _ => false,
-    };
-    if !is_loader {
+    if !is_loader(node) {
         return None;
     }
     arguments(node).first().and_then(literal)

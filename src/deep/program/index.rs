@@ -9,6 +9,7 @@ pub struct FileIndex {
     pub bindings: HashMap<String, Binding>,
     pub exports: Vec<Export>,
     pub loads: Vec<Load>,
+    pub unresolved_loads: Vec<usize>,
     pub ignored: Vec<Range<usize>>,
     pub supertypes: Vec<Supertypes>,
 }
