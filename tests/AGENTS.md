@@ -11,6 +11,10 @@
 - Name each test for the behavior that it guards.
 - Prove each new test. Change the code that it guards, and make sure that the test fails for the reason that you expect. Then restore the code.
 
+## Corpus
+
+`tests/corpus/` holds pairs of safe and unsafe changes. `tests/integration/corpus.rs` runs them. When you fix a miss or a false block, add a pair. See [docs/benchmark.md](../docs/benchmark.md).
+
 ## Fixtures
 
 `tests/fixtures/` holds binary fixtures, such as a .NET assembly. Each binary fixture has its source and a build script next to it, and the build gives the same bytes each time.
