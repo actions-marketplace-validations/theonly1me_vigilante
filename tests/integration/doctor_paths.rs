@@ -11,6 +11,7 @@ fn doctor_checks_the_rule_folders_that_vigilante_toml_configures() {
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: true,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 1, "{}{}", run.stdout, run.stderr);
@@ -33,6 +34,7 @@ fn doctor_checks_each_existing_file_in_a_protected_folder() {
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: true,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 1, "{}{}", run.stdout, run.stderr);
@@ -57,12 +59,35 @@ fn doctor_fails_when_vigilante_toml_is_invalid() {
         rules: PROTECTED_RULES,
         protection: None,
         has_gh: true,
+        unreadable: &[],
     });
 
     assert_eq!(run.code, 1, "{}{}", run.stdout, run.stderr);
     assert!(
         unchecked(&run.stdout).iter().any(|line| line
             .starts_with("- [ ] Vigilante cannot read the rule folders: invalid vigilante.toml")),
+        "{}",
+        run.stdout
+    );
+}
+
+#[test]
+fn doctor_fails_when_it_cannot_read_a_protected_folder() {
+    let run = run_doctor(Doctor {
+        codeowners: ALL_OWNED,
+        files: &[(".vigilante/rules/private/network.yml", "id: network\n")],
+        rules: PROTECTED_RULES,
+        protection: None,
+        has_gh: true,
+        unreadable: &[".vigilante/rules"],
+    });
+
+    assert_eq!(run.code, 1, "{}{}", run.stdout, run.stderr);
+    assert_eq!(
+        unchecked(&run.stdout),
+        vec![
+            "- [ ] Vigilante cannot read `.vigilante/rules`, so it did not check each file in `.vigilante/`: Permission denied (os error 13)."
+        ],
         "{}",
         run.stdout
     );

@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::ErrorKind;
+use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use crate::config::Config;
@@ -10,11 +10,17 @@ const FOLDERS: &[(&str, &str)] = &[
     (".github/workflows", "vigilante.yml"),
 ];
 const RULE_SAMPLE: &str = "rule.yml";
+const ABSENT: &[ErrorKind] = &[ErrorKind::NotFound, ErrorKind::NotADirectory];
 
 pub struct Protected {
     pub label: String,
     pub sample: String,
-    pub files: Vec<String>,
+    pub files: Result<Vec<String>, Unread>,
+}
+
+pub struct Unread {
+    pub path: String,
+    pub error: String,
 }
 
 pub struct ProtectedPaths {
@@ -28,7 +34,7 @@ pub fn protected_paths(repository: &Path) -> ProtectedPaths {
         .map(|file| Protected {
             label: file.to_string(),
             sample: file.to_string(),
-            files: Vec::new(),
+            files: Ok(Vec::new()),
         })
         .collect();
     let (rule_folders, problem) = match rule_folders(repository) {
@@ -79,22 +85,33 @@ struct FolderQuery<'a> {
     folder: &'a str,
 }
 
-fn files_under(query: &FolderQuery) -> Vec<String> {
+fn files_under(query: &FolderQuery) -> Result<Vec<String>, Unread> {
     let mut files = Vec::new();
     let mut pending = vec![query.folder.to_string()];
     while let Some(folder) = pending.pop() {
-        let Ok(entries) = fs::read_dir(query.repository.join(&folder)) else {
-            continue;
+        let unread_folder = |error: Error| Unread {
+            path: folder.clone(),
+            error: error.to_string(),
         };
-        for entry in entries.flatten() {
+        let entries = match fs::read_dir(query.repository.join(&folder)) {
+            Ok(entries) => entries,
+            Err(error) if ABSENT.contains(&error.kind()) => continue,
+            Err(error) => return Err(unread_folder(error)),
+        };
+        for entry in entries {
+            let entry = entry.map_err(unread_folder)?;
             let path = format!("{folder}/{}", entry.file_name().to_string_lossy());
-            match entry.file_type() {
-                Ok(kind) if kind.is_dir() => pending.push(path),
-                Ok(kind) if kind.is_file() => files.push(path),
-                _ => {}
+            let kind = entry.file_type().map_err(|error| Unread {
+                path: path.clone(),
+                error: error.to_string(),
+            })?;
+            if kind.is_dir() {
+                pending.push(path);
+            } else if kind.is_file() {
+                files.push(path);
             }
         }
     }
     files.sort();
-    files
+    Ok(files)
 }
