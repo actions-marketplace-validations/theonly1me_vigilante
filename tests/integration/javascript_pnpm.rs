@@ -11,12 +11,12 @@ const DIFF: &[&str] = &[
 const PATH: &str =
     "src/index.main > runner/lib/run.run > spawner/index.spawnIt > child_process.execSync";
 
-struct Locked<'a> {
-    registry: &'a NpmRegistry,
-    lockfile: (&'a str, &'a str),
+pub struct Locked<'a> {
+    pub registry: &'a NpmRegistry,
+    pub lockfile: (&'a str, &'a str),
 }
 
-fn diff_with(locked: Locked) -> Run {
+pub fn diff_with(locked: Locked) -> Run {
     let Locked { registry, lockfile } = locked;
     let repository = TestRepository::new();
     repository.write(&[
@@ -35,7 +35,7 @@ fn diff_with(locked: Locked) -> Run {
     repository.run_with_cache(DIFF)
 }
 
-fn expected_notes() -> Vec<String> {
+pub fn expected_notes() -> Vec<String> {
     vec![
         format!(". exec through runner src/index.js:4 {PATH}"),
         format!(". exec through runner src/index.js:4 {PATH}"),

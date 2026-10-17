@@ -8,7 +8,7 @@ use crate::deep::program::{FileKey, Import, PackageFile, Resolver, Root};
 use crate::repository_path::Folder;
 
 const MANIFEST: &str = "package.json";
-const NO_LOCKFILE: &str = "No package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or yarn.lock covers this code, so Vigilante did not read its packages.";
+const NO_LOCKFILE: &str = "No bun.lock, package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or yarn.lock covers this code, so Vigilante did not read its packages.";
 
 pub struct JavaScriptResolver<'a> {
     pub packages: Packages<'a>,

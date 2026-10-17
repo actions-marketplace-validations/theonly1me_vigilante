@@ -45,7 +45,7 @@ For Go, Vigilante runs Capslock. See [powers.md](powers.md#go-capslock).
 
 | Language | What Vigilante reads | Where packages come from | Checksum |
 | --- | --- | --- | --- |
-| JavaScript and TypeScript | `package-lock.json`, `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `yarn.lock` | registry.npmjs.org, registry.yarnpkg.com, GitHub | `integrity` in the lockfile |
+| JavaScript and TypeScript | `bun.lock`, `package-lock.json`, `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `yarn.lock` | registry.npmjs.org, registry.yarnpkg.com, GitHub | `integrity` in the lockfile |
 | Python | `uv.lock`, `poetry.lock`, `Pipfile.lock`, `requirements.txt` with exact versions | PyPI, GitHub | hashes in the lockfile, else the PyPI JSON API |
 | Java | `pom.xml` (Vigilante's own resolver), `gradle.lockfile` | Maven Central, Google Maven | `.sha1` file next to each jar |
 | Rust | `Cargo.lock` | crates.io, GitHub | `checksum` in `Cargo.lock` |
@@ -58,6 +58,9 @@ For Go, Vigilante runs Capslock. See [powers.md](powers.md#go-capslock).
 - Code that no lockfile covers: Vigilante reads only the code in the repository and shows a line.
 - Vigilante reads path dependencies and workspace dependencies from the repository.
 - yarn 2 and later: the checksum in `yarn.lock` is for the zip file of yarn. So Vigilante cannot compare the download with it.
+- Bun: Vigilante reads `bun.lock`, the text lockfile of Bun 1.2 and later. It does not read the binary `bun.lockb`. To make `bun.lock` from `bun.lockb`, run `bun install --save-text-lockfile --frozen-lockfile --lockfile-only`.
+- If a folder has `bun.lock` and a different JavaScript lockfile, Vigilante reads `bun.lock`. Bun keeps the old lockfile when it makes `bun.lock`.
+- A `link:` package in `bun.lock` comes from `bun link` on a computer, not from the repository. Vigilante shows a line for it.
 
 ## Network use and the cache
 
