@@ -1,7 +1,7 @@
 use super::nodes::NodeChildren;
 use super::nodes::{
     arguments, bound_by_declaration, declared_names, is_anonymous, is_forwarded, is_loader,
-    literal, loaded_specifier, plain, specifiers,
+    literal, plain, specifiers,
 };
 use super::{LoadSite, ModuleItems, Outcome};
 use crate::code::SyntaxNode;
@@ -81,12 +81,12 @@ impl ModuleItems {
     }
 
     pub(super) fn call(&mut self, node: &SyntaxNode) -> Outcome {
-        if is_loader(node) && loaded_specifier(node).is_none() {
+        if is_loader(node) && self.loaded_specifier(node).is_none() {
             self.unresolved(node);
         }
         let callee = node.field("function");
         let callee_text = callee.as_ref().map(|callee| callee.text().to_string());
-        if let Some(specifier) = loaded_specifier(node) {
+        if let Some(specifier) = self.loaded_specifier(node) {
             self.load(LoadSite {
                 specifier: &specifier,
                 node,
@@ -103,7 +103,10 @@ impl ModuleItems {
             .is_some_and(|text| text.ends_with("__exportStar") || text == "__export")
         {
             let first = arguments(node).into_iter().next();
-            if let Some(specifier) = first.as_ref().and_then(loaded_specifier) {
+            if let Some(specifier) = first
+                .as_ref()
+                .and_then(|first| self.loaded_specifier(first))
+            {
                 self.add_export(Export::Forward {
                     exported: None,
                     specifier: specifier.to_string(),

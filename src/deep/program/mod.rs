@@ -1,4 +1,6 @@
 mod analyze;
+mod canonical;
+mod canonical_call;
 mod index;
 mod link;
 mod load;
@@ -11,6 +13,7 @@ use std::collections::HashMap;
 use ast_grep_language::SupportLang;
 
 pub use analyze::AnalyzeInput;
+pub use canonical_call::CanonicalCall;
 pub use index::{
     Binding, Definition, Export, FileIndex, INIT, Imported, Load, Supertypes, Use, UseTarget,
 };
@@ -93,6 +96,10 @@ pub trait Language: Sync {
     fn imports_run_code(&self) -> bool;
 
     fn finds_members_by_type(&self) -> bool;
+
+    fn canonical_calls<'r>(&self, _root: &SyntaxNode<'r>) -> Vec<CanonicalCall<'r>> {
+        Vec::new()
+    }
 }
 
 pub trait Resolver {

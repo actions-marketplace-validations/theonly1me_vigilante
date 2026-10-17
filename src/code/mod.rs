@@ -12,7 +12,7 @@ use crate::{Capability, Detection, Error, Power, SourceFile, Surface};
 use file_filter::{FileFilter, RuleGlobs};
 use language::SUPPORTED_LANGUAGES;
 pub use language::language_of;
-pub use matches::{MatchRequest, SyntaxNode};
+pub use matches::{MatchRequest, RuleMatch, SyntaxNode};
 
 const BUILT_IN_PACKS: &[(&str, &str)] = &[
     ("packs/csharp.yml", include_str!("../../packs/csharp.yml")),

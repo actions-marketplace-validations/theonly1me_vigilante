@@ -1,6 +1,6 @@
 use vigilante::Review;
 
-use crate::support::{Branches, TestRepository};
+use crate::support::{Branches, TestRepository, finding_lines};
 
 const NAME_BASED: &str = "[engines]\njavascript = \"deep\"\n";
 const MANIFEST: &str = "{\"name\": \"app\", \"version\": \"1.0.0\"}\n";
@@ -30,16 +30,16 @@ fn gap_lines(review: &Review) -> Vec<String> {
 }
 
 #[test]
-fn a_require_through_a_constant_module_name_is_an_analysis_gap() {
+fn a_require_through_a_constant_module_name_is_followed() {
     let review = review_with_head(
         "const name = \"node:child_process\";\nconst processes = require(name);\nexports.run = (command) => processes.exec(command);\n",
     );
 
-    assert!(
-        gap_lines(&review).contains(&"index.js: Line 2 loads a module by a name that Vigilante cannot read, so Vigilante did not follow it.".to_string()),
-        "{:?}",
-        gap_lines(&review)
+    assert_eq!(
+        finding_lines(&review),
+        vec!["code . exec locked=false denied=false"]
     );
+    assert_eq!(gap_lines(&review), Vec::<String>::new());
 }
 
 #[test]

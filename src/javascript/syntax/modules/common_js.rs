@@ -1,5 +1,5 @@
 use super::ModuleItems;
-use super::nodes::{MODULE_EXPORTS, loaded_specifier, plain, unwrapped};
+use super::nodes::{MODULE_EXPORTS, plain, unwrapped};
 use crate::code::SyntaxNode;
 use crate::javascript::syntax::Export;
 
@@ -17,7 +17,7 @@ impl ModuleItems {
             return;
         };
         let right = unwrapped(right);
-        if let Some(specifier) = loaded_specifier(&right) {
+        if let Some(specifier) = self.loaded_specifier(&right) {
             match &exported {
                 None => {
                     self.add_export(Export::Forward {

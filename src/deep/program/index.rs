@@ -1,3 +1,4 @@
+use crate::code::SyntaxNode;
 use std::collections::HashMap;
 use std::ops::Range;
 
@@ -82,5 +83,26 @@ impl FileIndex {
             .filter(|(_, definition)| definition.range.contains(&offset))
             .min_by_key(|(_, definition)| definition.range.len())
             .map_or(0, |(position, _)| position)
+    }
+
+    pub fn shadows(&self, node: &SyntaxNode) -> bool {
+        let callee = match node.kind().as_ref() {
+            "call_expression" | "call" => node.field("function"),
+            "new_expression" => node.field("constructor"),
+            _ => None,
+        };
+        let Some(callee) = callee.filter(|callee| callee.kind() == "identifier") else {
+            return false;
+        };
+        let name = callee.text();
+        let own = &self.definitions[1..];
+        own.iter().any(|definition| {
+            definition.simple == name
+                && !own.iter().any(|outer| {
+                    outer.range != definition.range
+                        && outer.range.start <= definition.range.start
+                        && definition.range.end <= outer.range.end
+                })
+        })
     }
 }

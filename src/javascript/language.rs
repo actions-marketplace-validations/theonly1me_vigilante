@@ -3,7 +3,7 @@ use ast_grep_language::SupportLang;
 use super::paths::stem;
 use super::syntax;
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
+use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
 pub struct JavaScript;
 
@@ -30,6 +30,10 @@ impl Language for JavaScript {
 
     fn imports_run_code(&self) -> bool {
         true
+    }
+
+    fn canonical_calls<'r>(&self, root: &SyntaxNode<'r>) -> Vec<CanonicalCall<'r>> {
+        super::canonical::canonical_calls(root)
     }
 
     fn finds_members_by_type(&self) -> bool {

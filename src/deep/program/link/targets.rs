@@ -1,4 +1,5 @@
-use super::bindings::{BindingUse, PrivilegedUse};
+use super::bindings::BindingUse;
+use super::privileged::PrivilegedUse;
 use super::{FileUse, InFile, Linker, Unit, specifier_module, unit_of};
 use crate::deep::graph::Target;
 use crate::deep::program::UseTarget;

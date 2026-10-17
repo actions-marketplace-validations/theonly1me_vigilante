@@ -2,7 +2,7 @@ use ast_grep_language::SupportLang;
 
 use super::syntax;
 use crate::code::SyntaxNode;
-use crate::deep::program::{FileIndex, Language, PrivilegedQuery};
+use crate::deep::program::{CanonicalCall, FileIndex, Language, PrivilegedQuery};
 
 pub struct Python;
 
@@ -33,6 +33,10 @@ impl Language for Python {
         path.strip_suffix(".py")
             .or_else(|| path.strip_suffix(".pyi"))
             .unwrap_or(path)
+    }
+
+    fn canonical_calls<'r>(&self, root: &SyntaxNode<'r>) -> Vec<CanonicalCall<'r>> {
+        super::canonical::canonical_calls(root)
     }
 
     fn imports_run_code(&self) -> bool {

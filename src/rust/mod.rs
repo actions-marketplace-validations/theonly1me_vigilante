@@ -1,3 +1,4 @@
+mod canonical;
 mod cargo;
 mod environment;
 mod language;

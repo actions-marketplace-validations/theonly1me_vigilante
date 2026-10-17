@@ -26,6 +26,19 @@ A new dependency that reaches the network is a note that names the dependency. A
 5. The rules in `packs/` mark the privileged calls, for example `child_process.exec`, `subprocess.run`, `ProcessBuilder`, `std::process::Command`, `Process.Start`, and `system`.
 6. It finds the shortest call path from each function in the changed scopes to each privileged call.
 
+A rule must also find a privileged call that your code makes through an alias. So before the rules run, Vigilante writes each call through an alias in its full form:
+
+| Language | Alias | Full form |
+| --- | --- | --- |
+| JavaScript and TypeScript | `const request = fetch; request(url)` | `fetch(url)` |
+| JavaScript and TypeScript | `globalThis.fetch(url)`, `window.fetch(url)` | `fetch(url)` |
+| JavaScript and TypeScript | `const name = "node:child_process"; require(name)` | `require("node:child_process")` |
+| Python | `from os import system; system(command)` | `os.system(command)` |
+| Java | `Runtime runtime = Runtime.getRuntime(); runtime.exec(command)` | `Runtime.getRuntime().exec(command)` |
+| Rust | `use std::process as processes; processes::Command::new("id")` | `std::process::Command::new("id")` |
+
+Your file can define a function with the name of a privileged call, such as a local `function fetch`. Then a call to that name in the file goes to your function, and it is not a sink.
+
 For Go, Vigilante runs Capslock. See [powers.md](powers.md#go-capslock).
 
 ## Lockfiles, registries, and checksums
