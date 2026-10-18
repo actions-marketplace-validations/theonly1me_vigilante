@@ -75,3 +75,20 @@ fn a_package_that_does_not_match_its_lockfile_checksum_stops_the_review() {
         run.stderr
     );
 }
+
+#[test]
+fn a_call_into_a_package_with_input_that_changes_is_not_a_risk() {
+    let registry = served();
+    let lockfile = registry.lockfile(&lock_entries());
+
+    let run = diff(Change {
+        base_main: RUNNING_MAIN,
+        head_main: "import { start } from 'runner';\n\nexport function main(command) {\n  return start(command);\n}\n",
+        config: &registry.allow_config(),
+        lockfile: Some(&lockfile),
+    });
+
+    let report = report_of(&run);
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    assert_eq!(report["risks"], Value::Array(Vec::new()), "{report}");
+}
