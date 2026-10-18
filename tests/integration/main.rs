@@ -21,6 +21,7 @@ mod go_engine;
 mod go_fixtures;
 mod go_notes;
 mod go_support;
+mod go_test_paths;
 mod go_tools;
 mod install_hooks;
 mod java_classes;

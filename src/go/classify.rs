@@ -60,7 +60,7 @@ pub fn classify(input: ClassifyInput) -> Result<Option<Classified>, Error> {
         package: start_package,
         folder: &folder,
     });
-    if config.is_excluded(&evidence.path) {
+    if config.is_outside_analysis(&evidence.path) {
         return Ok(None);
     }
     let scope = Scope {
