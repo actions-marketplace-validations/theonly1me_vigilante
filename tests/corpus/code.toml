@@ -447,3 +447,28 @@ def parse(text)
   JSON.parse(text)
 end
 ''' }
+
+[[case]]
+name = "python: request input as the working folder of a fixed command"
+group = "python"
+base = { "app.py" = '''
+import subprocess
+
+
+def report(request):
+    return subprocess.run(["/usr/bin/date"])
+''' }
+unsafe = { "app.py" = '''
+import subprocess
+
+
+def report(request):
+    return subprocess.run(["/usr/bin/date", request.args["format"]])
+''' }
+safe = { "app.py" = '''
+import subprocess
+
+
+def report(request):
+    return subprocess.run(["/usr/bin/date"], cwd=request.args["directory"])
+''' }
