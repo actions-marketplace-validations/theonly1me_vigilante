@@ -9,7 +9,7 @@ pub use crate::deep::program::{
 };
 use members::member_use;
 use modules::{ModuleItems, constant_strings};
-use names::{Definable, class_name, definition_name};
+use names::{Definable, binds_name, class_name, definition_name};
 use references::is_reference;
 
 struct Visit<'r> {
@@ -57,6 +57,9 @@ pub fn index(root: &SyntaxNode) -> FileIndex {
                         range: node.range(),
                         uses: Vec::new(),
                     });
+                    if !binds_name(node) {
+                        index.members.push(node.range());
+                    }
                     definition = index.definitions.len() - 1;
                 }
             }

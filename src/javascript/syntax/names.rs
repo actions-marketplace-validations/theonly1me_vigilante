@@ -92,6 +92,22 @@ pub fn definition_name(definable: Definable) -> Option<(String, String)> {
     Some((simple.clone(), simple))
 }
 
+pub fn binds_name(node: &SyntaxNode) -> bool {
+    match node.kind().as_ref() {
+        "function_declaration" | "generator_function_declaration" => true,
+        "method_definition" => false,
+        _ => node
+            .parent()
+            .is_some_and(|parent| match parent.kind().as_ref() {
+                "variable_declarator" => true,
+                "assignment_expression" => parent
+                    .field("left")
+                    .is_some_and(|left| left.kind() == "identifier"),
+                _ => false,
+            }),
+    }
+}
+
 pub fn class_name(node: &SyntaxNode) -> String {
     if let Some(name) = node.field("name") {
         return name.text().to_string();
