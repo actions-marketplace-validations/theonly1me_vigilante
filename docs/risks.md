@@ -13,6 +13,8 @@ A risk is one call to an `exec`, `network`, `dynamic_code`, `native`, or `system
 | `dynamic` | Changes at run time | No |
 | `constant` | Is a literal | No, and the report does not show it |
 
+The class looks at the command arguments only. An options object such as `{ cwd: folder }`, a keyword argument such as `cwd=folder`, and a callback do not change the class. The keyword arguments `args`, `command`, and `cmd` carry the command, so they count.
+
 The report shows each risk that the pull request adds or changes under "Changed risks". It shows a risk also when the scope already has the power. For example, a fixed `subprocess.run(["date"])` that becomes `subprocess.run(f"date {request.args['day']}", shell=True)` blocks.
 
 Each code risk has the identity `power:function:sink:class`, for example `exec:app.export:subprocess.run:untrusted`.
