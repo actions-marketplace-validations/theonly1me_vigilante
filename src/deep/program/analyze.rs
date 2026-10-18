@@ -72,6 +72,16 @@ impl Program<'_> {
                 !found.contains(&(sighting.scope.clone(), sighting.power.clone()))
             }),
         );
+        let found_examples: HashSet<_> = typed
+            .examples
+            .iter()
+            .map(|sighting| (sighting.scope.clone(), sighting.power.clone()))
+            .collect();
+        typed
+            .examples
+            .extend(by_name.examples.into_iter().filter(|sighting| {
+                !found_examples.contains(&(sighting.scope.clone(), sighting.power.clone()))
+            }));
         let known: HashSet<_> = typed
             .risks
             .iter()

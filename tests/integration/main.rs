@@ -65,6 +65,7 @@ mod rust_fixtures;
 mod rust_packages;
 mod rust_skips;
 mod rust_types;
+mod scan_examples;
 mod shadows;
 mod slow_tools;
 mod support;

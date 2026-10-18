@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::iter;
 
+use super::examples::{FolderExamples, folder_examples};
 use super::graph::{Function, FunctionId, Graph, Owner};
 use super::search::{Route, RouteStart, Search, explore, toward_each_power};
 use super::{Analysis, OwnPackagePath, Reach, ReachKind, note_kind_for_own_package};
@@ -19,7 +20,7 @@ impl Graph {
         })
     }
 
-    fn evidence_of(&self, route: &Route) -> Evidence {
+    pub(super) fn evidence_of(&self, route: &Route) -> Evidence {
         let sink = self.sink(route.sink);
         let (path, line) = route.hops.first().map_or((String::new(), 1), |hop| {
             (self.function(hop.function).path.clone(), hop.line)
@@ -83,6 +84,11 @@ fn analyze(input: Analyzed) -> Analysis {
                 })),
             }
         }
+        analysis.examples.extend(folder_examples(FolderExamples {
+            graph,
+            scope,
+            allowed: &in_scope,
+        }));
         let every = explore(Search {
             graph,
             roots: &scope.roots,
@@ -171,7 +177,7 @@ fn dependency_of(function: &Function) -> Option<&str> {
     }
 }
 
-fn code_scope(path: &str) -> Scope {
+pub(super) fn code_scope(path: &str) -> Scope {
     Scope {
         surface: Surface::Code,
         path: path.to_string(),

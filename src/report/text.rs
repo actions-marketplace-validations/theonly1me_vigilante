@@ -1,21 +1,49 @@
 use serde_json::{Value, json};
 
-use crate::ScanReport;
+use super::examples::{Candidates, listed, shown};
+use crate::{Power, ScanReport, Scope};
+
+struct Lookup<'a> {
+    report: &'a ScanReport,
+    scope: &'a Scope,
+    power: &'a Power,
+}
+
+fn candidates_of(lookup: Lookup) -> Candidates {
+    let Lookup {
+        report,
+        scope,
+        power,
+    } = lookup;
+    Candidates {
+        found: &report.map.scopes[scope][power],
+        extra: report
+            .examples
+            .scopes
+            .get(scope)
+            .and_then(|powers| powers.get(power)),
+    }
+}
 
 pub fn scan_text(report: &ScanReport) -> String {
     let mut lines = Vec::new();
     for (scope, powers) in &report.map.scopes {
-        for (power, evidence) in powers {
-            let location = evidence
-                .first()
-                .map(|first| format!("{}:{}", first.path, first.line))
-                .unwrap_or_default();
-            lines.push(format!(
-                "{:<6} {:<32} {:<40} {location}",
-                scope.surface.name(),
-                scope.path,
-                power.to_string()
-            ));
+        for power in powers.keys() {
+            let examples = shown(candidates_of(Lookup {
+                report,
+                scope,
+                power,
+            }));
+            for example in examples {
+                lines.push(format!(
+                    "{:<6} {:<32} {:<40} {}:{}",
+                    scope.surface.name(),
+                    scope.path,
+                    power.to_string(),
+                    example.path,
+                    example.line
+                ));
+            }
         }
     }
     if lines.is_empty() {
@@ -37,8 +65,15 @@ pub fn scan_json(report: &ScanReport) -> String {
         .iter()
         .map(|(scope, powers)| {
             let powers: Vec<Value> = powers
-                .iter()
-                .map(|(power, evidence)| json!({ "power": power, "evidence": evidence }))
+                .keys()
+                .map(|power| {
+                    let evidence = listed(candidates_of(Lookup {
+                        report,
+                        scope,
+                        power,
+                    }));
+                    json!({ "power": power, "evidence": evidence })
+                })
                 .collect();
             json!({ "surface": scope.surface, "scope": scope.path, "powers": powers })
         })

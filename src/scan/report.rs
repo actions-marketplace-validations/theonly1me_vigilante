@@ -5,6 +5,7 @@ use crate::{Error, PowerMap};
 
 pub struct ScanReport {
     pub map: PowerMap,
+    pub examples: PowerMap,
     pub risks: Vec<Risk>,
     pub not_analyzed: Vec<Skip>,
 }
@@ -19,8 +20,13 @@ pub fn scan_report(request: ScanRequest) -> Result<ScanReport, Error> {
         location: located.location(),
     })?
     .scan(&Selection::Everything)?;
+    let mut examples = PowerMap::default();
+    for sighting in scanned.examples {
+        examples.insert(sighting);
+    }
     Ok(ScanReport {
         map: scanned.map,
+        examples,
         risks: scanned.risks,
         not_analyzed: scanned.skipped,
     })

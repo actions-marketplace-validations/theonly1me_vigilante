@@ -1,4 +1,5 @@
 mod classify;
+mod examples;
 pub mod graph;
 pub mod program;
 mod risks;
@@ -17,6 +18,7 @@ const BLOCKING_CAPABILITIES: [Capability; 3] =
 #[derive(Default)]
 pub struct Analysis {
     pub sightings: Vec<Sighting>,
+    pub examples: Vec<Sighting>,
     pub reaches: Vec<Reach>,
     pub risks: Vec<Risk>,
     pub skipped: Vec<Skip>,
@@ -60,6 +62,7 @@ impl Risk {
 impl Analysis {
     pub fn absorb(&mut self, other: Analysis) {
         self.sightings.extend(other.sightings);
+        self.examples.extend(other.examples);
         self.reaches.extend(other.reaches);
         self.risks.extend(other.risks);
         self.skipped.extend(other.skipped);

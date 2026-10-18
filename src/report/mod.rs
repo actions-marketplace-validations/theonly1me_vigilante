@@ -1,3 +1,4 @@
+mod examples;
 mod json;
 mod markdown;
 mod notes;

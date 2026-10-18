@@ -104,6 +104,14 @@ Vigilante puts powers into scopes. It reports a power only the first time that t
 
 So Vigilante does not report a second HTTP call in a package that already uses the network. It reports the first `subprocess` call in a new package, also when another package already has one.
 
+## Examples in the scan output
+
+A scope can reach a power from more than one place. For example, `scripts/release.js` and `src/server.js` can both start a process.
+
+`vigilante scan` shows up to 3 examples for each power. Each example comes from a different top folder, so a script in `scripts/` cannot hide the code in `src/`. The text format prints one line for each example. The JSON format lists them in `evidence`.
+
+The first example is the same as in earlier versions. Vigilante picks the other examples in path order, one for each folder. The call graph engines give these examples, except the Go engine. The pattern rules give all their examples in the JSON format. `vigilante lock`, `vigilante diff`, `vigilante check`, and the SARIF report do not use the extra examples.
+
 ## What Vigilante leaves out
 
 These rules keep the report short. Each rule leaves out a change that a reviewer would not act on.
