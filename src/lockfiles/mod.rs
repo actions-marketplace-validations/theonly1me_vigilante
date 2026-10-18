@@ -1,3 +1,4 @@
+mod bun;
 mod npm;
 mod pnpm;
 pub mod python;
@@ -5,6 +6,7 @@ mod yarn;
 
 use std::collections::HashMap;
 
+use bun::BunLockfile;
 use npm::NpmLockfile;
 use pnpm::PnpmLockfile;
 use yarn::YarnLockfile;
@@ -12,12 +14,14 @@ use yarn::YarnLockfile;
 use crate::Error;
 
 pub const JAVASCRIPT_LOCKFILES: &[&str] = &[
+    BUN_LOCKFILE,
     "npm-shrinkwrap.json",
     "package-lock.json",
     "pnpm-lock.yaml",
     "yarn.lock",
 ];
 pub const YARN_LOCKFILE: &str = "yarn.lock";
+const BUN_LOCKFILE: &str = "bun.lock";
 const DEFAULT_NPM_REGISTRY: &str = "https://registry.npmjs.org";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -64,6 +68,7 @@ pub struct LockfileText<'a> {
 }
 
 pub enum JavaScriptLockfile {
+    Bun(BunLockfile),
     Npm(NpmLockfile),
     Pnpm(PnpmLockfile),
     Yarn(YarnLockfile),
@@ -72,7 +77,9 @@ pub enum JavaScriptLockfile {
 impl JavaScriptLockfile {
     pub fn parse(lockfile: LockfileText) -> Result<Self, Error> {
         let LockfileText { path, text } = lockfile;
-        if path.ends_with("pnpm-lock.yaml") {
+        if path.ends_with(BUN_LOCKFILE) {
+            BunLockfile::parse(text).map(Self::Bun)
+        } else if path.ends_with("pnpm-lock.yaml") {
             PnpmLockfile::parse(text).map(Self::Pnpm)
         } else if path.ends_with(YARN_LOCKFILE) {
             YarnLockfile::parse(text).map(Self::Yarn)
@@ -83,6 +90,7 @@ impl JavaScriptLockfile {
 
     pub fn find(&self, lookup: Lookup) -> Option<Found> {
         match self {
+            Self::Bun(lockfile) => lockfile.find(lookup),
             Self::Npm(lockfile) => lockfile.find(lookup),
             Self::Pnpm(lockfile) => lockfile.find(lookup),
             Self::Yarn(lockfile) => lockfile.find(lookup),

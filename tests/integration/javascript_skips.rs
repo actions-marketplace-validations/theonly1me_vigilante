@@ -57,7 +57,7 @@ fn code_without_a_lockfile_is_listed_as_not_analyzed() {
     assert_eq!(
         skipped(&report_of(&run)),
         vec![
-            ".: No package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or yarn.lock covers this code, so Vigilante did not read its packages."
+            ".: No bun.lock, package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or yarn.lock covers this code, so Vigilante did not read its packages."
         ]
     );
 }

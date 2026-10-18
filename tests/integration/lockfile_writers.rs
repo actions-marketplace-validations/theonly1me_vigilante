@@ -12,7 +12,53 @@ pub struct YarnEntry<'a> {
     pub dependencies: &'a [(&'a str, &'a str)],
 }
 
+pub struct BunEntry<'a> {
+    pub key: &'a str,
+    pub package: &'a FakePackage<'a>,
+    pub dependencies: &'a [(&'a str, &'a str)],
+}
+
+pub struct BunLock<'a> {
+    pub workspaces: &'a [(&'a str, &'a str)],
+    pub entries: &'a [BunEntry<'a>],
+}
+
 impl NpmRegistry {
+    pub fn bun_lockfile(&self, lock: BunLock) -> String {
+        let mut lines = vec![
+            "{".to_string(),
+            "  \"lockfileVersion\": 1,".to_string(),
+            "  \"workspaces\": {".to_string(),
+            "    \"\": { \"name\": \"app\", },".to_string(),
+        ];
+        for (folder, name) in lock.workspaces {
+            lines.push(format!("    \"{folder}\": {{ \"name\": \"{name}\", }},"));
+        }
+        lines.push("  },".to_string());
+        lines.push("  \"packages\": {".to_string());
+        for (folder, name) in lock.workspaces {
+            lines.push(format!("    \"{name}\": [\"{name}@workspace:{folder}\"],"));
+        }
+        for entry in lock.entries {
+            let (url, integrity) = self.tarball(entry.package);
+            let dependencies: Vec<String> = entry
+                .dependencies
+                .iter()
+                .map(|(name, range)| format!("\"{name}\": \"{range}\""))
+                .collect();
+            lines.push(format!(
+                "    \"{}\": [\"{}@{}\", \"{url}\", {{ \"dependencies\": {{ {} }} }}, \"{integrity}\"],",
+                entry.key,
+                entry.package.name,
+                entry.package.version,
+                dependencies.join(", ")
+            ));
+        }
+        lines.push("  }".to_string());
+        lines.push("}".to_string());
+        lines.join("\n") + "\n"
+    }
+
     pub fn pnpm_lockfile(&self, entries: &[PnpmEntry]) -> String {
         pnpm_lockfile(Written {
             registry: self,
