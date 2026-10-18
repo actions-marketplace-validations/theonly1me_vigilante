@@ -70,7 +70,7 @@ For Go modules, Vigilante runs [Capslock](https://github.com/google/capslock) v0
 
 How it works:
 
-1. Vigilante finds the Go modules (folders with `go.mod`) that the pull request changes.
+1. Vigilante finds the Go modules (folders with `go.mod`) that the pull request changes. It skips a module that has no `.go` file, for example a Hugo site module. A `.go` file in a nested module belongs to the nested module.
 2. It makes a shared clone of the repository in a temporary folder for the base and for the head, as `capslock-git-diff` does. Your checkout does not change.
 3. In each module, it runs `capslock -packages=./... -output=json -granularity=intermediate`, with `GOFLAGS=-mod=readonly`.
 4. A finding is `exec`, `network`, or `native` that a Go package reaches through its own code. At the base, the package did not reach that power in this way. The example call path stays in your packages until the privileged call. An example is your code that calls `exec.Command`. A finding must be in `vigilante.lock`, as each other power must be.
