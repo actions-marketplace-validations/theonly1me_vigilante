@@ -1,5 +1,6 @@
 mod agent;
 mod api_identity;
+mod benchmark_paths;
 mod call_scale;
 mod check;
 mod ci;

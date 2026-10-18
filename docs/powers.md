@@ -113,7 +113,10 @@ These rules keep the report short. Each rule leaves out a change that a reviewer
 Tests, fixtures, and mocks run in CI and in agent sessions, so Vigilante reads them as test code. Test code includes these files:
 
 - test folders and test files, for example `tests/`, `__tests__/`, `*.Tests/`, `*_test.go`, `*.spec.ts`, `*Test.java`, and `test_*.py`;
-- fixtures and mocks.
+- fixtures and mocks;
+- benchmark folders, which are `bench/`, `benchmark/`, `benchmarks/`, and `perf/`.
+
+A folder name must match the whole name. `perf/` is test code, but `perfect/` and `src/perf.js` are not.
 
 The pattern rules find the powers in test code. The report lists them in the section "Test code", apart from the findings. A diff lists each power that is new in its file. Test code does not go into the lock, and it blocks only when a `deny` rule matches. To give test code the same lock and approval as other code, set `[policy] tests = "lock"`. The call graph engines do not follow calls from test code.
 
