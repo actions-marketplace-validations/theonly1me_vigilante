@@ -1,10 +1,13 @@
+mod expansion;
 mod sites;
 mod syntax;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::ops::Range;
 
 use super::{FileIndex, Language};
 use crate::code::SyntaxNode;
+use expansion::{Assignments, Expansion, expand};
 pub use sites::CallFacts;
 use sites::CallSite;
 use syntax::{
@@ -25,7 +28,6 @@ const SHELLS: &[&str] = &[
 ];
 const SHELL_FLAGS: &[&str] = &["-c", "/c", "-Command"];
 const SHELL_OPTIONS: &[&str] = &["shell=True", "shell: true", "shell:true"];
-const EXPANSION_DEPTH: usize = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ArgumentFacts {
@@ -55,7 +57,7 @@ pub struct FactsInput<'a, 'r> {
 struct FunctionFacts {
     parameters: Vec<String>,
     parameters_are_sources: bool,
-    assignments: Vec<(String, String, usize)>,
+    assignments: Assignments,
 }
 
 pub fn call_facts(input: FactsInput) -> CallFacts {
@@ -67,6 +69,7 @@ pub fn call_facts(input: FactsInput) -> CallFacts {
     let sources = language.untrusted_sources();
     let mut functions: HashMap<usize, FunctionFacts> = HashMap::new();
     let mut facts = CallFacts::default();
+    let nodes = definition_nodes(root, index);
     for call in root.dfs().filter(is_call) {
         let Some(arguments) = call.field("arguments") else {
             continue;
@@ -77,6 +80,7 @@ pub fn call_facts(input: FactsInput) -> CallFacts {
             function_facts(FunctionQuery {
                 root,
                 index,
+                nodes: &nodes,
                 definition,
                 sources,
             })
@@ -123,8 +127,28 @@ pub fn call_facts(input: FactsInput) -> CallFacts {
 struct FunctionQuery<'a, 'r> {
     root: &'a SyntaxNode<'r>,
     index: &'a FileIndex,
+    nodes: &'a HashMap<Range<usize>, SyntaxNode<'r>>,
     definition: usize,
     sources: &'a [&'a str],
+}
+
+fn definition_nodes<'r>(
+    root: &SyntaxNode<'r>,
+    index: &FileIndex,
+) -> HashMap<Range<usize>, SyntaxNode<'r>> {
+    let ranges: HashSet<&Range<usize>> = index
+        .definitions
+        .iter()
+        .map(|definition| &definition.range)
+        .collect();
+    let mut nodes = HashMap::new();
+    for node in root.dfs() {
+        let range = node.range();
+        if ranges.contains(&range) {
+            nodes.entry(range).or_insert(node);
+        }
+    }
+    nodes
 }
 
 fn function_facts(query: FunctionQuery) -> FunctionFacts {
@@ -132,13 +156,13 @@ fn function_facts(query: FunctionQuery) -> FunctionFacts {
     let node = if query.definition == 0 {
         Some(query.root.clone())
     } else {
-        query.root.dfs().find(|node| node.range() == *range)
+        query.nodes.get(range).cloned()
     };
     let Some(node) = node else {
         return FunctionFacts {
             parameters: Vec::new(),
             parameters_are_sources: false,
-            assignments: Vec::new(),
+            assignments: Assignments::default(),
         };
     };
     let parameters_text = node
@@ -148,39 +172,8 @@ fn function_facts(query: FunctionQuery) -> FunctionFacts {
     FunctionFacts {
         parameters: parameter_names(&node),
         parameters_are_sources: contains_source(&parameters_text, query.sources),
-        assignments: assignments(&node),
+        assignments: Assignments::new(assignments(&node)),
     }
-}
-
-struct Expansion<'a> {
-    text: &'a str,
-    assignments: &'a [(String, String, usize)],
-    before: usize,
-}
-
-fn expand(expansion: Expansion) -> String {
-    let mut expanded = expansion.text.to_string();
-    let mut frontier = expansion.text.to_string();
-    for _ in 0..EXPANSION_DEPTH {
-        let mut next = String::new();
-        for word in identifiers(&frontier) {
-            if let Some((_, value, _)) = expansion
-                .assignments
-                .iter()
-                .rev()
-                .find(|(name, _, start)| name == word && *start < expansion.before)
-            {
-                next.push(' ');
-                next.push_str(value);
-            }
-        }
-        if next.is_empty() {
-            break;
-        }
-        expanded.push_str(&next);
-        frontier = next;
-    }
-    expanded
 }
 
 fn runs_a_shell(text: &str) -> bool {
