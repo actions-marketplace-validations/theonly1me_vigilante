@@ -1,6 +1,6 @@
 [package]
 name = "vigilante"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 rust-version = "1.88"
 description = "Shows the new powers that a pull request gives to code, CI, build, and AI agents"

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.2](https://github.com/theonly1me/vigilante/compare/v0.3.1...v0.3.2) (2026-10-18)
+
+
+### Fixes
+
+* **config:** treat benchmark folders as test code ([d15d407](https://github.com/theonly1me/vigilante/commit/d15d407bb0f5fd9c54717801c3888298b21da88c))
+* **deep:** look up assignments, functions, and call sites by key, not by scan ([37fe38f](https://github.com/theonly1me/vigilante/commit/37fe38fb38708da48f262ca32044066e2c540d2a))
+* **deep:** look up assignments, functions, and call sites by key, not by scan ([52691c8](https://github.com/theonly1me/vigilante/commit/52691c84ea09754dedb50e3baa140c8e3ea22d12))
+* **go:** leave test paths out of Capslock evidence ([ba7c9b3](https://github.com/theonly1me/vigilante/commit/ba7c9b333b157fdb6f8320feae2a67df7dd54002))
+* **go:** skip a go.mod folder that has no Go files ([aa40d51](https://github.com/theonly1me/vigilante/commit/aa40d51e34f54c2e92583947cec3f6868f43cd1c))
+* **go:** skip a go.mod folder that has no Go files ([3ab9bb0](https://github.com/theonly1me/vigilante/commit/3ab9bb0f92d63af9c00df10b401251ade91af7ed))
+* **scan:** show examples from more than one folder ([#40](https://github.com/theonly1me/vigilante/issues/40)) ([78abc76](https://github.com/theonly1me/vigilante/commit/78abc76f005ec19f35d1eabedd441603fbe1aca2))
+
 ## [0.3.1](https://github.com/theonly1me/vigilante/compare/v0.3.0...v0.3.1) (2026-10-17)
 
 

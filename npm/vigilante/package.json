@@ -1,6 +1,6 @@
 {
   "name": "@theonly1me/vigilante",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Shows the new powers that a pull request gives to code, CI, build, and AI agents",
   "keywords": [
     "security",
@@ -27,9 +27,9 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "@theonly1me/vigilante-darwin-arm64": "0.3.1",
-    "@theonly1me/vigilante-darwin-x64": "0.3.1",
-    "@theonly1me/vigilante-linux-arm64": "0.3.1",
-    "@theonly1me/vigilante-linux-x64": "0.3.1"
+    "@theonly1me/vigilante-darwin-arm64": "0.3.2",
+    "@theonly1me/vigilante-darwin-x64": "0.3.2",
+    "@theonly1me/vigilante-linux-arm64": "0.3.2",
+    "@theonly1me/vigilante-linux-x64": "0.3.2"
   }
 }

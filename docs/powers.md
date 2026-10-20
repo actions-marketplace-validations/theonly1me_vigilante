@@ -104,6 +104,14 @@ Vigilante puts powers into scopes. It reports a power only the first time that t
 
 So Vigilante does not report a second HTTP call in a package that already uses the network. It reports the first `subprocess` call in a new package, also when another package already has one.
 
+## Examples in the scan output
+
+A scope can reach a power from more than one place. For example, `scripts/release.js` and `src/server.js` can both start a process.
+
+`vigilante scan` shows up to 3 examples for each power. Each example comes from a different top folder, so a script in `scripts/` cannot hide the code in `src/`. The text format prints one line for each example. The JSON format lists them in `evidence`.
+
+The first example is the same as in earlier versions. Vigilante picks the other examples in path order, one for each folder. The call graph engines give these examples, except the Go engine. The pattern rules give all their examples in the JSON format. `vigilante lock`, `vigilante diff`, `vigilante check`, and the SARIF report do not use the extra examples.
+
 ## What Vigilante leaves out
 
 These rules keep the report short. Each rule leaves out a change that a reviewer would not act on.
@@ -113,7 +121,10 @@ These rules keep the report short. Each rule leaves out a change that a reviewer
 Tests, fixtures, and mocks run in CI and in agent sessions, so Vigilante reads them as test code. Test code includes these files:
 
 - test folders and test files, for example `tests/`, `__tests__/`, `*.Tests/`, `*_test.go`, `*.spec.ts`, `*Test.java`, and `test_*.py`;
-- fixtures and mocks.
+- fixtures and mocks;
+- benchmark folders, which are `bench/`, `benchmark/`, `benchmarks/`, and `perf/`.
+
+A folder name must match the whole name. `perf/` is test code, but `perfect/` and `src/perf.js` are not.
 
 The pattern rules find the powers in test code. The report lists them in the section "Test code", apart from the findings. A diff lists each power that is new in its file. Test code does not go into the lock, and it blocks only when a `deny` rule matches. To give test code the same lock and approval as other code, set `[policy] tests = "lock"`. The call graph engines do not follow calls from test code.
 

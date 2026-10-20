@@ -4,6 +4,10 @@ pub fn parent_folder(path: &str) -> &str {
     path.rsplit_once('/').map_or("", |(folder, _)| folder)
 }
 
+pub fn top_folder(path: &str) -> &str {
+    path.split_once('/').map_or("", |(folder, _)| folder)
+}
+
 pub trait Folder {
     fn joined(&self, relative: &str) -> Option<String>;
 

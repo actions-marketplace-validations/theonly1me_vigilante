@@ -45,7 +45,7 @@ allow = ["https://npm.example.com/"]
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. It reads tests, fixtures, and mocks as test code. |
+| `scan.exclude` | `[]` | More globs of files to skip. Vigilante always skips `node_modules`, `vendor`, `dist`, `build`, and minified JavaScript. It reads tests, fixtures, mocks, and benchmark folders as test code. |
 | `scopes.<name>` | none | Puts the code files that match the glob into one scope with this name. Without this key, the scope of a code file is its nearest package root. |
 | `policy.mode` | `"lock"` | `"lock"` fails if a power is not in `vigilante.lock`. `"report"` only shows the report. |
 | `policy.deny` | `[]` | Powers that always make the check fail, also when they are in the lock or when the report shows them as notes. `scope` is a glob for the scope path, and its default is all scopes. `capability` is a power name from [powers.md](powers.md). |

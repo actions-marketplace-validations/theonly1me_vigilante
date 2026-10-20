@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: theonly1me/vigilante@v0.3.1
+      - uses: theonly1me/vigilante@v0.3.2
 ```
 <!-- x-release-please-end -->
 
@@ -60,10 +60,10 @@ The `comment` input needs `pull-requests: write`. Only the comment step gets the
 ### Pin the action
 
 <!-- x-release-please-start-version -->
-`@v0.3.1` is a tag. For the strongest guarantee, pin the action to the full commit SHA of the tag:
+`@v0.3.2` is a tag. For the strongest guarantee, pin the action to the full commit SHA of the tag:
 
 ```yaml
-      - uses: theonly1me/vigilante@<commit SHA of v0.3.1>
+      - uses: theonly1me/vigilante@<commit SHA of v0.3.2>
 ```
 <!-- x-release-please-end -->
 

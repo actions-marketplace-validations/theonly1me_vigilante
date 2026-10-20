@@ -35,6 +35,7 @@ pub fn scan(request: ScanRequest) -> Result<PowerMap, Error> {
 pub struct Scanned {
     pub map: PowerMap,
     pub tests: Vec<Sighting>,
+    pub examples: Vec<Sighting>,
     pub risks: Vec<Risk>,
     pub reaches: Vec<Reach>,
     pub skipped: Vec<Skip>,
@@ -172,6 +173,7 @@ impl<'a> Scanner<'a> {
         Ok(Scanned {
             map,
             tests,
+            examples: analysis.examples,
             risks,
             reaches: analysis.reaches,
             skipped: analysis.skipped,
